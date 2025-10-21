@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **Plugin Architecture**: Feature follows Obsidian plugin patterns and lifecycle
+- [ ] **Code Block Integration**: Uses ```obs-gallery``` syntax with validated parameters  
+- [ ] **Gallery Rendering**: Efficient, responsive rendering within markdown containers
+- [ ] **Performance & UX**: Non-blocking, lazy loading, proper error handling (NON-NEGOTIABLE)
+- [ ] **Extensibility**: Modular design supports future gallery view types
 
 ## Project Structure
 

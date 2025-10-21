@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+main.js
+styles.css
+
+# Development
+*.log
+.env*
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
+coverage/
+*.test.js
+
+# TypeScript
+*.tsbuildinfo
+
+# Obsidian
+data.json

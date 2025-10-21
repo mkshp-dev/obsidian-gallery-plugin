@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-gallery-plugin",
+  "name": "Gallery Plugin",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Create interactive image galleries in your notes using obs-gallery code blocks. Supports multiple view types (thumbnail, carousel, grid) and both local vault images and external URLs.",
+  "author": "Gallery Plugin Team",
+  "authorUrl": "https://github.com/gallery-plugin/obsidian-gallery-plugin",
+  "fundingUrl": "https://github.com/sponsors/gallery-plugin",
+  "isDesktopOnly": false
+}

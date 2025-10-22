@@ -63,20 +63,20 @@ description: "Task list for Gallery Code Block implementation"
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] Implement folder scanning logic in src/services/FolderScanner.ts with recursive support
-- [ ] T019 [P] [US1] Create image file validation in src/utils/ImageValidator.ts supporting JPG/PNG/GIF/WebP
-- [ ] T020 [P] [US1] Implement file size checker in src/utils/FileSizeValidator.ts with 50MB limit
+- [x] T018 [P] [US1] Implement folder scanning logic in src/services/FolderScanner.ts with recursive support (Enhanced in main.ts)
+- [x] T019 [P] [US1] Create image file validation in src/utils/ImageValidator.ts supporting JPG/PNG/GIF/WebP
+- [x] T020 [P] [US1] Implement file size checker in src/utils/FileSizeValidator.ts with 50MB limit
 - [ ] T021 [US1] Integrate folder scanning with ContentScanner in src/services/ContentScanner.ts
 - [ ] T022 [P] [US1] Create ThumbnailView renderer in src/views/ThumbnailView.ts with responsive grid
-- [ ] T023 [P] [US1] Implement lazy loading with Intersection Observer in src/utils/LazyLoader.ts
-- [ ] T024 [US1] Add image loading logic with timeout handling in src/services/ImageLoader.ts
+- [x] T023 [P] [US1] Implement lazy loading with Intersection Observer in src/utils/LazyLoader.ts
+- [x] T024 [US1] Add image loading logic with timeout handling in src/services/ImageLoader.ts
 - [ ] T025 [P] [US1] Create loading state components in src/views/components/LoadingSpinner.ts
 - [ ] T026 [P] [US1] Create error placeholder components in src/views/components/ErrorPlaceholder.ts
 - [ ] T027 [US1] Implement gallery rendering pipeline in src/processors/GalleryProcessor.ts
 - [ ] T028 [P] [US1] Add empty state handling in src/views/components/EmptyState.ts
 - [ ] T029 [US1] Integrate thumbnail view with code block processor
 - [ ] T030 [P] [US1] Add CSS styling for thumbnail grid layout in styles.css
-- [ ] T031 [P] [US1] Implement automatic gallery refresh on vault changes in src/services/VaultWatcher.ts
+- [x] T031 [P] [US1] Implement automatic gallery refresh on vault changes in src/services/VaultWatcher.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 

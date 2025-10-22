@@ -91,7 +91,8 @@ export class ContentScanner implements IContentScanner {
             
         } catch (error) {
             console.error('Error scanning path:', path, error);
-            throw new Error(`Failed to scan path "${path}": ${error instanceof Error ? error.message : String(error)}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to scan path "${path}": ${errorMessage}`);
         }
     }
 
@@ -196,7 +197,8 @@ export class ContentScanner implements IContentScanner {
             
         } catch (error) {
             console.error('Error extracting links from file:', file.path, error);
-            throw new Error(`Failed to extract links from "${file.path}": ${error instanceof Error ? error.message : String(error)}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to extract links from "${file.path}": ${errorMessage}`);
         }
     }
 

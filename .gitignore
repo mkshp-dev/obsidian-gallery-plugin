@@ -28,3 +28,8 @@ coverage/
 
 # Obsidian
 data.json
+# Additional common ignores
+package-lock.json
+.parcel-cache/
+.cache/
+.nyc_output/

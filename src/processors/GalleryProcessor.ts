@@ -30,11 +30,11 @@ export class GalleryProcessor {
         ctx: MarkdownPostProcessorContext
     ): Promise<void> {
         try {
-            // Clear any existing content
-            el.empty();
+                        // Clear previous content and show loading
+            (el as any).empty();
             
-            // Show loading state
-            const loadingEl = el.createEl('div', { 
+            // Create loading indicator
+            const loadingEl = (el as any).createEl('div', {
                 cls: 'gallery-loading',
                 text: 'Loading gallery...'
             });
@@ -53,7 +53,7 @@ export class GalleryProcessor {
             
         } catch (error) {
             console.error('Error processing gallery code block:', error);
-            this.handleProcessingError(error, el);
+            this.handleProcessingError(error as Error, el);
         }
     }
 
@@ -119,7 +119,7 @@ export class GalleryProcessor {
      * Show empty gallery state
      */
     private showEmptyGallery(container: HTMLElement, path: string): void {
-        const emptyEl = container.createEl('div', { cls: 'gallery-empty' });
+        const emptyEl = (container as any).createEl('div', { cls: 'gallery-empty' });
         
         emptyEl.createEl('div', { 
             cls: 'gallery-empty-icon',
@@ -173,7 +173,7 @@ export class GalleryProcessor {
      */
     private handleProcessingError(error: Error, container: HTMLElement): void {
         // Clear container
-        container.empty();
+        (container as any).empty();
         
         // Check if it's a configuration error
         if (error.message.includes('Configuration')) {
@@ -217,7 +217,7 @@ export class GalleryProcessor {
             
         } catch (error) {
             console.error('Error refreshing gallery:', error);
-            ErrorHandler.handlePluginError(error, 'gallery refresh', gallery.container);
+            ErrorHandler.handlePluginError(error as Error, 'gallery refresh', gallery.container);
         }
     }
 
@@ -307,20 +307,20 @@ export class GalleryProcessor {
     /**
      * Validate configuration without creating gallery
      */
-    validateGalleryConfig(source: string): { 
+    async validateGalleryConfig(source: string): Promise<{ 
         isValid: boolean; 
         config?: IGalleryConfig; 
         errors: string[] 
-    } {
+    }> {
         const errors: string[] = [];
         let config: IGalleryConfig | undefined;
         
         try {
-            config = this.parseConfiguration(source);
+            config = await this.parseConfiguration(source);
             this.validateConfiguration(config);
             return { isValid: true, config, errors: [] };
         } catch (error) {
-            errors.push(error.message);
+            errors.push(error instanceof Error ? error.message : String(error));
             return { isValid: false, errors };
         }
     }

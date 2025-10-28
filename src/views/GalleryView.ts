@@ -1,4 +1,5 @@
 import { IGalleryView, IImageSource } from '../models/interfaces';
+import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 
 /**
  * Abstract base class for gallery view renderers
@@ -220,26 +221,19 @@ export abstract class GalleryView implements IGalleryView {
         const spinner = element.querySelector('.gallery-loading-spinner');
         if (spinner) spinner.remove();
 
-        // Show error placeholder
+        // Clear existing error placeholders
         const existingError = element.querySelector('.gallery-error-placeholder');
-        if (!existingError) {
-            const errorEl = element.createEl('div', { 
-                cls: 'gallery-error-placeholder',
-                text: image.errorMessage || 'Failed to load image'
-            });
-            
-            // Add retry button for retryable errors
-            if (image.canRetry()) {
-                const retryBtn = errorEl.createEl('button', {
-                    text: 'Retry',
-                    cls: 'gallery-retry-btn'
-                });
-                
-                retryBtn.addEventListener('click', () => {
-                    this.retryImageLoad(image);
-                });
-            }
-        }
+        if (existingError) existingError.remove();
+
+        // Create professional error placeholder
+        const errorPlaceholder = ErrorPlaceholder.createImageLoadError(
+            element,
+            image.path,
+            () => this.retryImageLoad(image)
+        );
+
+        // Add image-specific styling
+        element.addClass('gallery-item-error');
     }
 
     /**
@@ -266,7 +260,7 @@ export abstract class GalleryView implements IGalleryView {
     protected reloadImage(element: HTMLElement, image: IImageSource): void {
         const img = element.querySelector('img');
         if (img) {
-            img.src = image.path;
+            img.src = image.getDisplayUrl();
         }
     }
 

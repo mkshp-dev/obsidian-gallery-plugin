@@ -15,8 +15,11 @@ export interface IGalleryConfig {
 }
 
 export interface IImageSource {
-  /** Full path or URL to image */
+  /** Vault-relative path to image file */
   path: string;
+  
+  /** Browser-compatible resource URL for loading */
+  resourceUrl?: string;
   
   /** Source type */
   type: 'local' | 'external';
@@ -56,6 +59,9 @@ export interface IImageSource {
 
   /** Check if image can be retried */
   canRetry(): boolean;
+
+  /** Get the URL that should be used for loading in the browser */
+  getDisplayUrl(): string;
 
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;

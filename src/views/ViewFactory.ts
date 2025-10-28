@@ -1,5 +1,7 @@
 import { IGalleryView, IViewFactory } from '../models/interfaces';
 import { ThumbnailView } from './ThumbnailView';
+import { CarouselView } from './CarouselView';
+import { GridView } from './GridView';
 
 /**
  * Factory for creating gallery view renderers
@@ -17,61 +19,14 @@ export class ViewFactory implements IViewFactory {
      * Register default view types
      */
     private registerDefaultViews(): void {
-        // Register ThumbnailView
-        this.viewTypes.set('thumbnail', ThumbnailView);
+    // Register ThumbnailView
+    this.viewTypes.set('thumbnail', ThumbnailView);
         
-        // Placeholder views for Phase 4 implementation
-        this.viewTypes.set('carousel', class CarouselViewPlaceholder {
-            public readonly type = 'carousel' as const;
-            public readonly container: HTMLElement;
-            public readonly images: any[] = [];
-            
-            constructor(container: HTMLElement) {
-                this.container = container;
-            }
-            
-            render(): void {
-                this.container.innerHTML = '<div class="gallery-placeholder">Carousel view - implementation pending</div>';
-            }
-            
-            update(images: any[]): void {
-                this.render();
-            }
-            
-            destroy(): void {
-                this.container.innerHTML = '';
-            }
-            
-            handleImageLoad(image: any): void {}
-            handleImageError(image: any, error: Error): void {}
-            isImageVisible(image: any): boolean { return false; }
-        } as any);
+    // Register CarouselView (real implementation)
+    this.viewTypes.set('carousel', CarouselView as any);
         
-        this.viewTypes.set('grid', class GridViewPlaceholder {
-            public readonly type = 'grid' as const;
-            public readonly container: HTMLElement;
-            public readonly images: any[] = [];
-            
-            constructor(container: HTMLElement) {
-                this.container = container;
-            }
-            
-            render(): void {
-                this.container.innerHTML = '<div class="gallery-placeholder">Grid view - implementation pending</div>';
-            }
-            
-            update(images: any[]): void {
-                this.render();
-            }
-            
-            destroy(): void {
-                this.container.innerHTML = '';
-            }
-            
-            handleImageLoad(image: any): void {}
-            handleImageError(image: any, error: Error): void {}
-            isImageVisible(image: any): boolean { return false; }
-        } as any);
+    // Register real GridView implementation
+    this.viewTypes.set('grid', GridView as any);
     }
 
     /**

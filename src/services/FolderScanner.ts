@@ -103,7 +103,9 @@ export class FolderScanner {
      * Check if file is a supported image format
      */
     private isImageFile(path: string): boolean {
-        const extension = path.substring(path.lastIndexOf('.')).toLowerCase();
+        // Remove query parameters and fragments from path for extension detection
+        const cleanPath = path.split('?')[0].split('#')[0];
+        const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
         return this.SUPPORTED_EXTENSIONS.includes(extension);
     }
 
@@ -111,7 +113,10 @@ export class FolderScanner {
      * Create ImageSource from TFile with metadata
      */
     private async createImageSource(file: TFile): Promise<IImageSource> {
-        const imageSource = ImageSource.fromLocalPath(file.path);
+        // Convert vault path to resource URL for browser compatibility
+        const resourcePath = this.vault.adapter.getResourcePath(file.path);
+        // Keep original path for validation, pass resource URL separately
+        const imageSource = ImageSource.fromLocalPath(file.path, file.basename, resourcePath);
         
         // Get file size
         try {
@@ -176,7 +181,8 @@ export class FolderScanner {
                     stats.imageFiles++;
                     
                     // Count format
-                    const ext = child.path.substring(child.path.lastIndexOf('.')).toLowerCase();
+                    const cleanPath = child.path.split('?')[0].split('#')[0];
+                    const ext = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
                     stats.supportedFormats.set(ext, (stats.supportedFormats.get(ext) || 0) + 1);
                     
                     // Add size

@@ -327,30 +327,42 @@ export class LazyLoader {
     color: string = '#f0f0f0',
     textColor: string = '#999'
   ): string {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
+    // Fallback 1x1 transparent PNG data URI (used when canvas isn't available in test env)
+    const FALLBACK_DATA_URI =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext && canvas.getContext('2d');
+      if (!ctx || typeof canvas.toDataURL !== 'function') {
+        return FALLBACK_DATA_URI;
+      }
+
       // Background
       ctx.fillStyle = color;
       ctx.fillRect(0, 0, width, height);
-      
+
       // Border
       ctx.strokeStyle = textColor;
       ctx.lineWidth = 1;
       ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
-      
+
       // Loading text
       ctx.fillStyle = textColor;
       ctx.font = '14px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('Loading...', width / 2, height / 2);
+
+      return canvas.toDataURL();
+    } catch (e) {
+      // In constrained environments (like jsdom in CI), canvas APIs may not be available.
+      // Return a minimal transparent PNG data URI as a safe fallback.
+      return FALLBACK_DATA_URI;
     }
-    
-    return canvas.toDataURL();
   }
 
   /**

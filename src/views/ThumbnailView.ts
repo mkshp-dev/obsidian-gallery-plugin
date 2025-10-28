@@ -10,6 +10,7 @@ export class ThumbnailView extends GalleryView {
     private loadedImages: Set<string> = new Set();
     private readonly maxConcurrentLoads = 10;
     private currentLoads = 0;
+    private lastFocusedElement: HTMLElement | null = null;
 
     constructor(container: HTMLElement) {
         super('thumbnail', container);
@@ -89,12 +90,33 @@ export class ThumbnailView extends GalleryView {
             }
         });
 
+        // Accessibility: expose as button and provide an accessible name
+        itemEl.setAttribute('role', 'button');
+        itemEl.setAttribute('aria-label', image.displayName || 'Gallery image');
+
         // Add click handler for image expansion
         itemEl.addEventListener('click', () => this.expandImage(image));
         itemEl.addEventListener('keydown', (e) => {
+            // Activate on Enter or Space
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 this.expandImage(image);
+                return;
+            }
+
+            // Keyboard navigation: Left/Right arrows move between thumbnails
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                const parent = itemEl.parentElement;
+                if (!parent) return;
+                const items = Array.from(parent.querySelectorAll('.gallery-thumbnail-item')) as HTMLElement[];
+                const idx = items.indexOf(itemEl);
+                if (idx === -1) return;
+
+                const nextIdx = e.key === 'ArrowRight' ? idx + 1 : idx - 1;
+                if (nextIdx >= 0 && nextIdx < items.length) {
+                    items[nextIdx].focus();
+                    e.preventDefault();
+                }
             }
         });
 
@@ -163,7 +185,7 @@ export class ThumbnailView extends GalleryView {
                 }, 10000); // 10 second timeout
             }
 
-            img.src = image.path;
+            img.src = image.getDisplayUrl();
 
         } catch (error) {
             this.onImageError(image, container, error as Error);
@@ -203,34 +225,126 @@ export class ThumbnailView extends GalleryView {
      * Expand image in modal/lightbox
      */
     private expandImage(image: IImageSource): void {
-        // Create modal overlay
-        const modal = document.body.createEl('div', { cls: 'gallery-modal' });
+        // Save the element that had focus so we can restore it later
+        const active = document.activeElement;
+        if (active && active instanceof HTMLElement) {
+            this.lastFocusedElement = active;
+        }
+
+        // Create modal overlay using ownerDocument for compatibility with different rendering contexts
+    const doc = this.container.ownerDocument || document;
+    const modal = doc.createElement('div');
+        modal.className = 'gallery-modal';
+        // Accessibility: treat modal as dialog
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', image.displayName || 'Image dialog');
         
         // Close on click outside
-        modal.addEventListener('click', (e) => {
+        modal.addEventListener('click', (e: MouseEvent) => {
             if (e.target === modal) {
                 this.closeModal(modal);
             }
         });
 
-        // Close on escape key
+    // Track current image for modal navigation
+    let currentImage = image;
+
+    // Close on escape key and trap focus
         const closeOnEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 this.closeModal(modal);
-                document.removeEventListener('keydown', closeOnEscape);
+                doc.removeEventListener('keydown', closeOnEscape as any);
+                doc.removeEventListener('focus', keepFocus as any, true);
+                doc.removeEventListener('keydown', modalKeyHandler as any);
+            }
+    };
+    // Attach close handler to the modal (avoid document-level handler to prevent double firing)
+    modal.addEventListener('keydown', closeOnEscape as any);
+
+        // Keep focus inside modal (simple trap)
+        const keepFocus = (e: Event) => {
+            if (!modal.contains(doc.activeElement)) {
+                // Focus the close button as a sensible default
+                const btn = modal.querySelector('.gallery-modal-close') as HTMLElement | null;
+                if (btn) btn.focus();
             }
         };
-        document.addEventListener('keydown', closeOnEscape);
+        doc.addEventListener('focus', keepFocus as any, true);
+
+    // Modal keyboard handler for navigation (Left/Right) and Escape handled above
+        const modalKeyHandler = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                const currentIndex = this._images.findIndex(img => img.path === currentImage.path);
+                if (currentIndex === -1) return;
+                const nextIndex = e.key === 'ArrowRight' ? currentIndex + 1 : currentIndex - 1;
+                if (nextIndex >= 0 && nextIndex < this._images.length) {
+                    const nextImage = this._images[nextIndex];
+                    // Update modal image and info
+                    const imgEl = modal.querySelector('.gallery-modal-image img') as HTMLImageElement | null;
+                    const titleEl = modal.querySelector('.gallery-modal-info h3') as HTMLElement | null;
+                    if (imgEl && nextImage) {
+                        imgEl.src = nextImage.getDisplayUrl();
+                    }
+                    if (titleEl && nextImage) {
+                        titleEl.textContent = nextImage.displayName || '';
+                    }
+                    // Update reference image for further navigation
+                    currentImage = nextImage;
+                }
+            }
+        };
+    // Attach keydown handler to the modal only to avoid duplicate handling
+    modal.addEventListener('keydown', modalKeyHandler as any);
+
+        // Attach cleanup function to modal for safe removal
+        const cleanup = () => {
+            try {
+                modal.removeEventListener('keydown', closeOnEscape as any);
+                doc.removeEventListener('focus', keepFocus as any, true);
+                modal.removeEventListener('keydown', modalKeyHandler as any);
+            } catch {}
+        };
+        (modal as any).__cleanup = cleanup;
 
         // Create modal content
-        const content = modal.createEl('div', { cls: 'gallery-modal-content' });
-        
+        const content = (modal as any).createEl('div', { cls: 'gallery-modal-content' });
+
         // Close button
-        const closeBtn = content.createEl('button', { 
+        const closeBtn = (content as any).createEl('button', {
             cls: 'gallery-modal-close',
             text: '×'
         });
         closeBtn.addEventListener('click', () => this.closeModal(modal));
+        // Accessibility: make close button focusable and labelled
+        closeBtn.setAttribute('aria-label', 'Close image dialog');
+        closeBtn.setAttribute('role', 'button');
+
+        // Make modal focusable and focus it so it receives key events
+        modal.setAttribute('tabindex', '-1');
+        setTimeout(() => {
+            try {
+                modal.focus();
+            } catch {}
+            // Also focus close button as a visible focus target
+            try { closeBtn.focus(); } catch {}
+        }, 0);
+
+        // Create Prev/Next buttons for modal navigation (mouse-friendly)
+        const prevBtn = (content as any).createEl('button', {
+            cls: 'gallery-modal-nav prev',
+            text: '\u2039' // single left-pointing angle quotation mark
+        }) as HTMLElement;
+        prevBtn.setAttribute('aria-label', 'Previous image');
+        prevBtn.addEventListener('click', () => navigate(-1));
+
+        const nextBtn = (content as any).createEl('button', {
+            cls: 'gallery-modal-nav next',
+            text: '\u203A' // single right-pointing angle quotation mark
+        }) as HTMLElement;
+        nextBtn.setAttribute('aria-label', 'Next image');
+        nextBtn.addEventListener('click', () => navigate(1));
 
         // Image info
         const info = content.createEl('div', { cls: 'gallery-modal-info' });
@@ -247,26 +361,65 @@ export class ThumbnailView extends GalleryView {
         }
 
         // Image container
-        const imgContainer = content.createEl('div', { cls: 'gallery-modal-image' });
-        const img = imgContainer.createEl('img', {
-            attr: { 
-                'src': image.path,
+        const imgContainer = (content as any).createEl('div', { cls: 'gallery-modal-image' });
+        const img = (imgContainer as any).createEl('img', {
+            attr: {
+                'src': image.getDisplayUrl(),
                 'alt': image.displayName
             }
         });
 
         img.addEventListener('load', () => {
-            modal.addClass('gallery-modal-loaded');
+            (modal as any).addClass && (modal as any).addClass('gallery-modal-loaded');
         });
+
+        // Navigation helper: move by delta (-1 or 1)
+        const navigate = (delta: number) => {
+            const currentIndex = this._images.findIndex(imgSrc => imgSrc.path === currentImage.path);
+            if (currentIndex === -1) return;
+            const nextIndex = currentIndex + delta;
+            if (nextIndex < 0 || nextIndex >= this._images.length) return;
+
+            const nextImage = this._images[nextIndex];
+            const modalImg = modal.querySelector('.gallery-modal-image img') as HTMLImageElement | null;
+            const titleEl = modal.querySelector('.gallery-modal-info h3') as HTMLElement | null;
+            if (modalImg && nextImage) {
+                modalImg.src = nextImage.getDisplayUrl();
+                modalImg.alt = nextImage.displayName || '';
+            }
+            if (titleEl && nextImage) {
+                titleEl.textContent = nextImage.displayName || '';
+            }
+            currentImage = nextImage;
+        };
+
+        // Append modal to document body
+        try {
+            doc.body.appendChild(modal);
+        } catch (appendErr) {
+            console.warn('Failed to append modal to document body, falling back to document.body:', appendErr);
+            document.body.appendChild(modal);
+        }
     }
 
     /**
      * Close modal
      */
     private closeModal(modal: HTMLElement): void {
-        modal.addClass('gallery-modal-closing');
+        (modal as any).addClass && (modal as any).addClass('gallery-modal-closing');
+        // Call modal-specific cleanup if present
+        try {
+            const cleanup = (modal as any).__cleanup as (() => void) | undefined;
+            if (cleanup) cleanup();
+        } catch {}
+
         setTimeout(() => {
             modal.remove();
+            // Restore focus to previously focused element
+            if (this.lastFocusedElement) {
+                try { this.lastFocusedElement.focus(); } catch {}
+                this.lastFocusedElement = null;
+            }
         }, 200);
     }
 

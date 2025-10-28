@@ -1,6 +1,7 @@
 import { Vault, TFile, TFolder } from 'obsidian';
 import { IContentScanner, IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
+import { FolderScanner } from './FolderScanner';
 
 /**
  * Content scanner service for discovering images in vault
@@ -8,12 +9,14 @@ import { ImageSource } from '../models/ImageSource';
  */
 export class ContentScanner implements IContentScanner {
     private vault: Vault;
+    private folderScanner: FolderScanner;
     private cache: Map<string, { images: IImageSource[], timestamp: number }> = new Map();
     private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
     private readonly SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
     constructor(vault: Vault) {
         this.vault = vault;
+        this.folderScanner = new FolderScanner(vault);
         this.setupVaultWatcher();
     }
 
@@ -37,12 +40,14 @@ export class ContentScanner implements IContentScanner {
         // Invalidate cache for affected directories
         const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
         this.invalidateCache(dirPath);
+        this.folderScanner.invalidateCache(dirPath);
         
         // Also invalidate parent directories if recursive scanning
         let parentPath = dirPath;
         while (parentPath.includes('/')) {
             parentPath = parentPath.substring(0, parentPath.lastIndexOf('/'));
             this.invalidateCache(parentPath);
+            this.folderScanner.invalidateCache(parentPath);
         }
     }
 
@@ -77,8 +82,8 @@ export class ContentScanner implements IContentScanner {
                     images = await this.extractLinksFromFile(abstractFile);
                 }
             } else if (abstractFile instanceof TFolder) {
-                // Folder - scan for images
-                images = await this.scanFolder(abstractFile, recursive);
+                // Folder - use specialized FolderScanner for better performance
+                images = await this.folderScanner.scanFolder(abstractFile.path, recursive);
             }
 
             // Cache results
@@ -97,47 +102,40 @@ export class ContentScanner implements IContentScanner {
     }
 
     /**
-     * Scan folder for image files
+     * Get folder statistics (delegated to FolderScanner)
      */
-    private async scanFolder(folder: TFolder, recursive: boolean): Promise<IImageSource[]> {
-        const images: IImageSource[] = [];
-        
-        // Get all files in folder
-        const files = this.vault.getFiles().filter(file => 
-            file.path.startsWith(folder.path + '/') &&
-            this.isImageFile(file.path)
-        );
+    async getFolderStats(folderPath: string, recursive: boolean = true) {
+        return await this.folderScanner.getFolderStats(folderPath, recursive);
+    }
 
-        for (const file of files) {
-            // Check if file is in direct subfolder (for recursive control)
-            const relativePath = file.path.substring(folder.path.length + 1);
-            const isInSubfolder = relativePath.includes('/');
-            
-            if (!isInSubfolder || recursive) {
-                const imageSource = ImageSource.fromLocalPath(file.path);
-                
-                // Get file stats for size validation
-                try {
-                    const stat = await this.vault.adapter.stat(file.path);
-                    if (stat && stat.size) {
-                        imageSource.validateSize(stat.size);
-                    }
-                } catch (error) {
-                    console.warn('Could not get file stats for:', file.path, error);
-                }
-                
-                images.push(imageSource);
-            }
-        }
+    /**
+     * Find images by pattern (delegated to FolderScanner)
+     */
+    async findImagesByPattern(folderPath: string, pattern: RegExp, recursive: boolean = true): Promise<IImageSource[]> {
+        return await this.folderScanner.findImagesByPattern(folderPath, pattern, recursive);
+    }
 
-        return images.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    /**
+     * Get recently added images (delegated to FolderScanner)
+     */
+    async getRecentImages(folderPath: string, hours: number = 24, recursive: boolean = true): Promise<IImageSource[]> {
+        return await this.folderScanner.getRecentImages(folderPath, hours, recursive);
+    }
+
+    /**
+     * Validate folder access (delegated to FolderScanner)
+     */
+    async validateFolderAccess(folderPath: string) {
+        return await this.folderScanner.validateFolderAccess(folderPath);
     }
 
     /**
      * Check if file is supported image format
      */
     isImageFile(path: string): boolean {
-        const extension = path.substring(path.lastIndexOf('.')).toLowerCase();
+        // Remove query parameters and fragments from path for extension detection
+        const cleanPath = path.split('?')[0].split('#')[0];
+        const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
         return this.SUPPORTED_EXTENSIONS.includes(extension);
     }
 
@@ -272,20 +270,25 @@ export class ContentScanner implements IContentScanner {
      */
     clearCache(): void {
         this.cache.clear();
+        this.folderScanner.clearCache();
     }
 
     /**
-     * Get cache statistics
+     * Get cache statistics (combined from both scanners)
      */
-    getCacheStats(): { entries: number; size: number } {
+    getCacheStats(): { entries: number; size: number; folderCacheEntries: number; folderCacheImages: number } {
         let totalSize = 0;
         for (const entry of this.cache.values()) {
             totalSize += entry.images.length;
         }
         
+        const folderStats = this.folderScanner.getCacheStats();
+        
         return {
             entries: this.cache.size,
-            size: totalSize
+            size: totalSize,
+            folderCacheEntries: folderStats.entries,
+            folderCacheImages: folderStats.totalImages
         };
     }
 

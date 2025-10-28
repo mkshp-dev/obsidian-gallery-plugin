@@ -6,6 +6,7 @@ import { IImageSource } from './interfaces';
  */
 export class ImageSource implements IImageSource {
     public readonly path: string;
+    public readonly resourceUrl?: string;
     public readonly type: 'local' | 'external';
     public readonly displayName: string;
     public size?: number;
@@ -17,8 +18,9 @@ export class ImageSource implements IImageSource {
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    constructor(path: string, type: 'local' | 'external', displayName?: string) {
+    constructor(path: string, type: 'local' | 'external', displayName?: string, resourceUrl?: string) {
         this.path = path;
+        this.resourceUrl = resourceUrl;
         this.type = type;
         this.displayName = displayName || this.extractDisplayName(path);
         this.loadState = 'pending';
@@ -64,8 +66,10 @@ export class ImageSource implements IImageSource {
      * Get file extension from path
      */
     private getFileExtension(): string {
-        const lastDot = this.path.lastIndexOf('.');
-        return lastDot === -1 ? '' : this.path.substring(lastDot);
+        // Remove query parameters and fragments from path for extension detection
+        const cleanPath = this.path.split('?')[0].split('#')[0];
+        const lastDot = cleanPath.lastIndexOf('.');
+        return lastDot === -1 ? '' : cleanPath.substring(lastDot);
     }
 
     /**
@@ -126,7 +130,9 @@ export class ImageSource implements IImageSource {
      * Check if image format is supported
      */
     static isSupportedFormat(path: string): boolean {
-        const extension = path.substring(path.lastIndexOf('.')).toLowerCase();
+        // Remove query parameters and fragments from path for extension detection
+        const cleanPath = path.split('?')[0].split('#')[0];
+        const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
         return ImageSource.SUPPORTED_FORMATS.includes(extension);
     }
 
@@ -159,8 +165,8 @@ export class ImageSource implements IImageSource {
     /**
      * Create ImageSource from local file path
      */
-    static fromLocalPath(path: string, displayName?: string): ImageSource {
-        return new ImageSource(path, 'local', displayName);
+    static fromLocalPath(path: string, displayName?: string, resourceUrl?: string): ImageSource {
+        return new ImageSource(path, 'local', displayName, resourceUrl);
     }
 
     /**
@@ -177,6 +183,18 @@ export class ImageSource implements IImageSource {
         this.loadState = 'pending';
         this.loadStartTime = undefined;
         this.errorMessage = undefined;
+    }
+
+    /**
+     * Get the URL that should be used for loading in the browser
+     * For local files, returns resourceUrl if available, otherwise path
+     * For external files, returns path
+     */
+    getDisplayUrl(): string {
+        if (this.type === 'local' && this.resourceUrl) {
+            return this.resourceUrl;
+        }
+        return this.path;
     }
 
     /**

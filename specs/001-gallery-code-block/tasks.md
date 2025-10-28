@@ -66,16 +66,16 @@ description: "Task list for Gallery Code Block implementation"
 - [x] T018 [P] [US1] Implement folder scanning logic in src/services/FolderScanner.ts with recursive support (Enhanced in main.ts)
 - [x] T019 [P] [US1] Create image file validation in src/utils/ImageValidator.ts supporting JPG/PNG/GIF/WebP
 - [x] T020 [P] [US1] Implement file size checker in src/utils/FileSizeValidator.ts with 50MB limit
-- [ ] T021 [US1] Integrate folder scanning with ContentScanner in src/services/ContentScanner.ts
-- [ ] T022 [P] [US1] Create ThumbnailView renderer in src/views/ThumbnailView.ts with responsive grid
+ - [x] T021 [US1] Integrate folder scanning with ContentScanner in src/services/ContentScanner.ts
+ - [x] T022 [P] [US1] Create ThumbnailView renderer in src/views/ThumbnailView.ts with responsive grid
 - [x] T023 [P] [US1] Implement lazy loading with Intersection Observer in src/utils/LazyLoader.ts
 - [x] T024 [US1] Add image loading logic with timeout handling in src/services/ImageLoader.ts
-- [ ] T025 [P] [US1] Create loading state components in src/views/components/LoadingSpinner.ts
-- [ ] T026 [P] [US1] Create error placeholder components in src/views/components/ErrorPlaceholder.ts
-- [ ] T027 [US1] Implement gallery rendering pipeline in src/processors/GalleryProcessor.ts
-- [ ] T028 [P] [US1] Add empty state handling in src/views/components/EmptyState.ts
-- [ ] T029 [US1] Integrate thumbnail view with code block processor
-- [ ] T030 [P] [US1] Add CSS styling for thumbnail grid layout in styles.css
+ - [x] T025 [P] [US1] Create loading state components in src/views/components/LoadingSpinner.ts
+ - [x] T026 [P] [US1] Create error placeholder components in src/views/components/ErrorPlaceholder.ts
+ - [x] T027 [US1] Implement gallery rendering pipeline in src/processors/GalleryProcessor.ts
+ - [x] T028 [P] [US1] Add empty state handling in src/views/components/EmptyState.ts
+ - [x] T029 [US1] Integrate thumbnail view with code block processor
+ - [x] T030 [P] [US1] Add CSS styling for thumbnail grid layout in styles.css
 - [x] T031 [P] [US1] Implement automatic gallery refresh on vault changes in src/services/VaultWatcher.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
@@ -90,7 +90,7 @@ description: "Task list for Gallery Code Block implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T032 [P] [US2] Create CarouselView renderer in src/views/CarouselView.ts with horizontal scrolling
+- [x] T032 [P] [US2] Create CarouselView renderer in src/views/CarouselView.ts with horizontal scrolling
 - [ ] T033 [P] [US2] Create GridView renderer in src/views/GridView.ts with masonry layout
 - [ ] T034 [P] [US2] Add carousel navigation controls in src/views/components/CarouselControls.ts
 - [ ] T035 [P] [US2] Implement touch gesture support in src/utils/TouchHandler.ts for carousel

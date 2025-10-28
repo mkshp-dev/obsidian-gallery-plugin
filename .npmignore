@@ -1,0 +1,31 @@
+node_modules/
+dist/
+build/
+main.js
+styles.css
+
+# Logs
+*.log
+.env*
+
+# Coverage and tests
+coverage/
+*.test.js
+
+# TypeScript
+*.tsbuildinfo
+
+# Obsidian
+data.json
+
+# Lockfiles
+package-lock.json
+
+# Caches
+.parcel-cache/
+.cache/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/

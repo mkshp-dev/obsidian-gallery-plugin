@@ -6,6 +6,28 @@ import { ParameterParser } from './ParameterParser';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ViewFactory } from '../views/ViewFactory';
+import { LoadingManager } from '../views/components/LoadingSpinner';
+import { ErrorManager } from '../views/components/ErrorPlaceholder';
+import { EmptyState } from '../views/components/EmptyState';
+import { ImageValidator } from '../utils/ImageValidator';
+import { FileSizeValidator } from '../utils/FileSizeValidator';
+
+export interface IGalleryProcessingOptions {
+  showLoadingFeedback?: boolean;
+  enableValidation?: boolean;
+  maxRetries?: number;
+  timeoutMs?: number;
+}
+
+export interface IGalleryRenderResult {
+  success: boolean;
+  galleryInstance?: GalleryInstance;
+  imagesFound: number;
+  imagesValid: number;
+  imagesLoaded: number;
+  errors: string[];
+  processingTimeMs: number;
+}
 
 /**
  * Gallery processor for handling obs-gallery code blocks
@@ -14,58 +36,365 @@ import { ViewFactory } from '../views/ViewFactory';
 export class GalleryProcessor {
     private contentScanner: IContentScanner;
     private viewFactory: ViewFactory;
+    private imageValidator: ImageValidator;
+    private fileSizeValidator: FileSizeValidator;
     private activeGalleries: Map<string, GalleryInstance> = new Map();
+
+    private readonly DEFAULT_OPTIONS: Required<IGalleryProcessingOptions> = {
+        showLoadingFeedback: true,
+        enableValidation: true,
+        maxRetries: 3,
+        timeoutMs: 30000
+    };
 
     constructor(contentScanner: IContentScanner, viewFactory: ViewFactory) {
         this.contentScanner = contentScanner;
         this.viewFactory = viewFactory;
+        this.imageValidator = new ImageValidator();
+        this.fileSizeValidator = new FileSizeValidator();
     }
 
     /**
-     * Process obs-gallery code block
+     * Process obs-gallery code block with comprehensive pipeline
      */
     async processCodeBlock(
         source: string, 
         el: HTMLElement, 
-        ctx: MarkdownPostProcessorContext
-    ): Promise<void> {
-        try {
-                        // Clear previous content and show loading
-            (el as any).empty();
-            
-            // Create loading indicator
-            const loadingEl = (el as any).createEl('div', {
-                cls: 'gallery-loading',
-                text: 'Loading gallery...'
-            });
+        ctx: MarkdownPostProcessorContext,
+        options: IGalleryProcessingOptions = {}
+    ): Promise<IGalleryRenderResult> {
+        const startTime = Date.now();
+        const opts = { ...this.DEFAULT_OPTIONS, ...options };
+        const result: IGalleryRenderResult = {
+            success: false,
+            imagesFound: 0,
+            imagesValid: 0,
+            imagesLoaded: 0,
+            errors: [],
+            processingTimeMs: 0
+        };
 
-            // Parse configuration
-            const config = await this.parseConfiguration(source);
+        let loadingManager: LoadingManager | null = null;
+        let errorManager: ErrorManager | null = null;
+
+        try {
+            // Clear previous content (use safe clear for environments where `empty()` helper is unavailable)
+            if ((el as any).empty && typeof (el as any).empty === 'function') {
+                (el as any).empty();
+            } else {
+                while (el.firstChild) el.removeChild(el.firstChild);
+            }
             
-            // Validate configuration
-            this.validateConfiguration(config);
-            
-            // Create gallery
-            await this.createGallery(config, el);
-            
-            // Remove loading state
-            loadingEl.remove();
-            
+            // Initialize managers
+            if (opts.showLoadingFeedback) {
+                loadingManager = new LoadingManager(el);
+                errorManager = new ErrorManager(el);
+            }
+
+            // Step 1: Parse and validate configuration
+            const config = await this.parseAndValidateConfiguration(source, result, loadingManager);
+            if (result.errors.length > 0) {
+                throw new Error(`Configuration errors: ${result.errors.join(', ')}`);
+            }
+
+            // Step 2: Scan for images
+            const images = await this.scanForImages(config, result, opts, loadingManager);
+            if (images.length === 0) {
+                this.showProfessionalEmptyState(el, config, result);
+                result.processingTimeMs = Date.now() - startTime;
+                return result;
+            }
+
+            // Step 3: Validate images
+            const validImages = await this.validateImages(images, result, opts, loadingManager);
+            if (validImages.length === 0) {
+                result.errors.push('No images passed validation');
+                throw new Error('No valid images after validation');
+            }
+
+            // Step 4: Create and render gallery
+            const galleryInstance = await this.createAndRenderGallery(
+                config, el, validImages, result, opts, loadingManager
+            );
+
+            result.success = true;
+            result.galleryInstance = galleryInstance;
+            result.processingTimeMs = Date.now() - startTime;
+
+            // Clean up loading state
+            if (loadingManager) {
+                loadingManager.stopAllLoading();
+            }
+
+            return result;
+
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            result.errors.push(errorMessage);
+            result.processingTimeMs = Date.now() - startTime;
+
             console.error('Error processing gallery code block:', error);
             this.handleProcessingError(error as Error, el);
+
+            return result;
+
+        } finally {
+            // Clean up managers
+            if (loadingManager) {
+                loadingManager.stopAllLoading();
+            }
         }
     }
 
     /**
-     * Parse configuration from code block content
+     * Legacy method for backward compatibility
      */
-    private async parseConfiguration(source: string): Promise<IGalleryConfig> {
-        try {
-            return ParameterParser.parseAndValidate(source);
-        } catch (error) {
-            throw new Error(`Configuration parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+    async processCodeBlockLegacy(
+        source: string, 
+        el: HTMLElement, 
+        ctx: MarkdownPostProcessorContext
+    ): Promise<void> {
+        const result = await this.processCodeBlock(source, el, ctx);
+        if (!result.success) {
+            console.error('Gallery processing failed:', result.errors);
         }
+    }
+
+    /**
+     * Step 1: Parse and validate configuration
+     */
+    private async parseAndValidateConfiguration(
+        source: string, 
+        result: IGalleryRenderResult,
+        loadingManager: LoadingManager | null
+    ): Promise<IGalleryConfig> {
+        if (loadingManager) {
+            loadingManager.startLoading('config', { type: 'spinner', text: 'Parsing configuration...' });
+        }
+
+        try {
+            // Parse configuration
+            const config = ParameterParser.parseAndValidate(source);
+            
+            // Validate configuration
+            this.validateConfiguration(config);
+            
+            if (loadingManager) {
+                loadingManager.updateText('config', 'Configuration validated');
+            }
+            
+            return config;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            result.errors.push(`Configuration error: ${errorMessage}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Step 2: Scan for images
+     */
+    private async scanForImages(
+        config: IGalleryConfig,
+        result: IGalleryRenderResult,
+        options: Required<IGalleryProcessingOptions>,
+        loadingManager: LoadingManager | null
+    ) {
+        if (loadingManager) {
+            loadingManager.startLoading('scan', { type: 'dots', text: 'Scanning for images...' });
+        }
+
+        try {
+            const images = await Promise.race([
+                this.contentScanner.scanPath(config.path, config.recursive),
+                new Promise<never>((_, reject) => 
+                    setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
+                )
+            ]);
+
+            result.imagesFound = images.length;
+
+            if (loadingManager && images.length > 0) {
+                loadingManager.updateText('scan', `Found ${images.length} images`);
+            }
+
+            return images;
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            result.errors.push(`Image scanning failed: ${errorMessage}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Step 3: Validate images
+     */
+    private async validateImages(
+        images: any[], 
+        result: IGalleryRenderResult,
+        options: Required<IGalleryProcessingOptions>,
+        loadingManager: LoadingManager | null
+    ) {
+        if (!options.enableValidation) {
+            result.imagesValid = images.length;
+            return images;
+        }
+
+        if (loadingManager) {
+            loadingManager.startLoading('validate', { type: 'pulse', text: `Validating ${images.length} images...` });
+        }
+
+        const validImages: any[] = [];
+        const validationErrors: string[] = [];
+
+        for (let i = 0; i < images.length; i++) {
+            const image = images[i];
+            
+            try {
+                // Update progress
+                if (loadingManager) {
+                    loadingManager.updateText('validate', `Validating image ${i + 1}/${images.length}`);
+                }
+
+                // Validate image format (using simple extension check)
+                const cleanPath = image.path.split('?')[0].split('#')[0];
+                const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
+                const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+                if (!supportedExtensions.includes(extension)) {
+                    validationErrors.push(`Invalid format: ${image.path}`);
+                    continue;
+                }
+
+                // Additional validation for local images
+                if (image.type === 'local') {
+                    const isValid = await this.contentScanner.validateImageSource(image);
+                    if (!isValid) {
+                        validationErrors.push(`Source validation failed: ${image.path}`);
+                        continue;
+                    }
+                }
+
+                validImages.push(image);
+
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                validationErrors.push(`Validation error for ${image.path}: ${errorMessage}`);
+            }
+        }
+
+        result.imagesValid = validImages.length;
+        if (validationErrors.length > 0) {
+            result.errors.push(...validationErrors);
+        }
+
+        if (loadingManager) {
+            loadingManager.updateText('validate', `${validImages.length} images validated`);
+        }
+
+        return validImages;
+    }
+
+    /**
+     * Step 4: Create and render gallery
+     */
+    private async createAndRenderGallery(
+        config: IGalleryConfig,
+        container: HTMLElement,
+        images: any[],
+        result: IGalleryRenderResult,
+        options: Required<IGalleryProcessingOptions>,
+        loadingManager: LoadingManager | null
+    ): Promise<GalleryInstance> {
+        if (loadingManager) {
+            loadingManager.startLoading('render', { type: 'skeleton', text: `Rendering ${images.length} images...` });
+        }
+
+        try {
+            // Create view
+            const view = this.viewFactory.createView(config.view || 'thumbnail', container);
+            
+            // Create gallery instance
+            const galleryInstance = new GalleryInstance(config, container, view, images);
+            
+            // Store active gallery
+            this.activeGalleries.set(galleryInstance.id, galleryInstance);
+            
+            // Setup cleanup when container is removed
+            this.setupGalleryCleanup(galleryInstance);
+            
+            // Render gallery with retry logic
+            let retryCount = 0;
+            while (retryCount <= options.maxRetries) {
+                try {
+                    await view.update(images);
+                    view.render();
+                    
+                    // Wait for initial render
+                    await this.waitForInitialRender(view, options.timeoutMs);
+                    
+                    // Get stats if available (fallback for interface compatibility)
+                    const stats = (view as any).getStats?.() || { loadedImages: images.length };
+                    result.imagesLoaded = stats.loadedImages;
+                    
+                    if (loadingManager) {
+                        loadingManager.updateText('render', `Rendered ${result.imagesLoaded} images`);
+                    }
+
+                    return galleryInstance;
+
+                } catch (renderError) {
+                    retryCount++;
+                    if (retryCount > options.maxRetries) {
+                        throw renderError;
+                    }
+                    
+                    console.warn(`Render attempt ${retryCount} failed, retrying...`, renderError);
+                    
+                    if (loadingManager) {
+                        loadingManager.updateText('render', `Retrying render (${retryCount}/${options.maxRetries})...`);
+                    }
+                    
+                    // Wait before retry
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                }
+            }
+
+            throw new Error('Max retries exceeded');
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Gallery rendering failed: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Wait for initial render to complete
+     */
+    private async waitForInitialRender(view: IGalleryView, timeoutMs: number): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Render timeout'));
+            }, timeoutMs);
+
+            // Check render status periodically
+            const checkInterval = setInterval(() => {
+                const stats = (view as any).getStats?.() || { loadedImages: 0, errorImages: 0 };
+                if (stats.loadedImages > 0 || stats.errorImages > 0) {
+                    clearTimeout(timeout);
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+
+            // Also resolve immediately if view reports ready
+            const stats = (view as any).getStats?.() || { totalImages: 0 };
+            if (stats.totalImages > 0) {
+                clearTimeout(timeout);
+                clearInterval(checkInterval);
+                resolve();
+            }
+        });
     }
 
     /**
@@ -88,7 +417,14 @@ export class GalleryProcessor {
             const images = await this.contentScanner.scanPath(config.path, config.recursive);
             
             if (images.length === 0) {
-                this.showEmptyGallery(container, config.path);
+                this.showProfessionalEmptyState(container, config, {
+                    success: false,
+                    imagesFound: 0,
+                    imagesValid: 0,
+                    imagesLoaded: 0,
+                    errors: ['No images found in the specified path'],
+                    processingTimeMs: 0
+                });
                 return;
             }
 
@@ -116,30 +452,100 @@ export class GalleryProcessor {
     }
 
     /**
-     * Show empty gallery state
+     * Show professional empty state using EmptyState component
      */
-    private showEmptyGallery(container: HTMLElement, path: string): void {
-        const emptyEl = (container as any).createEl('div', { cls: 'gallery-empty' });
+    private showProfessionalEmptyState(
+        container: HTMLElement, 
+        config: IGalleryConfig, 
+        result: IGalleryRenderResult
+    ): void {
+        // Clear container
+        (container as any).empty();
+
+        // Determine the type of empty state based on the errors
+        const hasPathError = result.errors.some(error => 
+            error.includes('not found') || error.includes('Path not found')
+        );
+        const hasValidationError = result.errors.some(error => 
+            error.includes('validation') || error.includes('Validation')
+        );
+        const hasPermissionError = result.errors.some(error => 
+            error.includes('permission') || error.includes('Access')
+        );
+
+        if (hasPathError) {
+            EmptyState.createPathNotFound(container, config.path, [
+                'Check that the folder exists in your vault',
+                'Verify the path spelling and capitalization',
+                'Make sure you have access to the folder'
+            ]);
+        } else if (hasValidationError) {
+            EmptyState.createValidationFailed(
+                container, 
+                config.path, 
+                result.imagesFound,
+                result.errors,
+                () => this.refreshGalleryByConfig(container, config)
+            );
+        } else if (hasPermissionError) {
+            EmptyState.createPermissionDenied(container, config.path);
+        } else {
+            // No images found
+            EmptyState.createNoImages(
+                container,
+                config.path,
+                config.recursive || true,
+                () => this.refreshGalleryByConfig(container, config)
+            );
+        }
+    }
+
+    /**
+     * Refresh gallery by rescanning (for empty state retry)
+     */
+    private async refreshGalleryByConfig(container: HTMLElement, config: IGalleryConfig): Promise<void> {
+        try {
+            // Clear cache for this path
+            this.contentScanner.invalidateCache(config.path);
+            
+            // Re-process the gallery
+            await this.processCodeBlock(
+                this.serializeConfig(config), 
+                container, 
+                {} as MarkdownPostProcessorContext
+            );
+        } catch (error) {
+            console.error('Error refreshing gallery:', error);
+        }
+    }
+
+    /**
+     * Serialize config back to string format for re-processing
+     */
+    private serializeConfig(config: IGalleryConfig): string {
+        const lines: string[] = [];
         
-        emptyEl.createEl('div', { 
-            cls: 'gallery-empty-icon',
-            text: '🖼️'
-        });
+        lines.push(`path: ${config.path}`);
         
-        emptyEl.createEl('div', { 
-            cls: 'gallery-empty-message',
-            text: 'No images found'
-        });
+        if (config.view && config.view !== 'thumbnail') {
+            lines.push(`view: ${config.view}`);
+        }
         
-        emptyEl.createEl('div', { 
-            cls: 'gallery-empty-path',
-            text: `Path: ${path}`
-        });
+        if (config.recursive !== undefined && !config.recursive) {
+            lines.push(`recursive: false`);
+        }
         
-        emptyEl.createEl('div', { 
-            cls: 'gallery-empty-help',
-            text: 'Make sure the path exists and contains supported image files (JPG, PNG, GIF, WebP)'
-        });
+        // Add any additional config properties that exist
+        const configAny = config as any;
+        if (configAny.limit && configAny.limit > 0) {
+            lines.push(`limit: ${configAny.limit}`);
+        }
+        
+        if (configAny.sort && configAny.sort !== 'name') {
+            lines.push(`sort: ${configAny.sort}`);
+        }
+        
+        return lines.join('\n');
     }
 
     /**
@@ -316,7 +722,7 @@ export class GalleryProcessor {
         let config: IGalleryConfig | undefined;
         
         try {
-            config = await this.parseConfiguration(source);
+            config = ParameterParser.parseAndValidate(source);
             this.validateConfiguration(config);
             return { isValid: true, config, errors: [] };
         } catch (error) {

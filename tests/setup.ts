@@ -1,5 +1,5 @@
 // Jest setup file for Obsidian plugin testing
-import 'jest-dom/extend-expect';
+import '@testing-library/jest-dom';
 
 // Mock Obsidian API
 global.app = {

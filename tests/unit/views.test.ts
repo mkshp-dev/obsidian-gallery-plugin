@@ -3,31 +3,36 @@ import { GridView } from '../../src/views/GridView';
 import { IImageSource } from '../../src/models/interfaces';
 
 // Minimal mock container that implements a subset of Obsidian's DOM helpers
-class MockContainer extends HTMLElement {
-  constructor() {
-    super();
-  }
+function createMockContainer(): HTMLElement & any {
+  const el = document.createElement('div') as HTMLElement & any;
 
-  createEl(tag: string, options?: any) {
-    const el = document.createElement(tag);
-    if (options && options.cls) el.className = options.cls;
-    if (options && options.text) el.textContent = options.text;
-    if (options && options.attr) {
-      Object.keys(options.attr).forEach(k => el.setAttribute(k, options.attr[k]));
-    }
-    this.appendChild(el);
-    return el;
-  }
+  // Helper to augment any element with the small subset of Obsidian helpers
+  const augment = (node: HTMLElement & any) => {
+    node.createEl = (tag: string, options?: any) => {
+      const child = document.createElement(tag) as HTMLElement & any;
+      if (options && options.cls) child.className = options.cls;
+      if (options && options.text) child.textContent = options.text;
+      if (options && options.attr) {
+        Object.keys(options.attr).forEach((k: string) => child.setAttribute(k, options.attr[k]));
+      }
+      // augment child so nested createEl calls work
+      augment(child);
+      node.appendChild(child);
+      return child;
+    };
 
-  empty() {
-    while (this.firstChild) this.removeChild(this.firstChild);
-  }
+    node.empty = () => {
+      while (node.firstChild) node.removeChild(node.firstChild);
+    };
 
-  addClass(cls: string) { this.classList.add(cls); }
-  removeClass(cls: string) { this.classList.remove(cls); }
+    node.addClass = (cls: string) => node.classList.add(cls);
+    node.removeClass = (cls: string) => node.classList.remove(cls);
+    node.q = (selector: string) => node.querySelector(selector);
 
-  // helper to find elements by selector
-  q(selector: string) { return this.querySelector(selector); }
+    return node;
+  };
+
+  return augment(el);
 }
 
 function makeImage(path: string, state: 'pending' | 'loading' | 'loaded' | 'error'): IImageSource {
@@ -49,7 +54,7 @@ function makeImage(path: string, state: 'pending' | 'loading' | 'loaded' | 'erro
 
 describe('Gallery Views - getStats', () => {
   test('CarouselView reports correct stats from model', () => {
-    const container = new MockContainer();
+  const container = createMockContainer();
     const view = new CarouselView(container as any);
 
     const images = [
@@ -70,7 +75,7 @@ describe('Gallery Views - getStats', () => {
   });
 
   test('GridView reports correct stats from model and DOM fallback', () => {
-    const container = new MockContainer();
+  const container = createMockContainer();
     const view = new GridView(container as any);
 
     const images = [

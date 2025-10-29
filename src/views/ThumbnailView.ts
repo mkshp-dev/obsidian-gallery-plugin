@@ -54,9 +54,9 @@ export class ThumbnailView extends GalleryView {
             cls: 'gallery-thumbnail-grid'
         });
 
-        // Render each image thumbnail
-        this._images.forEach(image => {
-            this.renderThumbnailItem(gridContainer, image);
+        // Render each image thumbnail (pass index for size variations)
+        this._images.forEach((image, idx) => {
+            this.renderThumbnailItem(gridContainer, image, idx);
         });
 
         console.log(`Thumbnail view rendered with ${this._images.length} images`);
@@ -80,7 +80,7 @@ export class ThumbnailView extends GalleryView {
     /**
      * Render individual thumbnail item
      */
-    private renderThumbnailItem(container: HTMLElement, image: IImageSource): void {
+    private renderThumbnailItem(container: HTMLElement, image: IImageSource, idx: number): void {
         const itemEl = container.createEl('div', {
             cls: 'gallery-thumbnail-item',
             attr: {
@@ -89,6 +89,15 @@ export class ThumbnailView extends GalleryView {
                 'tabindex': '0'
             }
         });
+
+        // Add occasional larger/tall items for a more varied masonry look
+        // Use less frequent intervals so large items are rarer and don't
+        // dominate vertical space.
+        if (idx % 12 === 0) {
+            itemEl.classList.add('gallery-thumbnail-item--large');
+        } else if (idx % 23 === 0) {
+            itemEl.classList.add('gallery-thumbnail-item--tall');
+        }
 
         // Accessibility: expose as button and provide an accessible name
         itemEl.setAttribute('role', 'button');
@@ -128,6 +137,10 @@ export class ThumbnailView extends GalleryView {
                 'loading': 'lazy'
             }
         });
+
+        // Caption overlay (visible on hover/focus)
+        const caption = itemEl.createEl('div', { cls: 'gallery-thumbnail-caption' });
+        caption.textContent = image.displayName || '';
 
         // Set initial opacity to 0 for fade-in effect
         imgEl.style.opacity = '0';
@@ -206,6 +219,10 @@ export class ThumbnailView extends GalleryView {
             imgEl.src = img.src;
             imgEl.style.opacity = '1';
         }
+
+        // We intentionally do not compute grid-row spans here anymore.
+        // Thumbnails use a fixed-ish tile height and images are centered with
+        // object-fit:contain to preserve aspect ratio while rendering smaller.
 
         // Remove loading state
         this.showLoadedState(container, image);

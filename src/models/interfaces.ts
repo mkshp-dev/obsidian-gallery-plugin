@@ -12,6 +12,9 @@ export interface IGalleryConfig {
   
   /** Include subdirectories (default: true) */
   recursive?: boolean;
+  
+  /** Optional list of external image URLs */
+  urls?: string[];
 }
 
 export interface IImageSource {

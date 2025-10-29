@@ -1,9 +1,58 @@
-import { Plugin, TFile } from 'obsidian';
+import { Plugin, TFile, PluginSettingTab, Setting, App } from 'obsidian';
 import { ContentScanner } from './src/services/ContentScanner';
 import { ViewFactory } from './src/views/ViewFactory';
 import { GalleryProcessor } from './src/processors/GalleryProcessor';
 import { VaultWatcher } from './src/utils/VaultWatcher';
 import { LazyLoader } from './src/utils/LazyLoader';
+
+/**
+ * Plugin settings
+ */
+interface GalleryPluginSettings {
+    allowRemoteImages: boolean;
+    remoteLoadTimeoutMs: number;
+}
+
+const DEFAULT_SETTINGS: GalleryPluginSettings = {
+    allowRemoteImages: false,
+    remoteLoadTimeoutMs: 30000
+};
+
+class GallerySettingsTab extends PluginSettingTab {
+    plugin: GalleryPlugin;
+    constructor(app: App, plugin: GalleryPlugin) {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
+
+    display(): void {
+        const { containerEl } = this;
+        containerEl.empty();
+
+        containerEl.createEl('h2', { text: 'Gallery Plugin Settings' });
+
+        new Setting(containerEl)
+            .setName('Allow remote images')
+            .setDesc('Enable loading images from external URLs listed in the `urls:` field of the gallery config. This is opt-in to protect privacy.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.allowRemoteImages)
+                .onChange(async (value) => {
+                    this.plugin.settings.allowRemoteImages = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Remote load timeout (ms)')
+            .setDesc('Timeout in milliseconds for loading remote images')
+            .addText(text => text
+                .setValue(String(this.plugin.settings.remoteLoadTimeoutMs))
+                .onChange(async (value) => {
+                    const n = parseInt(value, 10) || DEFAULT_SETTINGS.remoteLoadTimeoutMs;
+                    this.plugin.settings.remoteLoadTimeoutMs = n;
+                    await this.plugin.saveSettings();
+                }));
+    }
+}
 
 export default class GalleryPlugin extends Plugin {
     private vaultWatcher: VaultWatcher | null = null;
@@ -11,9 +60,12 @@ export default class GalleryPlugin extends Plugin {
     private contentScanner: ContentScanner | null = null;
     private viewFactory: ViewFactory | null = null;
     private galleryProcessor: GalleryProcessor | null = null;
+    public settings: GalleryPluginSettings = DEFAULT_SETTINGS;
     
     async onload() {
         console.log('Loading Gallery Plugin');
+
+        await this.loadSettings();
 
         // Initialize core services
         this.contentScanner = new ContentScanner(this.app.vault);
@@ -52,7 +104,19 @@ export default class GalleryPlugin extends Plugin {
             }
         );
 
+        // Register settings tab
+        this.addSettingTab(new GallerySettingsTab(this.app, this));
+
         console.log('Gallery Plugin loaded successfully');
+    }
+
+    async loadSettings() {
+        const data = await this.loadData();
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, data || {});
+    }
+
+    async saveSettings() {
+        await this.saveData(this.settings);
     }
 
     onunload() {
@@ -130,7 +194,8 @@ export default class GalleryPlugin extends Plugin {
                 showLoadingFeedback: true,
                 enableValidation: true,
                 maxRetries: 3,
-                timeoutMs: 30000
+                timeoutMs: this.settings.remoteLoadTimeoutMs || 30000,
+                allowRemoteImages: !!this.settings.allowRemoteImages
             });
 
             if (!result.success) {

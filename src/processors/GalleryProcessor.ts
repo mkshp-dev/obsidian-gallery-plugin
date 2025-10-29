@@ -11,12 +11,14 @@ import { ErrorManager } from '../views/components/ErrorPlaceholder';
 import { EmptyState } from '../views/components/EmptyState';
 import { ImageValidator } from '../utils/ImageValidator';
 import { FileSizeValidator } from '../utils/FileSizeValidator';
+import { ImageSource } from '../models/ImageSource';
 
 export interface IGalleryProcessingOptions {
   showLoadingFeedback?: boolean;
   enableValidation?: boolean;
   maxRetries?: number;
   timeoutMs?: number;
+    allowRemoteImages?: boolean;
 }
 
 export interface IGalleryRenderResult {
@@ -45,6 +47,7 @@ export class GalleryProcessor {
         enableValidation: true,
         maxRetries: 3,
         timeoutMs: 30000
+        ,allowRemoteImages: false
     };
 
     constructor(contentScanner: IContentScanner, viewFactory: ViewFactory) {
@@ -108,6 +111,14 @@ export class GalleryProcessor {
             // Step 3: Validate images
             const validImages = await this.validateImages(images, result, opts, loadingManager);
             if (validImages.length === 0) {
+                // If there were external images but remote loading is disabled, give a clearer hint
+                const hadExternal = images.some((img: any) => img.type === 'external');
+                if (hadExternal && !opts.allowRemoteImages) {
+                    const msg = 'No valid images: external URLs were present but remote image loading is disabled in plugin settings.';
+                    result.errors.push(msg);
+                    throw new Error(msg);
+                }
+
                 result.errors.push('No images passed validation');
                 throw new Error('No valid images after validation');
             }
@@ -205,12 +216,35 @@ export class GalleryProcessor {
         }
 
         try {
-            const images = await Promise.race([
-                this.contentScanner.scanPath(config.path, config.recursive),
-                new Promise<never>((_, reject) => 
-                    setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
-                )
-            ]);
+            // If a path is provided, scan the vault; otherwise start with empty list
+            let images: any[] = [];
+
+            if (config.path && config.path.trim() !== '') {
+                const scanned = await Promise.race([
+                    this.contentScanner.scanPath(config.path, config.recursive),
+                    new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
+                    )
+                ]);
+                images = scanned || [];
+            }
+
+            // Include any external URLs provided in the config (merge, avoid duplicates)
+            const configAny = config as any;
+            if (Array.isArray(configAny.urls) && configAny.urls.length > 0) {
+                for (const url of configAny.urls) {
+                    try {
+                        const external = ImageSource.fromUrl(url as string);
+                        // Avoid duplicates by path
+                        if (!images.find(img => img.path === external.path)) {
+                            images.push(external);
+                        }
+                    } catch (err) {
+                        // Ignore invalid URL entries but record error
+                        result.errors.push(`Invalid URL in urls list: ${url}`);
+                    }
+                }
+            }
 
             result.imagesFound = images.length;
 
@@ -257,22 +291,40 @@ export class GalleryProcessor {
                     loadingManager.updateText('validate', `Validating image ${i + 1}/${images.length}`);
                 }
 
-                // Validate image format (using simple extension check)
-                const cleanPath = image.path.split('?')[0].split('#')[0];
-                const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
-                const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-                if (!supportedExtensions.includes(extension)) {
-                    validationErrors.push(`Invalid format: ${image.path}`);
-                    continue;
-                }
-
-                // Additional validation for local images
+                // Additional validation logic
                 if (image.type === 'local') {
+                    // Validate image format (using simple extension check for local files)
+                    const cleanPath = image.path.split('?')[0].split('#')[0];
+                    const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
+                    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+                    if (!supportedExtensions.includes(extension)) {
+                        validationErrors.push(`Invalid format: ${image.path}`);
+                        continue;
+                    }
+
+                    // Validate local source accessibility via scanner
                     const isValid = await this.contentScanner.validateImageSource(image);
                     if (!isValid) {
                         validationErrors.push(`Source validation failed: ${image.path}`);
                         continue;
                     }
+
+                } else if (image.type === 'external') {
+                    // External images require plugin opt-in
+                    if (!options.allowRemoteImages) {
+                        validationErrors.push(`External image blocked by settings: ${image.path}`);
+                        continue;
+                    }
+
+                    // Accept external URLs even if they lack a file extension.
+                    // Basic check: ensure the URL is syntactically valid.
+                    try {
+                        new URL(image.path);
+                    } catch {
+                        validationErrors.push(`Invalid external URL: ${image.path}`);
+                        continue;
+                    }
+                    // Note: Content-type validation (HEAD request) could be added later.
                 }
 
                 validImages.push(image);
@@ -543,6 +595,14 @@ export class GalleryProcessor {
         
         if (configAny.sort && configAny.sort !== 'name') {
             lines.push(`sort: ${configAny.sort}`);
+        }
+
+        if (Array.isArray(configAny.urls) && configAny.urls.length > 0) {
+            // Serialize urls as YAML list
+            lines.push('urls:');
+            for (const u of configAny.urls) {
+                lines.push(`  - ${u}`);
+            }
         }
         
         return lines.join('\n');

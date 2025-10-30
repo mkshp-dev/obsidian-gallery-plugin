@@ -386,6 +386,20 @@ export class GalleryProcessor {
         }
 
         try {
+            // If there's an existing gallery for the same path, remove it first to
+            // avoid duplicate instances when the markdown post-processor runs
+            // multiple times during mode toggles. Matching by config.path is a
+            // reasonable heuristic for the same code block instance.
+            try {
+                const existing = Array.from(this.activeGalleries.values()).find(g => g.config.path === config.path && g.id !== undefined);
+                if (existing) {
+                    console.log(`GalleryProcessor: found existing gallery for path ${config.path} (id=${existing.id}), destroying before creating new instance.`);
+                    this.destroyGallery(existing.id);
+                }
+            } catch (e) {
+                // swallow errors to avoid breaking rendering
+            }
+
             // Create view
             const view = this.viewFactory.createView(config.view || 'thumbnail', container);
             
@@ -697,7 +711,8 @@ export class GalleryProcessor {
             // Defer checks to allow transient DOM moves (sidebar toggle, layout shifts)
             // to settle. Use a few retries with exponential backoff before deciding
             // the container is permanently gone.
-            const attempts = [200, 500, 1000, 2000];
+            // Retry schedule (ms) — extended to handle slower reattachment scenarios
+            const attempts = [200, 500, 1000, 2000, 5000, 10000];
             let attemptIndex = 0;
 
             const tryCheck = () => {
@@ -711,8 +726,27 @@ export class GalleryProcessor {
 
                     attemptIndex++;
                     if (attemptIndex >= attempts.length) {
-                        // final check failed — consider it removed
-                        this.destroyGallery(gallery.id);
+                        // final check failed — consider it removed for now but allow a grace
+                        // period to support Obsidian re-rendering cycles (e.g., switching
+                        // between editor/preview). Mark the gallery as detached and
+                        // schedule a final destruction after a longer grace period so
+                        // that the markdown post-processor can reattach a new container
+                        // without losing the opportunity to recreate the gallery.
+                        console.log(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy.`);
+                        try { (gallery as any)._detached = true; } catch {}
+
+                        const GRACE_PERIOD_MS = 30_000; // 30 seconds
+                        setTimeout(() => {
+                            try {
+                                if ((gallery as any)._detached) {
+                                    console.log(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
+                                    this.destroyGallery(gallery.id);
+                                }
+                            } catch (e) {
+                                try { this.destroyGallery(gallery.id); } catch {}
+                            }
+                        }, GRACE_PERIOD_MS);
+
                         try { observer.disconnect(); } catch {}
                         return;
                     }

@@ -65,8 +65,36 @@ path: Projects/WebDev/Screenshots
 
 | Parameter | Description | Default | Example |
 |-----------|-------------|---------|---------|
-| `path` | Folder or file path (required) | - | `Images/Photos` |
+| `path` | Folder or file path (required when not using `urls`) | - | `Images/Photos` |
 | `view` | Display style | `thumbnail` | `thumbnail` |
+| `urls` | Optional list of remote image URLs (opt-in). Use when you want to reference images hosted externally. | - | see example below |
+| `allowRemoteImages` | Plugin setting (opt-in). When false, remote images from `urls` will be blocked and a helpful message will be shown. This is controlled from the plugin settings page. | `false` | n/a |
+| `remoteLoadTimeoutMs` | Plugin setting controlling how long (ms) the plugin will wait for a remote image to load before giving up. Applies to images in `urls`. | `10000` | n/a |
+
+## 🌐 Remote images (opt-in)
+
+You can reference externally hosted images using the `urls:` YAML list in your `obs-gallery` code block. Remote images are disabled by default to preserve privacy. The plugin exposes these related settings in the Gallery Plugin settings panel:
+
+- `Allow remote images` (boolean) — enable loading images from external URLs.
+- `Remote load timeout (ms)` — how long the plugin waits for remote images before giving up.
+- `Validate remote content type` (optional) — when enabled the plugin will perform a lightweight HEAD request to verify the remote resource's Content-Type header looks like an image (e.g., `image/jpeg`) before attempting to load it. This can reduce accidental attempts to load non-image resources, at the cost of one extra small network request per URL.
+
+Example `urls:` usage:
+
+````markdown
+```obs-gallery
+view: thumbnail
+urls:
+  - https://example.com/photos/cover.jpg
+  - https://cdn.example.org/gallery/img123.webp
+```
+````
+
+Notes:
+
+- The plugin performs only syntactic validation of URLs by default. Enabling content-type validation activates the HEAD check described above.
+- Remote images are not automatically downloaded into your vault. If you need permanent local copies, mirror the assets manually.
+
 
 ## 🖼️ Supported Formats
 
@@ -158,17 +186,13 @@ obsidian-gallery-plugin/
 ### Future Enhancements
 - 🔄 Carousel view mode
 - 🔄 Grid layout options
-- 🔄 External URL support
+- ✅ External URL support (opt-in, timeouts)
 - 🔄 Image filtering and sorting
 - 🔄 Batch operations
 - 🔄 Settings panel
 
-## 🤝 Contributing
-
 Contributions are welcome! Please feel free to:
 
-- Report bugs or request features via GitHub Issues
-- Submit pull requests for improvements
 - Share usage examples and feedback
 - Help with documentation
 

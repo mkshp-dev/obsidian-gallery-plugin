@@ -28,7 +28,7 @@ export class GalleryInstance implements IGalleryInstance {
         this._images = [...images];
         
         // Initialize container
-        this.initializeContainer();
+    this.initializeContainer();
         
         // Update counters
         this.updateCounters();
@@ -45,10 +45,11 @@ export class GalleryInstance implements IGalleryInstance {
      * Initialize container with gallery class and data attributes
      */
     private initializeContainer(): void {
-        this.container.addClass('gallery-container');
-        this.container.setAttribute('data-gallery-id', this.id);
-        this.container.setAttribute('data-gallery-type', this.config.view || 'thumbnail');
-        this.container.setAttribute('data-gallery-path', this.config.path);
+        // Support both Obsidian container helpers and plain DOM elements
+        this.addClass(this.container, 'gallery-container');
+        try { this.container.setAttribute('data-gallery-id', this.id); } catch {}
+        try { this.container.setAttribute('data-gallery-type', this.config.view || 'thumbnail'); } catch {}
+        try { this.container.setAttribute('data-gallery-path', this.config.path); } catch {}
     }
 
     /**
@@ -175,11 +176,9 @@ export class GalleryInstance implements IGalleryInstance {
      * Show error message in gallery container
      */
     private showError(message: string): void {
-        this.container.empty();
-        this.container.createEl('div', {
-            text: message,
-            cls: 'gallery-error'
-        });
+        this.emptyElement(this.container);
+        const err = this.createElement(this.container, 'div', { cls: 'gallery-error', text: message });
+        return;
     }
 
     /**
@@ -188,6 +187,55 @@ export class GalleryInstance implements IGalleryInstance {
     private triggerEvent(eventType: string, data: any): void {
         const event = new CustomEvent(eventType, { detail: data });
         this.container.dispatchEvent(event);
+    }
+
+    /**
+     * Helper to create an element into a parent supporting Obsidian helpers or plain DOM
+     */
+    private createElement(parent: HTMLElement, tag: string = 'div', options?: any): HTMLElement {
+        const anyParent = parent as any;
+        if (anyParent.createEl && typeof anyParent.createEl === 'function') {
+            return anyParent.createEl(tag, options || {});
+        }
+
+        const el = document.createElement(tag);
+        if (options) {
+            if (options.cls) el.className = options.cls;
+            if (options.text) el.textContent = options.text;
+            if (options.attr) {
+                for (const k of Object.keys(options.attr)) {
+                    try { el.setAttribute(k, String(options.attr[k])); } catch {}
+                }
+            }
+        }
+        parent.appendChild(el);
+        return el;
+    }
+
+    private addClass(el: HTMLElement, cls: string) {
+        const anyEl = el as any;
+        if (anyEl.addClass && typeof anyEl.addClass === 'function') {
+            anyEl.addClass(cls);
+            return;
+        }
+        try { el.classList.add(cls); } catch {}
+    }
+
+    private removeClass(el: HTMLElement, cls: string) {
+        const anyEl = el as any;
+        if (anyEl.removeClass && typeof anyEl.removeClass === 'function') {
+            anyEl.removeClass(cls);
+            return;
+        }
+        try { el.classList.remove(cls); } catch {}
+    }
+
+    private emptyElement(el: HTMLElement) {
+        const anyEl = el as any;
+        if (anyEl.empty && typeof anyEl.empty === 'function') {
+            try { anyEl.empty(); return; } catch {}
+        }
+        while (el.firstChild) el.removeChild(el.firstChild);
     }
 
     /**
@@ -287,12 +335,12 @@ export class GalleryInstance implements IGalleryInstance {
             console.error('Error destroying gallery view:', error);
         }
         
-        // Clear container
-        this.container.empty();
-        this.container.removeClass('gallery-container');
-        this.container.removeAttribute('data-gallery-id');
-        this.container.removeAttribute('data-gallery-type');
-        this.container.removeAttribute('data-gallery-path');
+    // Clear container (support plain DOM)
+    this.emptyElement(this.container);
+    this.removeClass(this.container, 'gallery-container');
+    try { this.container.removeAttribute('data-gallery-id'); } catch {}
+    try { this.container.removeAttribute('data-gallery-type'); } catch {}
+    try { this.container.removeAttribute('data-gallery-path'); } catch {}
         
         // Clear references
         this._images = [];

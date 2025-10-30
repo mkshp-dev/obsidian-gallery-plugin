@@ -187,18 +187,25 @@ export class ThumbnailView extends GalleryView {
                 this.onImageError(image, container, new Error('Failed to load image'));
             };
 
-            // Set timeout for external URLs
-            if (image.type === 'external') {
-                setTimeout(() => {
-                    if (image.loadState === 'loading') {
-                        img.onload = null;
-                        img.onerror = null;
-                        this.onImageError(image, container, new Error('Image loading timed out'));
-                    }
-                }, 10000); // 10 second timeout
-            }
+            // Block external images when remote loading is disabled
+                if (image.type === 'external' && !this.allowRemoteImages) {
+                this.onImageError(image, container, new Error('External images are blocked by settings'));
+            } else {
+                // Set timeout for external URLs (use view-provided timeout when available)
+                let timeoutHandle: any = null;
+                if (image.type === 'external') {
+                        const timeoutMs = this.remoteLoadTimeoutMs ?? 10000;
+                    timeoutHandle = setTimeout(() => {
+                        if (image.loadState === 'loading') {
+                            img.onload = null;
+                            img.onerror = null;
+                            this.onImageError(image, container, new Error('Image loading timed out'));
+                        }
+                    }, timeoutMs);
+                }
 
-            img.src = image.getDisplayUrl();
+                img.src = image.getDisplayUrl();
+            }
 
         } catch (error) {
             this.onImageError(image, container, error as Error);
@@ -381,14 +388,51 @@ export class ThumbnailView extends GalleryView {
         const imgContainer = (content as any).createEl('div', { cls: 'gallery-modal-image' });
         const img = (imgContainer as any).createEl('img', {
             attr: {
-                'src': image.getDisplayUrl(),
                 'alt': image.displayName
             }
         });
 
-        img.addEventListener('load', () => {
-            (modal as any).addClass && (modal as any).addClass('gallery-modal-loaded');
-        });
+        // Load modal image respecting remote settings and timeout
+        const loadModalImage = (imgEl: HTMLImageElement, srcImage: IImageSource) => {
+            if (srcImage.type === 'external' && !(this as any).allowRemoteImages) {
+                imgEl.alt = 'External image blocked';
+                // Optionally show a placeholder class
+                imgEl.classList.add('gallery-external-blocked');
+                return;
+            }
+
+            const temp = new Image();
+            let timeoutHandle: any = null;
+
+            const onLoad = () => {
+                clearTimeout(timeoutHandle);
+                try { imgEl.src = temp.src; } catch {}
+                (modal as any).addClass && (modal as any).addClass('gallery-modal-loaded');
+                cleanup();
+            };
+
+            const onError = () => {
+                clearTimeout(timeoutHandle);
+                imgEl.alt = 'Failed to load';
+                cleanup();
+            };
+
+            const cleanup = () => {
+                temp.onload = null;
+                temp.onerror = null;
+            };
+
+            temp.onload = onLoad;
+            temp.onerror = onError;
+
+                timeoutHandle = setTimeout(() => {
+                    onError();
+                }, this.remoteLoadTimeoutMs ?? 10000);
+
+            try { temp.src = srcImage.getDisplayUrl(); } catch (e) { onError(); }
+        };
+
+        loadModalImage(img as HTMLImageElement, image);
 
         // Navigation helper: move by delta (-1 or 1)
         const navigate = (delta: number) => {

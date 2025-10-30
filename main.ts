@@ -11,11 +11,13 @@ import { LazyLoader } from './src/utils/LazyLoader';
 interface GalleryPluginSettings {
     allowRemoteImages: boolean;
     remoteLoadTimeoutMs: number;
+    validateRemoteContentType?: boolean;
 }
 
 const DEFAULT_SETTINGS: GalleryPluginSettings = {
     allowRemoteImages: false,
     remoteLoadTimeoutMs: 30000
+    ,validateRemoteContentType: false
 };
 
 class GallerySettingsTab extends PluginSettingTab {
@@ -51,6 +53,16 @@ class GallerySettingsTab extends PluginSettingTab {
                     this.plugin.settings.remoteLoadTimeoutMs = n;
                     await this.plugin.saveSettings();
                 }));
+
+        new Setting(containerEl)
+            .setName('Validate remote content type')
+            .setDesc('When enabled, the plugin will perform a lightweight HEAD request to verify the Content-Type of remote URLs is an image before attempting to load them. This may add a small network request per URL.')
+            .addToggle(toggle => toggle
+                .setValue(!!this.plugin.settings.validateRemoteContentType)
+                .onChange(async (value) => {
+                    this.plugin.settings.validateRemoteContentType = value;
+                    await this.plugin.saveSettings();
+                }));
     }
 }
 
@@ -61,6 +73,7 @@ export default class GalleryPlugin extends Plugin {
     private viewFactory: ViewFactory | null = null;
     private galleryProcessor: GalleryProcessor | null = null;
     public settings: GalleryPluginSettings = DEFAULT_SETTINGS;
+    private _onOpenSettingsRequested: ((e?: Event) => void) | null = null;
     
     async onload() {
         console.log('Loading Gallery Plugin');
@@ -107,6 +120,16 @@ export default class GalleryPlugin extends Plugin {
         // Register settings tab
         this.addSettingTab(new GallerySettingsTab(this.app, this));
 
+        // Listen for requests from views/processors to open Settings
+        this._onOpenSettingsRequested = () => {
+            try {
+                (this.app as any).commands.executeCommandById('app:open-settings');
+            } catch (e) {
+                console.warn('Failed to open settings via command', e);
+            }
+        };
+        document.addEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
+
         console.log('Gallery Plugin loaded successfully');
     }
 
@@ -151,6 +174,11 @@ export default class GalleryPlugin extends Plugin {
             // ViewFactory doesn't have destroy method yet, just null it
             this.viewFactory = null;
         }
+
+        // Remove document listener
+        try {
+            document.removeEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
+        } catch {}
     }
 
     /**
@@ -194,8 +222,9 @@ export default class GalleryPlugin extends Plugin {
                 showLoadingFeedback: true,
                 enableValidation: true,
                 maxRetries: 3,
-                timeoutMs: this.settings.remoteLoadTimeoutMs || 30000,
-                allowRemoteImages: !!this.settings.allowRemoteImages
+                    timeoutMs: this.settings.remoteLoadTimeoutMs || 30000,
+                    allowRemoteImages: !!this.settings.allowRemoteImages,
+                    validateRemoteContentType: !!this.settings.validateRemoteContentType
             });
 
             if (!result.success) {

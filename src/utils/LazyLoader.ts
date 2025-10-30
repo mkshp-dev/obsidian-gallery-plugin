@@ -12,6 +12,8 @@ export interface ILazyLoadOptions {
   placeholderSrc?: string;
   retryAttempts?: number;
   retryDelay?: number;
+  /** Timeout for individual image loads (ms) */
+  timeoutMs?: number;
 }
 
 export interface ILazyLoadResult {
@@ -37,6 +39,7 @@ export class LazyLoader {
     placeholderSrc: '',
     retryAttempts: 3,
     retryDelay: 1000
+    , timeoutMs: 30000
   };
 
   constructor(options: ILazyLoadOptions = {}) {
@@ -209,7 +212,7 @@ export class LazyLoader {
         tempImg.onload = null;
         tempImg.onerror = null;
         reject(new Error(`Image load timeout: ${src}`));
-      }, 30000); // 30 second timeout
+      }, this.options.timeoutMs);
       
       tempImg.onload = () => {
         clearTimeout(timeout);

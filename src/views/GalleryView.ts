@@ -11,6 +11,9 @@ export abstract class GalleryView implements IGalleryView {
     protected _type: 'thumbnail' | 'carousel' | 'grid';
     protected _isDestroyed: boolean = false;
     protected _observers: IntersectionObserver[] = [];
+    // Runtime options (common)
+    protected remoteLoadTimeoutMs: number = 10000;
+    protected allowRemoteImages: boolean = false;
 
     constructor(type: 'thumbnail' | 'carousel' | 'grid', container: HTMLElement) {
         this._type = type;
@@ -36,9 +39,79 @@ export abstract class GalleryView implements IGalleryView {
      * Initialize container with view-specific classes
      */
     protected initializeContainer(): void {
-        this.container.addClass('gallery-view');
-        this.container.addClass(`gallery-${this._type}`);
+        // Be DOM-agnostic: support both Obsidian helper methods and plain DOM elements
+        if ((this.container as any).addClass && typeof (this.container as any).addClass === 'function') {
+            (this.container as any).addClass('gallery-view');
+            (this.container as any).addClass(`gallery-${this._type}`);
+        } else {
+            this.container.classList.add('gallery-view');
+            this.container.classList.add(`gallery-${this._type}`);
+        }
         this.container.setAttribute('data-view-type', this._type);
+    }
+
+    /**
+     * DOM-agnostic helpers for subclasses to use when Obsidian helpers are unavailable
+     */
+    protected emptyElement(el?: HTMLElement): void {
+        const target = el || this.container;
+        if ((target as any).empty && typeof (target as any).empty === 'function') {
+            (target as any).empty();
+            return;
+        }
+        while (target.firstChild) target.removeChild(target.firstChild);
+    }
+
+    protected safeAddClass(el: HTMLElement, ...classes: string[]): void {
+        // Filter out empty or falsy tokens to avoid DOMTokenList.add('') errors
+        const toAdd = classes.filter(c => typeof c === 'string' && c.trim().length > 0);
+        if (toAdd.length === 0) return;
+
+        if ((el as any).addClass && typeof (el as any).addClass === 'function') {
+            toAdd.forEach(c => (el as any).addClass(c));
+        } else {
+            el.classList.add(...toAdd);
+        }
+    }
+
+    protected safeRemoveClass(el: HTMLElement, ...classes: string[]): void {
+        // Avoid passing empty tokens to remove
+        const toRemove = classes.filter(c => typeof c === 'string' && c.trim().length > 0);
+        if (toRemove.length === 0) return;
+
+        if ((el as any).removeClass && typeof (el as any).removeClass === 'function') {
+            toRemove.forEach(c => (el as any).removeClass(c));
+        } else {
+            el.classList.remove(...toRemove);
+        }
+    }
+
+    protected createElement(parent: HTMLElement, tag: string, props?: any): HTMLElement {
+        // If parent provides an external createEl helper (e.g., Obsidian API or test mock),
+        // prefer delegating to it — but avoid delegating to a shim we previously attached,
+        // which would cause infinite recursion. We mark our shims with __galleryShim.
+        if ((parent as any).createEl && typeof (parent as any).createEl === 'function' && !(parent as any).__galleryShim) {
+            return (parent as any).createEl(tag, props);
+        }
+
+        const el = document.createElement(tag);
+        if (props) {
+            if (props.cls) el.className = props.cls;
+            if (props.text) el.textContent = props.text;
+            if (props.attr && typeof props.attr === 'object') {
+                Object.keys(props.attr).forEach(k => el.setAttribute(k, String(props.attr[k])));
+            }
+        }
+        // attach small helper shims so callers using Obsidian-style helpers won't break
+    (el as any).addClass = (c: string) => el.classList.add(c);
+    (el as any).removeClass = (c: string) => el.classList.remove(c);
+    // mark shim so callers know not to delegate back to it
+    (el as any).__galleryShim = true;
+    (el as any).createEl = (t: string, p?: any) => this.createElement(el, t, p);
+    (el as any).createDiv = (p?: any) => this.createElement(el, 'div', p);
+
+        parent.appendChild(el);
+        return el;
     }
 
     /**
@@ -46,6 +119,14 @@ export abstract class GalleryView implements IGalleryView {
      * Must be implemented by subclasses
      */
     abstract render(): void;
+
+    /**
+     * Apply runtime options to the view. Subclasses may override to react immediately.
+     */
+    setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean } = {}): void {
+        if (typeof options.remoteLoadTimeoutMs === 'number') this.remoteLoadTimeoutMs = options.remoteLoadTimeoutMs;
+        if (typeof options.allowRemoteImages === 'boolean') this.allowRemoteImages = options.allowRemoteImages;
+    }
 
     /**
      * Update with new image list
@@ -70,11 +151,11 @@ export abstract class GalleryView implements IGalleryView {
         this._observers.forEach(observer => observer.disconnect());
         this._observers = [];
 
-        // Clear container
-        this.container.empty();
-        this.container.removeClass('gallery-view');
-        this.container.removeClass(`gallery-${this._type}`);
-        this.container.removeAttribute('data-view-type');
+    // Clear container
+    this.emptyElement(this.container);
+    this.safeRemoveClass(this.container, 'gallery-view');
+    this.safeRemoveClass(this.container, `gallery-${this._type}`);
+    this.container.removeAttribute('data-view-type');
 
         // Clear references
         this._images = [];
@@ -162,7 +243,24 @@ export abstract class GalleryView implements IGalleryView {
      * Find DOM element for specific image path
      */
     protected findImageElement(imagePath: string): HTMLElement | null {
-        return this.container.querySelector(`[data-image-path="${CSS.escape(imagePath)}"]`);
+        if (!imagePath) return null;
+
+        // Avoid using CSS.escape / complex selectors to prevent SelectorSyntaxError in jsdom.
+        // Instead, iterate elements with the attribute and compare the attribute value directly.
+        try {
+            const nodes = Array.from(this.container.querySelectorAll('[data-image-path]')) as HTMLElement[];
+            for (const n of nodes) {
+                try {
+                    const val = n.getAttribute('data-image-path');
+                    if (val === imagePath) return n;
+                } catch {
+                    // ignore malformed nodes
+                }
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
     }
 
     /**
@@ -170,10 +268,10 @@ export abstract class GalleryView implements IGalleryView {
      */
     protected updateImageElement(element: HTMLElement, image: IImageSource, state: 'loading' | 'loaded' | 'error'): void {
         // Remove existing state classes
-        element.removeClass('image-loading', 'image-loaded', 'image-error');
-        
+        this.safeRemoveClass(element, 'image-loading', 'image-loaded', 'image-error');
+
         // Add new state class
-        element.addClass(`image-${state}`);
+        this.safeAddClass(element, `image-${state}`);
         
         switch (state) {
             case 'loading':
@@ -194,7 +292,7 @@ export abstract class GalleryView implements IGalleryView {
     protected showLoadingState(element: HTMLElement): void {
         const existingSpinner = element.querySelector('.gallery-loading-spinner');
         if (!existingSpinner) {
-            element.createEl('div', { cls: 'gallery-loading-spinner' });
+            this.createElement(element, 'div', { cls: 'gallery-loading-spinner' });
         }
     }
 
@@ -233,7 +331,7 @@ export abstract class GalleryView implements IGalleryView {
         );
 
         // Add image-specific styling
-        element.addClass('gallery-item-error');
+        this.safeAddClass(element, 'gallery-item-error');
     }
 
     /**

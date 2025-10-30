@@ -11,6 +11,7 @@ import { ErrorManager } from '../views/components/ErrorPlaceholder';
 import { EmptyState } from '../views/components/EmptyState';
 import { ImageValidator } from '../utils/ImageValidator';
 import { FileSizeValidator } from '../utils/FileSizeValidator';
+import { ImageLoader } from '../utils/ImageLoader';
 import { ImageSource } from '../models/ImageSource';
 
 export interface IGalleryProcessingOptions {
@@ -19,6 +20,7 @@ export interface IGalleryProcessingOptions {
   maxRetries?: number;
   timeoutMs?: number;
     allowRemoteImages?: boolean;
+        validateRemoteContentType?: boolean;
 }
 
 export interface IGalleryRenderResult {
@@ -48,6 +50,7 @@ export class GalleryProcessor {
         maxRetries: 3,
         timeoutMs: 30000
         ,allowRemoteImages: false
+        ,validateRemoteContentType: false
     };
 
     constructor(contentScanner: IContentScanner, viewFactory: ViewFactory) {
@@ -111,12 +114,20 @@ export class GalleryProcessor {
             // Step 3: Validate images
             const validImages = await this.validateImages(images, result, opts, loadingManager);
             if (validImages.length === 0) {
-                // If there were external images but remote loading is disabled, give a clearer hint
+                // If there were external images but remote loading is disabled, show a friendly empty state
                 const hadExternal = images.some((img: any) => img.type === 'external');
                 if (hadExternal && !opts.allowRemoteImages) {
                     const msg = 'No valid images: external URLs were present but remote image loading is disabled in plugin settings.';
                     result.errors.push(msg);
-                    throw new Error(msg);
+                    // Render an explanatory empty state to guide the user rather than throwing
+                    try {
+                        this.showProfessionalEmptyState(el, config, result);
+                    } catch (e) {
+                        // Fallback to throwing if rendering fails
+                        throw new Error(msg);
+                    }
+                    result.processingTimeMs = Date.now() - startTime;
+                    return result;
                 }
 
                 result.errors.push('No images passed validation');
@@ -324,7 +335,19 @@ export class GalleryProcessor {
                         validationErrors.push(`Invalid external URL: ${image.path}`);
                         continue;
                     }
-                    // Note: Content-type validation (HEAD request) could be added later.
+                    // Optional content-type validation via HEAD request
+                    if (options.validateRemoteContentType) {
+                        try {
+                            const isImage = await ImageLoader.validateImageUrl(image.path, Math.min(5000, options.timeoutMs));
+                            if (!isImage) {
+                                validationErrors.push(`External URL does not appear to be an image: ${image.path}`);
+                                continue;
+                            }
+                        } catch (e) {
+                            validationErrors.push(`Failed to validate external URL: ${image.path}`);
+                            continue;
+                        }
+                    }
                 }
 
                 validImages.push(image);
@@ -379,6 +402,18 @@ export class GalleryProcessor {
             let retryCount = 0;
             while (retryCount <= options.maxRetries) {
                 try {
+                    // Pass runtime options to view when supported (backwards-compatible)
+                    try {
+                        // Preferred: view has a setOptions API
+                        (view as any).setOptions?.({ remoteLoadTimeoutMs: options.timeoutMs, allowRemoteImages: options.allowRemoteImages });
+                    } catch {}
+
+                    // Backwards-compat: set properties directly for simple views
+                    try {
+                        (view as any).remoteLoadTimeoutMs = options.timeoutMs;
+                        (view as any).allowRemoteImages = options.allowRemoteImages;
+                    } catch {}
+
                     await view.update(images);
                     view.render();
                     
@@ -524,6 +559,9 @@ export class GalleryProcessor {
         const hasPermissionError = result.errors.some(error => 
             error.includes('permission') || error.includes('Access')
         );
+        const hasExternalBlocked = result.errors.some(error => 
+            error.includes('external URLs were present') || error.includes('External image blocked')
+        );
 
         if (hasPathError) {
             EmptyState.createPathNotFound(container, config.path, [
@@ -531,6 +569,33 @@ export class GalleryProcessor {
                 'Verify the path spelling and capitalization',
                 'Make sure you have access to the folder'
             ]);
+        } else if (hasExternalBlocked) {
+            // Show a specific message guiding the user to enable remote images
+            EmptyState.createCustom(
+                container,
+                'External images blocked',
+                'The gallery contains external image URLs, but remote image loading is disabled in plugin settings. Enable "Allow remote images" in Settings → Gallery Plugin to display them.',
+                {
+                    path: config.path,
+                    customDetails: 'External URLs were detected in the gallery configuration.'
+                },
+                [
+                    {
+                        label: 'Open Settings',
+                        action: () => {
+                            try { document.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch {};
+                        },
+                        type: 'primary',
+                        icon: '⚙️'
+                    },
+                    {
+                        label: 'Scan Again',
+                        action: () => this.refreshGalleryByConfig(container, config),
+                        type: 'secondary',
+                        icon: '🔄'
+                    }
+                ]
+            );
         } else if (hasValidationError) {
             EmptyState.createValidationFailed(
                 container, 
@@ -638,8 +703,12 @@ export class GalleryProcessor {
      * Handle processing errors
      */
     private handleProcessingError(error: Error, container: HTMLElement): void {
-        // Clear container
-        (container as any).empty();
+        // Clear container (support both Obsidian helpers and plain DOM)
+        if ((container as any).empty && typeof (container as any).empty === 'function') {
+            (container as any).empty();
+        } else {
+            while (container.firstChild) container.removeChild(container.firstChild);
+        }
         
         // Check if it's a configuration error
         if (error.message.includes('Configuration')) {

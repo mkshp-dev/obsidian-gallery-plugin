@@ -11,6 +11,41 @@ export class ErrorHandler {
     private constructor() {}
 
     /**
+     * Create an element into parent, supporting Obsidian helpers or plain DOM
+     */
+    private static createElement(parent: HTMLElement, tag: string | { tag?: string } = 'div', options?: any): HTMLElement {
+        const anyParent = parent as any;
+
+        // Support Obsidian's createEl/createDiv
+        if (anyParent.createEl && typeof anyParent.createEl === 'function') {
+            const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
+            return anyParent.createEl(tagName, options || {});
+        }
+
+        // Plain DOM fallback
+        const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
+        const el = document.createElement(tagName);
+        if (options) {
+            if (typeof options === 'string') {
+                el.className = options;
+            } else {
+                if (options.cls) el.className = options.cls;
+                if (options.text) el.textContent = options.text;
+                if (options.attr) {
+                    for (const k of Object.keys(options.attr)) {
+                        try { el.setAttribute(k, String(options.attr[k])); } catch {}
+                    }
+                }
+                if (options.href && el instanceof HTMLAnchorElement) {
+                    el.href = options.href;
+                }
+            }
+        }
+        parent.appendChild(el);
+        return el;
+    }
+
+    /**
      * Get singleton instance
      */
     static getInstance(): ErrorHandler {
@@ -26,36 +61,23 @@ export class ErrorHandler {
     static handleConfigError(error: IConfigError, container: HTMLElement): void {
         console.error('Gallery Config Error:', error);
         
-        const errorEl = container.createEl('div', { cls: 'gallery-error gallery-config-error' });
-        
+        const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-config-error' });
+
         // Error title
-        errorEl.createEl('div', { 
-            cls: 'gallery-error-title',
-            text: `Configuration Error: ${error.field}`
-        });
-        
+        ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-title', text: `Configuration Error: ${error.field}` });
+
         // Error message
-        errorEl.createEl('div', { 
-            cls: 'gallery-error-message',
-            text: error.message
-        });
-        
+        ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-message', text: error.message });
+
         // Suggestion if available
         if (error.suggestion) {
-            errorEl.createEl('div', { 
-                cls: 'gallery-error-suggestion',
-                text: `💡 ${error.suggestion}`
-            });
+            ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-suggestion', text: `💡 ${error.suggestion}` });
         }
-        
+
         // Add documentation link
-        const helpEl = errorEl.createEl('div', { cls: 'gallery-error-help' });
-        helpEl.createEl('span', { text: 'Need help? Check the ' });
-        helpEl.createEl('a', { 
-            text: 'documentation',
-            href: '#gallery-plugin-docs',
-            cls: 'gallery-help-link'
-        });
+        const helpEl = ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-help' });
+        ErrorHandler.createElement(helpEl, 'span', { text: 'Need help? Check the ' });
+        const a = ErrorHandler.createElement(helpEl, 'a', { cls: 'gallery-help-link', text: 'documentation', href: '#gallery-plugin-docs' });
     }
 
     /**
@@ -64,42 +86,30 @@ export class ErrorHandler {
     static handleLoadError(error: ILoadError, container: HTMLElement): HTMLElement {
         console.error('Gallery Load Error:', error);
         
-        const errorEl = container.createEl('div', { 
-            cls: 'gallery-error gallery-load-error',
-            attr: { 'data-error-type': error.reason }
-        });
-        
+        const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-load-error', attr: { 'data-error-type': error.reason } });
+
         // Error icon
-        const iconEl = errorEl.createEl('div', { cls: 'gallery-error-icon' });
+        const iconEl = ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-icon' });
         iconEl.textContent = this.getErrorIcon(error.reason);
-        
+
         // Error content
-        const contentEl = errorEl.createEl('div', { cls: 'gallery-error-content' });
-        
+        const contentEl = ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-content' });
+
         // Image info
-        contentEl.createEl('div', { 
-            cls: 'gallery-error-image-path',
-            text: this.truncatePath(error.source.path)
-        });
-        
+        ErrorHandler.createElement(contentEl, 'div', { cls: 'gallery-error-image-path', text: this.truncatePath(error.source.path) });
+
         // Error message
-        contentEl.createEl('div', { 
-            cls: 'gallery-error-message',
-            text: error.message
-        });
-        
+        ErrorHandler.createElement(contentEl, 'div', { cls: 'gallery-error-message', text: error.message });
+
         // Retry button if error is retryable
         if (error.retryable) {
-            const retryBtn = contentEl.createEl('button', {
-                cls: 'gallery-retry-button',
-                text: 'Retry'
-            });
-            
+            const retryBtn = ErrorHandler.createElement(contentEl, 'button', { cls: 'gallery-retry-button', text: 'Retry' });
+
             retryBtn.addEventListener('click', () => {
                 this.retryImageLoad(error.source, errorEl);
             });
         }
-        
+
         return errorEl;
     }
 
@@ -110,31 +120,17 @@ export class ErrorHandler {
         console.error(`Gallery Plugin Error (${context}):`, error);
         
         if (container) {
-            const errorEl = container.createEl('div', { cls: 'gallery-error gallery-plugin-error' });
-            
-            errorEl.createEl('div', { 
-                cls: 'gallery-error-title',
-                text: 'Gallery Plugin Error'
-            });
-            
-            errorEl.createEl('div', { 
-                cls: 'gallery-error-message',
-                text: error.message
-            });
-            
-            errorEl.createEl('div', { 
-                cls: 'gallery-error-context',
-                text: `Context: ${context}`
-            });
-            
+            const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-plugin-error' });
+
+            ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-title', text: 'Gallery Plugin Error' });
+            ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-message', text: error.message });
+            ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-context', text: `Context: ${context}` });
+
             // Debug info in development
             if (process.env.NODE_ENV === 'development') {
-                const debugEl = errorEl.createEl('details', { cls: 'gallery-error-debug' });
-                debugEl.createEl('summary', { text: 'Debug Information' });
-                debugEl.createEl('pre', { 
-                    text: error.stack || error.toString(),
-                    cls: 'gallery-error-stack'
-                });
+                const debugEl = ErrorHandler.createElement(errorEl, 'details', { cls: 'gallery-error-debug' });
+                ErrorHandler.createElement(debugEl, 'summary', { text: 'Debug Information' });
+                ErrorHandler.createElement(debugEl, 'pre', { text: error.stack || error.toString(), cls: 'gallery-error-stack' });
             }
         }
     }
@@ -217,24 +213,22 @@ export class ErrorHandler {
     private static retryImageLoad(source: IImageSource, errorElement: HTMLElement): void {
         // Reset image state
         source.reset();
-        
-        // Replace error element with loading state
-        const loadingEl = errorElement.parentElement?.createEl('div', { 
-            cls: 'gallery-loading-retry'
-        });
-        
-        if (loadingEl) {
-            loadingEl.textContent = 'Retrying...';
-            errorElement.remove();
-            
-            // Trigger reload after short delay
-            setTimeout(() => {
-                const event = new CustomEvent('gallery:retry-image', {
-                    detail: { source, element: loadingEl }
-                });
-                document.dispatchEvent(event);
-            }, 500);
-        }
+
+        // Replace error element with loading state (support plain DOM parent)
+        const parent = errorElement.parentElement;
+        if (!parent) return;
+
+        const loadingEl = ErrorHandler.createElement(parent, 'div', { cls: 'gallery-loading-retry' });
+        loadingEl.textContent = 'Retrying...';
+        errorElement.remove();
+
+        // Trigger reload after short delay
+        setTimeout(() => {
+            const event = new CustomEvent('gallery:retry-image', {
+                detail: { source, element: loadingEl }
+            });
+            document.dispatchEvent(event);
+        }, 500);
     }
 
     /**

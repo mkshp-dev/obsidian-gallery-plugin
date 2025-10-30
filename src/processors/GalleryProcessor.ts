@@ -679,15 +679,55 @@ export class GalleryProcessor {
     private setupGalleryCleanup(gallery: GalleryInstance): void {
         // Use MutationObserver to detect when gallery container is removed
         const observer = new MutationObserver((mutations) => {
+            // If we see a removal, don't immediately destroy: Obsidian may transiently
+            // move or reparent nodes when toggling sidebars or changing layouts. Defer
+            // the actual destruction check by a short timeout and only destroy if the
+            // gallery container remains detached from the document.
+            let sawRemoval = false;
             mutations.forEach((mutation) => {
                 mutation.removedNodes.forEach((node) => {
-                    if (node === gallery.container || 
-                        (node instanceof Element && node.contains(gallery.container))) {
-                        this.destroyGallery(gallery.id);
-                        observer.disconnect();
+                    if (node === gallery.container || (node instanceof Element && node.contains(gallery.container))) {
+                        sawRemoval = true;
                     }
                 });
             });
+
+            if (!sawRemoval) return;
+
+            // Defer checks to allow transient DOM moves (sidebar toggle, layout shifts)
+            // to settle. Use a few retries with exponential backoff before deciding
+            // the container is permanently gone.
+            const attempts = [200, 500, 1000, 2000];
+            let attemptIndex = 0;
+
+            const tryCheck = () => {
+                try {
+                    const doc = gallery.container?.ownerDocument;
+                    const stillAttached = !!(doc && doc.body && doc.body.contains(gallery.container));
+                    if (stillAttached) {
+                        // it's back — do nothing
+                        return;
+                    }
+
+                    attemptIndex++;
+                    if (attemptIndex >= attempts.length) {
+                        // final check failed — consider it removed
+                        this.destroyGallery(gallery.id);
+                        try { observer.disconnect(); } catch {}
+                        return;
+                    }
+
+                    // schedule next check
+                    setTimeout(tryCheck, attempts[attemptIndex]);
+                } catch (e) {
+                    // If something unexpected happens, attempt a safe cleanup
+                    try { this.destroyGallery(gallery.id); } catch {}
+                    try { observer.disconnect(); } catch {}
+                }
+            };
+
+            // Start checks
+            setTimeout(tryCheck, attempts[0]);
         });
 
         // Observe the parent document for changes

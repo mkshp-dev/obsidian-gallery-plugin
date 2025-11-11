@@ -21,6 +21,10 @@ export interface IGalleryProcessingOptions {
   timeoutMs?: number;
     allowRemoteImages?: boolean;
         validateRemoteContentType?: boolean;
+        // How long to wait (ms) before final destruction of a detached gallery
+        gracePeriodMs?: number;
+        // Enable verbose lifecycle logging for debugging mode toggles
+        enableLifecycleLogging?: boolean;
 }
 
 export interface IGalleryRenderResult {
@@ -51,6 +55,8 @@ export class GalleryProcessor {
         timeoutMs: 30000
         ,allowRemoteImages: false
         ,validateRemoteContentType: false
+        ,gracePeriodMs: 30000
+        ,enableLifecycleLogging: false
     };
 
     constructor(contentScanner: IContentScanner, viewFactory: ViewFactory) {
@@ -409,8 +415,9 @@ export class GalleryProcessor {
             // Store active gallery
             this.activeGalleries.set(galleryInstance.id, galleryInstance);
             
-            // Setup cleanup when container is removed
-            this.setupGalleryCleanup(galleryInstance);
+            // Setup cleanup when container is removed (pass options so cleanup
+            // honors runtime-configurable grace period and logging)
+            this.setupGalleryCleanup(galleryInstance, options);
             
             // Render gallery with retry logic
             let retryCount = 0;
@@ -690,7 +697,7 @@ export class GalleryProcessor {
     /**
      * Setup gallery cleanup when container is removed from DOM
      */
-    private setupGalleryCleanup(gallery: GalleryInstance): void {
+    private setupGalleryCleanup(gallery: GalleryInstance, options: Required<IGalleryProcessingOptions> = this.DEFAULT_OPTIONS): void {
         // Use MutationObserver to detect when gallery container is removed
         const observer = new MutationObserver((mutations) => {
             // If we see a removal, don't immediately destroy: Obsidian may transiently
@@ -732,14 +739,19 @@ export class GalleryProcessor {
                         // schedule a final destruction after a longer grace period so
                         // that the markdown post-processor can reattach a new container
                         // without losing the opportunity to recreate the gallery.
-                        console.log(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy.`);
                         try { (gallery as any)._detached = true; } catch {}
 
-                        const GRACE_PERIOD_MS = 30_000; // 30 seconds
+                        const GRACE_PERIOD_MS = Math.max(0, options.gracePeriodMs || 30000);
+                        if (options.enableLifecycleLogging) {
+                            console.log(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
+                        }
+
                         setTimeout(() => {
                             try {
                                 if ((gallery as any)._detached) {
-                                    console.log(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
+                                    if (options.enableLifecycleLogging) {
+                                        console.log(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
+                                    }
                                     this.destroyGallery(gallery.id);
                                 }
                             } catch (e) {

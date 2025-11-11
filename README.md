@@ -2,7 +2,9 @@
 
 Create beautiful, interactive image galleries in your Obsidian notes using simple code blocks. Display images from your vault folders with thumbnail grids and click-to-expand modal viewing.
 
-![Plugin Demo](https://img.shields.io/badge/status-working-brightgreen) ![Version](https://img.shields.io/badge/version-1.0.0-blue) ![Obsidian](https://img.shields.io/badge/obsidian-0.15.0+-purple)
+![Plugin Demo](https://img.shields.io/badge/status-beta-yellow) ![Version](https://img.shields.io/badge/version-1.0.0--beta-blue) ![Obsidian](https://img.shields.io/badge/obsidian-0.15.0+-purple)
+
+> **🎯 BETA RELEASE**: This plugin is ready for beta testing! See [BETA_RELEASE.md](./BETA_RELEASE.md) for testing instructions and known limitations.
 
 ## ✨ Features
 
@@ -42,22 +44,38 @@ Display all images from a folder:
 ````markdown
 ```obs-gallery
 path: Photos/Vacation2024
+view: thumbnail
 ```
 ````
 
-### Single Image
-Show a specific image:
+### Carousel View
+Horizontal scrolling carousel with controls:
 ````markdown
 ```obs-gallery
-path: Images/diagram.png
+path: Images/Screenshots
+view: carousel
 ```
 ````
 
-### Nested Folders
-Access images in subfolders:
+### Masonry Grid
+Pinterest-style layout with variable heights:
 ````markdown
 ```obs-gallery
-path: Projects/WebDev/Screenshots
+path: Projects/WebDev
+view: grid
+recursive: true
+```
+````
+
+### With External Images (Beta)
+Include remote images (requires enabling in settings):
+````markdown
+```obs-gallery
+path: Photos/Local
+urls:
+  - https://example.com/image1.jpg
+  - https://example.com/image2.png
+view: grid
 ```
 ````
 

@@ -12,12 +12,18 @@ interface GalleryPluginSettings {
     allowRemoteImages: boolean;
     remoteLoadTimeoutMs: number;
     validateRemoteContentType?: boolean;
+    // How long (ms) to wait before finally destroying a detached gallery
+    gracePeriodMs?: number;
+    // Enable verbose lifecycle logging to help debug detach/reattach behavior
+    enableLifecycleLogging?: boolean;
 }
 
 const DEFAULT_SETTINGS: GalleryPluginSettings = {
     allowRemoteImages: false,
     remoteLoadTimeoutMs: 30000
     ,validateRemoteContentType: false
+    ,gracePeriodMs: 30000
+    ,enableLifecycleLogging: false
 };
 
 class GallerySettingsTab extends PluginSettingTab {
@@ -61,6 +67,27 @@ class GallerySettingsTab extends PluginSettingTab {
                 .setValue(!!this.plugin.settings.validateRemoteContentType)
                 .onChange(async (value) => {
                     this.plugin.settings.validateRemoteContentType = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Detached gallery grace period (ms)')
+            .setDesc('How long (ms) to retain a detached gallery before final destruction. Useful to avoid losing galleries during editor/preview toggles.')
+            .addText(text => text
+                .setValue(String(this.plugin.settings.gracePeriodMs ?? DEFAULT_SETTINGS.gracePeriodMs))
+                .onChange(async (value) => {
+                    const n = parseInt(value, 10);
+                    this.plugin.settings.gracePeriodMs = isNaN(n) ? DEFAULT_SETTINGS.gracePeriodMs : n;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Enable lifecycle logging')
+            .setDesc('Enable verbose lifecycle logs (debug) for gallery attach/detach events. Useful for troubleshooting mode toggles.')
+            .addToggle(toggle => toggle
+                .setValue(!!this.plugin.settings.enableLifecycleLogging)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableLifecycleLogging = value;
                     await this.plugin.saveSettings();
                 }));
     }
@@ -225,6 +252,8 @@ export default class GalleryPlugin extends Plugin {
                     timeoutMs: this.settings.remoteLoadTimeoutMs || 30000,
                     allowRemoteImages: !!this.settings.allowRemoteImages,
                     validateRemoteContentType: !!this.settings.validateRemoteContentType
+            ,gracePeriodMs: this.settings.gracePeriodMs || DEFAULT_SETTINGS.gracePeriodMs
+            ,enableLifecycleLogging: !!this.settings.enableLifecycleLogging
             });
 
             if (!result.success) {

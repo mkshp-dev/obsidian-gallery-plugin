@@ -1,4 +1,4 @@
-import { MarkdownPostProcessorContext } from 'obsidian';
+import { MarkdownPostProcessorContext, App } from 'obsidian';
 import { IGalleryConfig, IContentScanner, IGalleryView } from '../models/interfaces';
 import { GalleryConfig } from '../models/GalleryConfig';
 import { GalleryInstance } from '../models/GalleryInstance';
@@ -42,6 +42,7 @@ export interface IGalleryRenderResult {
  * Coordinates parsing, validation, and rendering of galleries
  */
 export class GalleryProcessor {
+    private app: App;
     private contentScanner: IContentScanner;
     private viewFactory: ViewFactory;
     private imageValidator: ImageValidator;
@@ -59,7 +60,8 @@ export class GalleryProcessor {
         ,enableLifecycleLogging: false
     };
 
-    constructor(contentScanner: IContentScanner, viewFactory: ViewFactory) {
+    constructor(app: App, contentScanner: IContentScanner, viewFactory: ViewFactory) {
+        this.app = app;
         this.contentScanner = contentScanner;
         this.viewFactory = viewFactory;
         this.imageValidator = new ImageValidator();
@@ -201,8 +203,28 @@ export class GalleryProcessor {
         }
 
         try {
+            // Step 1a: Check for nested Nextcloud query block
+            let processedSource = source;
+            const nextcloudData = this.extractNextcloudQuery(source);
+            
+            if (nextcloudData) {
+                if (loadingManager) {
+                    loadingManager.updateText('config', 'Processing Nextcloud query...');
+                }
+                
+                // Execute Nextcloud query and get URLs
+                const nextcloudUrls = await this.executeNextcloudQuery(nextcloudData.query);
+                
+                // Inject URLs into YAML source
+                processedSource = this.injectNextcloudUrls(nextcloudData.yamlWithoutNextcloud, nextcloudUrls);
+                
+                if (loadingManager) {
+                    loadingManager.updateText('config', `Retrieved ${nextcloudUrls.length} URLs from Nextcloud`);
+                }
+            }
+            
             // Parse configuration
-            const config = ParameterParser.parseAndValidate(source);
+            const config = ParameterParser.parseAndValidate(processedSource);
             
             // Validate configuration
             this.validateConfiguration(config);
@@ -944,6 +966,97 @@ export class GalleryProcessor {
             errors.push(error instanceof Error ? error.message : String(error));
             return { isValid: false, errors };
         }
+    }
+
+    /**
+     * Extract Nextcloud query block from gallery source
+     * Returns the query text and the YAML without the nextcloud block
+     */
+    private extractNextcloudQuery(source: string): { query: string; yamlWithoutNextcloud: string } | null {
+        // Match nested nextcloud code block
+        const match = /```nextcloud\s*([\s\S]*?)```/m.exec(source);
+        
+        if (!match) {
+            return null;
+        }
+        
+        const query = match[1].trim();
+        const yamlWithoutNextcloud = source.replace(/```nextcloud\s*[\s\S]*?```/m, '').trim();
+        
+        return { query, yamlWithoutNextcloud };
+    }
+
+    /**
+     * Execute Nextcloud query via obsidian-nextcloud-bridge plugin
+     * Returns array of URLs
+     */
+    private async executeNextcloudQuery(query: string): Promise<string[]> {
+        // Check if Nextcloud plugin is available
+        const nextcloudPlugin = (this.app as any).plugins?.plugins?.['obsidian-nextcloud-bridge'];
+        
+        if (!nextcloudPlugin) {
+            throw new Error(
+                'Nextcloud plugin not found. Please install and enable the "obsidian-nextcloud-bridge" plugin to use Nextcloud queries in galleries.'
+            );
+        }
+        
+        // Check if plugin has API
+        if (!nextcloudPlugin.api || typeof nextcloudPlugin.api.runQuery !== 'function') {
+            throw new Error(
+                'Nextcloud plugin API not available. Please ensure you have the latest version of "obsidian-nextcloud-bridge" installed.'
+            );
+        }
+        
+        try {
+            // Execute query
+            const urls = await nextcloudPlugin.api.runQuery(query);
+            
+            // Validate result
+            if (!Array.isArray(urls)) {
+                throw new Error('Nextcloud query did not return an array of URLs');
+            }
+            
+            if (urls.length === 0) {
+                throw new Error(
+                    'Nextcloud query returned no results. Please check your query syntax and Nextcloud folder path.'
+                );
+            }
+            
+            return urls;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Nextcloud query failed: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Inject Nextcloud URLs into YAML source
+     * Adds URLs to urls: field (or creates it if missing)
+     */
+    private injectNextcloudUrls(yamlSource: string, urls: string[]): string {
+        // Check if urls: field already exists
+        const hasUrlsField = /^\s*urls\s*:/m.test(yamlSource);
+        
+        if (hasUrlsField) {
+            // Append to existing urls: field
+            // Find the urls: line and add our URLs after it
+            const lines = yamlSource.split('\n');
+            const urlsLineIndex = lines.findIndex(line => /^\s*urls\s*:/i.test(line));
+            
+            if (urlsLineIndex !== -1) {
+                // Insert Nextcloud URLs after the urls: line
+                const urlLines = urls.map(url => `  - ${url}`);
+                lines.splice(urlsLineIndex + 1, 0, ...urlLines);
+                return lines.join('\n');
+            }
+        }
+        
+        // No urls: field exists, create one
+        const urlLines = urls.map(url => `  - ${url}`);
+        const urlsSection = `urls:\n${urlLines.join('\n')}`;
+        
+        // Append to end of YAML
+        return yamlSource.trim() + '\n' + urlsSection;
     }
 
     /**

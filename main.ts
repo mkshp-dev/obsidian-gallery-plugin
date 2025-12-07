@@ -110,7 +110,7 @@ export default class GalleryPlugin extends Plugin {
         // Initialize core services
         this.contentScanner = new ContentScanner(this.app.vault);
         this.viewFactory = new ViewFactory();
-        this.galleryProcessor = new GalleryProcessor(this.contentScanner, this.viewFactory);
+        this.galleryProcessor = new GalleryProcessor(this.app, this.contentScanner, this.viewFactory);
 
         // Initialize lazy loader
         this.lazyLoader = new LazyLoader({

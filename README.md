@@ -16,6 +16,7 @@ Create beautiful, interactive image galleries in your Obsidian notes using simpl
 - ⚡ **Performance** - Lazy loading for large image collections
 - 🎨 **Clean Styling** - Integrates seamlessly with Obsidian themes
 - ❌ **Error Handling** - Graceful fallbacks for missing paths
+- ☁️ **Nextcloud Integration** - Load images directly from Nextcloud (requires [obsidian-nextcloud-bridge](https://github.com/your-repo/obsidian-nextcloud-bridge))
 
 ## 🚀 Quick Start
 
@@ -78,6 +79,23 @@ urls:
 view: grid
 ```
 ````
+
+### With Nextcloud Integration (New!)
+Load images dynamically from Nextcloud (requires [obsidian-nextcloud-bridge](https://github.com/your-repo/obsidian-nextcloud-bridge) plugin):
+````markdown
+```obs-gallery
+view: thumbnail
+
+```nextcloud
+folder: Photos/2024/
+filter:
+  - extension: jpg
+format: https://cloud.example.com/{{name}}
+```
+```
+````
+
+See [NEXTCLOUD_INTEGRATION.md](./NEXTCLOUD_INTEGRATION.md) for complete documentation.
 
 ## 🎛️ Configuration Options
 

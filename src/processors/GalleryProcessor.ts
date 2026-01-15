@@ -11,12 +11,20 @@ import { ErrorManager } from '../views/components/ErrorPlaceholder';
 import { EmptyState } from '../views/components/EmptyState';
 import { ImageValidator } from '../utils/ImageValidator';
 import { FileSizeValidator } from '../utils/FileSizeValidator';
+import { ImageLoader } from '../utils/ImageLoader';
+import { ImageSource } from '../models/ImageSource';
 
 export interface IGalleryProcessingOptions {
   showLoadingFeedback?: boolean;
   enableValidation?: boolean;
   maxRetries?: number;
   timeoutMs?: number;
+    allowRemoteImages?: boolean;
+        validateRemoteContentType?: boolean;
+        // How long to wait (ms) before final destruction of a detached gallery
+        gracePeriodMs?: number;
+        // Enable verbose lifecycle logging for debugging mode toggles
+        enableLifecycleLogging?: boolean;
 }
 
 export interface IGalleryRenderResult {
@@ -45,6 +53,10 @@ export class GalleryProcessor {
         enableValidation: true,
         maxRetries: 3,
         timeoutMs: 30000
+        ,allowRemoteImages: false
+        ,validateRemoteContentType: false
+        ,gracePeriodMs: 30000
+        ,enableLifecycleLogging: false
     };
 
     constructor(contentScanner: IContentScanner, viewFactory: ViewFactory) {
@@ -108,6 +120,22 @@ export class GalleryProcessor {
             // Step 3: Validate images
             const validImages = await this.validateImages(images, result, opts, loadingManager);
             if (validImages.length === 0) {
+                // If there were external images but remote loading is disabled, show a friendly empty state
+                const hadExternal = images.some((img: any) => img.type === 'external');
+                if (hadExternal && !opts.allowRemoteImages) {
+                    const msg = 'No valid images: external URLs were present but remote image loading is disabled in plugin settings.';
+                    result.errors.push(msg);
+                    // Render an explanatory empty state to guide the user rather than throwing
+                    try {
+                        this.showProfessionalEmptyState(el, config, result);
+                    } catch (e) {
+                        // Fallback to throwing if rendering fails
+                        throw new Error(msg);
+                    }
+                    result.processingTimeMs = Date.now() - startTime;
+                    return result;
+                }
+
                 result.errors.push('No images passed validation');
                 throw new Error('No valid images after validation');
             }
@@ -205,12 +233,35 @@ export class GalleryProcessor {
         }
 
         try {
-            const images = await Promise.race([
-                this.contentScanner.scanPath(config.path, config.recursive),
-                new Promise<never>((_, reject) => 
-                    setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
-                )
-            ]);
+            // If a path is provided, scan the vault; otherwise start with empty list
+            let images: any[] = [];
+
+            if (config.path && config.path.trim() !== '') {
+                const scanned = await Promise.race([
+                    this.contentScanner.scanPath(config.path, config.recursive),
+                    new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
+                    )
+                ]);
+                images = scanned || [];
+            }
+
+            // Include any external URLs provided in the config (merge, avoid duplicates)
+            const configAny = config as any;
+            if (Array.isArray(configAny.urls) && configAny.urls.length > 0) {
+                for (const url of configAny.urls) {
+                    try {
+                        const external = ImageSource.fromUrl(url as string);
+                        // Avoid duplicates by path
+                        if (!images.find(img => img.path === external.path)) {
+                            images.push(external);
+                        }
+                    } catch (err) {
+                        // Ignore invalid URL entries but record error
+                        result.errors.push(`Invalid URL in urls list: ${url}`);
+                    }
+                }
+            }
 
             result.imagesFound = images.length;
 
@@ -257,21 +308,51 @@ export class GalleryProcessor {
                     loadingManager.updateText('validate', `Validating image ${i + 1}/${images.length}`);
                 }
 
-                // Validate image format (using simple extension check)
-                const cleanPath = image.path.split('?')[0].split('#')[0];
-                const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
-                const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-                if (!supportedExtensions.includes(extension)) {
-                    validationErrors.push(`Invalid format: ${image.path}`);
-                    continue;
-                }
-
-                // Additional validation for local images
+                // Additional validation logic
                 if (image.type === 'local') {
+                    // Validate image format (using simple extension check for local files)
+                    const cleanPath = image.path.split('?')[0].split('#')[0];
+                    const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
+                    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+                    if (!supportedExtensions.includes(extension)) {
+                        validationErrors.push(`Invalid format: ${image.path}`);
+                        continue;
+                    }
+
+                    // Validate local source accessibility via scanner
                     const isValid = await this.contentScanner.validateImageSource(image);
                     if (!isValid) {
                         validationErrors.push(`Source validation failed: ${image.path}`);
                         continue;
+                    }
+
+                } else if (image.type === 'external') {
+                    // External images require plugin opt-in
+                    if (!options.allowRemoteImages) {
+                        validationErrors.push(`External image blocked by settings: ${image.path}`);
+                        continue;
+                    }
+
+                    // Accept external URLs even if they lack a file extension.
+                    // Basic check: ensure the URL is syntactically valid.
+                    try {
+                        new URL(image.path);
+                    } catch {
+                        validationErrors.push(`Invalid external URL: ${image.path}`);
+                        continue;
+                    }
+                    // Optional content-type validation via HEAD request
+                    if (options.validateRemoteContentType) {
+                        try {
+                            const isImage = await ImageLoader.validateImageUrl(image.path, Math.min(5000, options.timeoutMs));
+                            if (!isImage) {
+                                validationErrors.push(`External URL does not appear to be an image: ${image.path}`);
+                                continue;
+                            }
+                        } catch (e) {
+                            validationErrors.push(`Failed to validate external URL: ${image.path}`);
+                            continue;
+                        }
                     }
                 }
 
@@ -311,6 +392,20 @@ export class GalleryProcessor {
         }
 
         try {
+            // If there's an existing gallery for the same path, remove it first to
+            // avoid duplicate instances when the markdown post-processor runs
+            // multiple times during mode toggles. Matching by config.path is a
+            // reasonable heuristic for the same code block instance.
+            try {
+                const existing = Array.from(this.activeGalleries.values()).find(g => g.config.path === config.path && g.id !== undefined);
+                if (existing) {
+                    console.log(`GalleryProcessor: found existing gallery for path ${config.path} (id=${existing.id}), destroying before creating new instance.`);
+                    this.destroyGallery(existing.id);
+                }
+            } catch (e) {
+                // swallow errors to avoid breaking rendering
+            }
+
             // Create view
             const view = this.viewFactory.createView(config.view || 'thumbnail', container);
             
@@ -320,13 +415,26 @@ export class GalleryProcessor {
             // Store active gallery
             this.activeGalleries.set(galleryInstance.id, galleryInstance);
             
-            // Setup cleanup when container is removed
-            this.setupGalleryCleanup(galleryInstance);
+            // Setup cleanup when container is removed (pass options so cleanup
+            // honors runtime-configurable grace period and logging)
+            this.setupGalleryCleanup(galleryInstance, options);
             
             // Render gallery with retry logic
             let retryCount = 0;
             while (retryCount <= options.maxRetries) {
                 try {
+                    // Pass runtime options to view when supported (backwards-compatible)
+                    try {
+                        // Preferred: view has a setOptions API
+                        (view as any).setOptions?.({ remoteLoadTimeoutMs: options.timeoutMs, allowRemoteImages: options.allowRemoteImages });
+                    } catch {}
+
+                    // Backwards-compat: set properties directly for simple views
+                    try {
+                        (view as any).remoteLoadTimeoutMs = options.timeoutMs;
+                        (view as any).allowRemoteImages = options.allowRemoteImages;
+                    } catch {}
+
                     await view.update(images);
                     view.render();
                     
@@ -472,6 +580,9 @@ export class GalleryProcessor {
         const hasPermissionError = result.errors.some(error => 
             error.includes('permission') || error.includes('Access')
         );
+        const hasExternalBlocked = result.errors.some(error => 
+            error.includes('external URLs were present') || error.includes('External image blocked')
+        );
 
         if (hasPathError) {
             EmptyState.createPathNotFound(container, config.path, [
@@ -479,6 +590,33 @@ export class GalleryProcessor {
                 'Verify the path spelling and capitalization',
                 'Make sure you have access to the folder'
             ]);
+        } else if (hasExternalBlocked) {
+            // Show a specific message guiding the user to enable remote images
+            EmptyState.createCustom(
+                container,
+                'External images blocked',
+                'The gallery contains external image URLs, but remote image loading is disabled in plugin settings. Enable "Allow remote images" in Settings → Gallery Plugin to display them.',
+                {
+                    path: config.path,
+                    customDetails: 'External URLs were detected in the gallery configuration.'
+                },
+                [
+                    {
+                        label: 'Open Settings',
+                        action: () => {
+                            try { document.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch {};
+                        },
+                        type: 'primary',
+                        icon: '⚙️'
+                    },
+                    {
+                        label: 'Scan Again',
+                        action: () => this.refreshGalleryByConfig(container, config),
+                        type: 'secondary',
+                        icon: '🔄'
+                    }
+                ]
+            );
         } else if (hasValidationError) {
             EmptyState.createValidationFailed(
                 container, 
@@ -544,6 +682,14 @@ export class GalleryProcessor {
         if (configAny.sort && configAny.sort !== 'name') {
             lines.push(`sort: ${configAny.sort}`);
         }
+
+        if (Array.isArray(configAny.urls) && configAny.urls.length > 0) {
+            // Serialize urls as YAML list
+            lines.push('urls:');
+            for (const u of configAny.urls) {
+                lines.push(`  - ${u}`);
+            }
+        }
         
         return lines.join('\n');
     }
@@ -551,18 +697,83 @@ export class GalleryProcessor {
     /**
      * Setup gallery cleanup when container is removed from DOM
      */
-    private setupGalleryCleanup(gallery: GalleryInstance): void {
+    private setupGalleryCleanup(gallery: GalleryInstance, options: Required<IGalleryProcessingOptions> = this.DEFAULT_OPTIONS): void {
         // Use MutationObserver to detect when gallery container is removed
         const observer = new MutationObserver((mutations) => {
+            // If we see a removal, don't immediately destroy: Obsidian may transiently
+            // move or reparent nodes when toggling sidebars or changing layouts. Defer
+            // the actual destruction check by a short timeout and only destroy if the
+            // gallery container remains detached from the document.
+            let sawRemoval = false;
             mutations.forEach((mutation) => {
                 mutation.removedNodes.forEach((node) => {
-                    if (node === gallery.container || 
-                        (node instanceof Element && node.contains(gallery.container))) {
-                        this.destroyGallery(gallery.id);
-                        observer.disconnect();
+                    if (node === gallery.container || (node instanceof Element && node.contains(gallery.container))) {
+                        sawRemoval = true;
                     }
                 });
             });
+
+            if (!sawRemoval) return;
+
+            // Defer checks to allow transient DOM moves (sidebar toggle, layout shifts)
+            // to settle. Use a few retries with exponential backoff before deciding
+            // the container is permanently gone.
+            // Retry schedule (ms) — extended to handle slower reattachment scenarios
+            const attempts = [200, 500, 1000, 2000, 5000, 10000];
+            let attemptIndex = 0;
+
+            const tryCheck = () => {
+                try {
+                    const doc = gallery.container?.ownerDocument;
+                    const stillAttached = !!(doc && doc.body && doc.body.contains(gallery.container));
+                    if (stillAttached) {
+                        // it's back — do nothing
+                        return;
+                    }
+
+                    attemptIndex++;
+                    if (attemptIndex >= attempts.length) {
+                        // final check failed — consider it removed for now but allow a grace
+                        // period to support Obsidian re-rendering cycles (e.g., switching
+                        // between editor/preview). Mark the gallery as detached and
+                        // schedule a final destruction after a longer grace period so
+                        // that the markdown post-processor can reattach a new container
+                        // without losing the opportunity to recreate the gallery.
+                        try { (gallery as any)._detached = true; } catch {}
+
+                        const GRACE_PERIOD_MS = Math.max(0, options.gracePeriodMs || 30000);
+                        if (options.enableLifecycleLogging) {
+                            console.log(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
+                        }
+
+                        setTimeout(() => {
+                            try {
+                                if ((gallery as any)._detached) {
+                                    if (options.enableLifecycleLogging) {
+                                        console.log(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
+                                    }
+                                    this.destroyGallery(gallery.id);
+                                }
+                            } catch (e) {
+                                try { this.destroyGallery(gallery.id); } catch {}
+                            }
+                        }, GRACE_PERIOD_MS);
+
+                        try { observer.disconnect(); } catch {}
+                        return;
+                    }
+
+                    // schedule next check
+                    setTimeout(tryCheck, attempts[attemptIndex]);
+                } catch (e) {
+                    // If something unexpected happens, attempt a safe cleanup
+                    try { this.destroyGallery(gallery.id); } catch {}
+                    try { observer.disconnect(); } catch {}
+                }
+            };
+
+            // Start checks
+            setTimeout(tryCheck, attempts[0]);
         });
 
         // Observe the parent document for changes
@@ -578,8 +789,12 @@ export class GalleryProcessor {
      * Handle processing errors
      */
     private handleProcessingError(error: Error, container: HTMLElement): void {
-        // Clear container
-        (container as any).empty();
+        // Clear container (support both Obsidian helpers and plain DOM)
+        if ((container as any).empty && typeof (container as any).empty === 'function') {
+            (container as any).empty();
+        } else {
+            while (container.firstChild) container.removeChild(container.firstChild);
+        }
         
         // Check if it's a configuration error
         if (error.message.includes('Configuration')) {

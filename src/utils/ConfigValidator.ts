@@ -15,8 +15,10 @@ export class ConfigValidator {
     static validate(config: IGalleryConfig): IConfigError[] {
         const errors: IConfigError[] = [];
         
-        // Validate path
-        errors.push(...this.validatePath(config.path));
+        // Validate path only if no external urls provided
+        if (!Array.isArray((config as any).urls) || (config as any).urls.length === 0) {
+            errors.push(...this.validatePath(config.path));
+        }
         
         // Validate view type
         errors.push(...this.validateView(config.view));
@@ -30,9 +32,12 @@ export class ConfigValidator {
     /**
      * Validate and sanitize path parameter
      */
-    private static validatePath(path: string): IConfigError[] {
+    private static validatePath(path?: string): IConfigError[] {
         const errors: IConfigError[] = [];
         
+        // Path is required unless external URLs are provided; callers must
+        // decide whether to call this method. Here, treat undefined/null/empty
+        // specially and report the appropriate message.
         if (!path || typeof path !== 'string') {
             errors.push({
                 type: 'config',

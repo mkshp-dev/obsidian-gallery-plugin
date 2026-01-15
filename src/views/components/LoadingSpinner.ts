@@ -43,8 +43,8 @@ export class LoadingSpinner {
       this.spinnerElement.remove();
     }
 
-    // Create main spinner container
-    this.spinnerElement = this.container.createDiv({
+    // Create main spinner container (support both Obsidian helpers and plain DOM)
+    this.spinnerElement = this.createDiv(this.container, {
       cls: [
         'gallery-loading-spinner',
         `gallery-loading-${this.options.size}`,
@@ -71,7 +71,7 @@ export class LoadingSpinner {
 
     // Add text if provided
     if (this.options.text) {
-      this.textElement = this.spinnerElement.createDiv('gallery-loading-text');
+      this.textElement = this.createDiv(this.spinnerElement!, 'gallery-loading-text');
       this.textElement.textContent = this.options.text;
       // Accessibility: announce loading text to assistive tech
       this.textElement.setAttribute('role', 'status');
@@ -88,7 +88,7 @@ export class LoadingSpinner {
    * Render spinning circle loader
    */
   private renderSpinner(): void {
-    const spinnerIcon = this.spinnerElement!.createDiv('gallery-spinner-icon');
+  const spinnerIcon = this.createDiv(this.spinnerElement!, 'gallery-spinner-icon');
     
     // Create SVG spinner using standard DOM API
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -116,10 +116,10 @@ export class LoadingSpinner {
    * Render bouncing dots loader
    */
   private renderDots(): void {
-    const dotsContainer = this.spinnerElement!.createDiv('gallery-dots-container');
+  const dotsContainer = this.createDiv(this.spinnerElement!, 'gallery-dots-container');
     
     for (let i = 0; i < 3; i++) {
-      const dot = dotsContainer.createDiv('gallery-dot');
+  const dot = this.createDiv(dotsContainer, 'gallery-dot');
       dot.style.animationDelay = `${i * 0.1}s`;
     }
   }
@@ -128,10 +128,10 @@ export class LoadingSpinner {
    * Render pulsing loader
    */
   private renderPulse(): void {
-    const pulseContainer = this.spinnerElement!.createDiv('gallery-pulse-container');
+  const pulseContainer = this.createDiv(this.spinnerElement!, 'gallery-pulse-container');
     
     for (let i = 0; i < 2; i++) {
-      const pulse = pulseContainer.createDiv('gallery-pulse');
+  const pulse = this.createDiv(pulseContainer, 'gallery-pulse');
       pulse.style.animationDelay = `${i * 0.5}s`;
     }
   }
@@ -140,11 +140,11 @@ export class LoadingSpinner {
    * Render skeleton placeholder loader
    */
   private renderSkeleton(): void {
-    const skeletonContainer = this.spinnerElement!.createDiv('gallery-skeleton-container');
+  const skeletonContainer = this.createDiv(this.spinnerElement!, 'gallery-skeleton-container');
     
     // Create multiple skeleton lines
     for (let i = 0; i < 3; i++) {
-      const skeletonLine = skeletonContainer.createDiv('gallery-skeleton-line');
+  const skeletonLine = this.createDiv(skeletonContainer, 'gallery-skeleton-line');
       
       // Vary the width for more realistic look
       const widths = ['100%', '80%', '60%'];
@@ -156,10 +156,10 @@ export class LoadingSpinner {
    * Render progress bar
    */
   private renderProgressBar(): void {
-    const progressContainer = this.spinnerElement!.createDiv('gallery-progress-container');
-    
-    const progressBar = progressContainer.createDiv('gallery-progress-bar');
-    this.progressElement = progressBar.createDiv('gallery-progress-fill');
+  const progressContainer = this.createDiv(this.spinnerElement!, 'gallery-progress-container');
+
+  const progressBar = this.createDiv(progressContainer, 'gallery-progress-bar');
+  this.progressElement = this.createDiv(progressBar, 'gallery-progress-fill');
     
     // Set initial progress
     this.updateProgress(this.options.progress);
@@ -202,7 +202,7 @@ export class LoadingSpinner {
   show(): void {
     if (this.spinnerElement) {
       this.spinnerElement.style.display = '';
-      this.spinnerElement.addClass('gallery-loading-visible');
+      this.addClass(this.spinnerElement, 'gallery-loading-visible');
     }
   }
 
@@ -211,8 +211,8 @@ export class LoadingSpinner {
    */
   hide(): void {
     if (this.spinnerElement) {
-      this.spinnerElement.removeClass('gallery-loading-visible');
-      this.spinnerElement.addClass('gallery-loading-hidden');
+      this.removeClass(this.spinnerElement, 'gallery-loading-visible');
+      this.addClass(this.spinnerElement, 'gallery-loading-hidden');
       
       // Remove after animation
       setTimeout(() => {
@@ -221,6 +221,45 @@ export class LoadingSpinner {
         }
       }, 300);
     }
+  }
+
+  /**
+   * Create a div element appended to parent. Supports Obsidian helper API when present.
+   */
+  private createDiv(parent: HTMLElement, arg?: string | { cls?: string }): HTMLElement {
+    if (!parent) {
+      return document.createElement('div');
+    }
+
+    // If parent provides createDiv, use it
+    const anyParent = parent as any;
+    if (anyParent.createDiv && typeof anyParent.createDiv === 'function') {
+      if (typeof arg === 'string') return anyParent.createDiv(arg);
+      return anyParent.createDiv(arg || {});
+    }
+
+    // Fallback to standard DOM
+    const el = document.createElement('div');
+    if (typeof arg === 'string') el.className = arg;
+    else if (arg && arg.cls) el.className = arg.cls;
+    parent.appendChild(el);
+    return el;
+  }
+
+  private addClass(el: HTMLElement, cls: string) {
+    try {
+      const anyEl = el as any;
+      if (anyEl.addClass && typeof anyEl.addClass === 'function') anyEl.addClass(cls);
+      else el.classList.add(cls);
+    } catch {}
+  }
+
+  private removeClass(el: HTMLElement, cls: string) {
+    try {
+      const anyEl = el as any;
+      if (anyEl.removeClass && typeof anyEl.removeClass === 'function') anyEl.removeClass(cls);
+      else el.classList.remove(cls);
+    } catch {}
   }
 
   /**

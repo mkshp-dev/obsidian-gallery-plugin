@@ -7,7 +7,7 @@ import { GalleryConfig } from '../models/GalleryConfig';
  * Handles parsing and validation of gallery configuration
  */
 export class ParameterParser {
-    private static readonly ALLOWED_KEYS = ['path', 'view', 'recursive'];
+    private static readonly ALLOWED_KEYS = ['path', 'view', 'recursive', 'urls'];
     private static readonly VIEW_TYPES = ['thumbnail', 'carousel', 'grid'];
 
     /**
@@ -19,20 +19,51 @@ export class ParameterParser {
                 'Provide at least a path parameter');
         }
 
+        // Normalize common problematic whitespace and indentation issues that users paste
+        // from rich text sources (non-breaking spaces, tabs) which break YAML parsing.
+        let normalizedContent = content.replace(/\u00A0/g, ' '); // NBSP -> space
+        normalizedContent = normalizedContent.replace(/\t/g, '  '); // tabs -> two spaces
+        normalizedContent = normalizedContent.replace(/\r\n/g, '\n').trim();
+
+        // If the config contains a 'urls:' list, ensure the list items are indented
+        // (some copy/pastes produce lines starting at column 0 which makes YAML think
+        // the mapping ended). We only adjust dashes immediately following the urls: line.
+        if (/^\s*urls\s*:/mi.test(normalizedContent)) {
+            const lines = normalizedContent.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                if (/^\s*urls\s*:/i.test(lines[i])) {
+                    // Normalize following list item lines until a non-list, non-empty line
+                    for (let j = i + 1; j < lines.length; j++) {
+                        const line = lines[j];
+                        if (line.trim() === '') break;
+                        // If line starts with a dash but is not indented at least two spaces,
+                        // prefix with two spaces so it's treated as a sequence under urls:
+                        if (/^\s*-\s+/.test(line) && !/^\s{2,}-\s+/.test(line)) {
+                            lines[j] = '  ' + line.trim();
+                            continue;
+                        }
+                        // If the line does not start with '-' at all, stop adjusting (end of list)
+                        if (!/^\s*-\s+/.test(line)) break;
+                    }
+                    break;
+                }
+            }
+            normalizedContent = lines.join('\n');
+        }
+
         let parsedData: any;
-        
         try {
-            // Try parsing as YAML
-            parsedData = yaml.load(content.trim());
+            // Try parsing normalized YAML
+            parsedData = yaml.load(normalizedContent);
         } catch (yamlError) {
-            // If YAML parsing fails, try simple key-value parsing
+            // If YAML parsing fails, try simple key-value parsing on the normalized content
             try {
-                parsedData = this.parseSimpleFormat(content);
+                parsedData = this.parseSimpleFormat(normalizedContent);
             } catch (simpleError) {
                 throw this.createConfigError(
                     'yaml-syntax',
                     `Invalid YAML syntax: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`,
-                    'Check your YAML formatting'
+                    'Check your YAML formatting (ensure list items under urls: are indented).'
                 );
             }
         }
@@ -127,11 +158,11 @@ export class ParameterParser {
                 `Valid keys are: ${this.ALLOWED_KEYS.join(', ')}`);
         }
 
-        // Validate required keys
-        if (!config.path) {
-            throw this.createConfigError('missing_path', 
-                'Path parameter is required',
-                'Add "path: your/folder/path" to the configuration');
+        // Validate required keys: either path or urls must be provided
+        if (!config.path && !config.urls) {
+            throw this.createConfigError('missing_path_or_urls', 
+                'Either "path" or "urls" must be provided',
+                'Add "path: your/folder/path" or a list of remote "urls:" to the configuration');
         }
 
         // Validate view type if provided
@@ -168,9 +199,9 @@ export class ParameterParser {
         const errors: IConfigError[] = [];
 
         // Path validation
-        if (!config.path || config.path.trim() === '') {
-            errors.push(this.createConfigError('path', 'Path cannot be empty'));
-        } else if (config.path.includes('..')) {
+        if ((!config.path || config.path.trim() === '') && !(config as any).urls) {
+            errors.push(this.createConfigError('path_or_urls', 'Path cannot be empty unless urls are provided'));
+        } else if (config.path && config.path.includes('..')) {
             errors.push(this.createConfigError('path', 
                 'Path cannot contain directory traversal (..)'));
         }

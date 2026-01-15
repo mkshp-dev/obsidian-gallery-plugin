@@ -54,9 +54,9 @@ export class ThumbnailView extends GalleryView {
             cls: 'gallery-thumbnail-grid'
         });
 
-        // Render each image thumbnail
-        this._images.forEach(image => {
-            this.renderThumbnailItem(gridContainer, image);
+        // Render each image thumbnail (pass index for size variations)
+        this._images.forEach((image, idx) => {
+            this.renderThumbnailItem(gridContainer, image, idx);
         });
 
         console.log(`Thumbnail view rendered with ${this._images.length} images`);
@@ -80,7 +80,7 @@ export class ThumbnailView extends GalleryView {
     /**
      * Render individual thumbnail item
      */
-    private renderThumbnailItem(container: HTMLElement, image: IImageSource): void {
+    private renderThumbnailItem(container: HTMLElement, image: IImageSource, idx: number): void {
         const itemEl = container.createEl('div', {
             cls: 'gallery-thumbnail-item',
             attr: {
@@ -89,6 +89,15 @@ export class ThumbnailView extends GalleryView {
                 'tabindex': '0'
             }
         });
+
+        // Add occasional larger/tall items for a more varied masonry look
+        // Use less frequent intervals so large items are rarer and don't
+        // dominate vertical space.
+        if (idx % 12 === 0) {
+            itemEl.classList.add('gallery-thumbnail-item--large');
+        } else if (idx % 23 === 0) {
+            itemEl.classList.add('gallery-thumbnail-item--tall');
+        }
 
         // Accessibility: expose as button and provide an accessible name
         itemEl.setAttribute('role', 'button');
@@ -128,6 +137,10 @@ export class ThumbnailView extends GalleryView {
                 'loading': 'lazy'
             }
         });
+
+        // Caption overlay (visible on hover/focus)
+        const caption = itemEl.createEl('div', { cls: 'gallery-thumbnail-caption' });
+        caption.textContent = image.displayName || '';
 
         // Set initial opacity to 0 for fade-in effect
         imgEl.style.opacity = '0';
@@ -174,18 +187,25 @@ export class ThumbnailView extends GalleryView {
                 this.onImageError(image, container, new Error('Failed to load image'));
             };
 
-            // Set timeout for external URLs
-            if (image.type === 'external') {
-                setTimeout(() => {
-                    if (image.loadState === 'loading') {
-                        img.onload = null;
-                        img.onerror = null;
-                        this.onImageError(image, container, new Error('Image loading timed out'));
-                    }
-                }, 10000); // 10 second timeout
-            }
+            // Block external images when remote loading is disabled
+                if (image.type === 'external' && !this.allowRemoteImages) {
+                this.onImageError(image, container, new Error('External images are blocked by settings'));
+            } else {
+                // Set timeout for external URLs (use view-provided timeout when available)
+                let timeoutHandle: any = null;
+                if (image.type === 'external') {
+                        const timeoutMs = this.remoteLoadTimeoutMs ?? 10000;
+                    timeoutHandle = setTimeout(() => {
+                        if (image.loadState === 'loading') {
+                            img.onload = null;
+                            img.onerror = null;
+                            this.onImageError(image, container, new Error('Image loading timed out'));
+                        }
+                    }, timeoutMs);
+                }
 
-            img.src = image.getDisplayUrl();
+                img.src = image.getDisplayUrl();
+            }
 
         } catch (error) {
             this.onImageError(image, container, error as Error);
@@ -206,6 +226,10 @@ export class ThumbnailView extends GalleryView {
             imgEl.src = img.src;
             imgEl.style.opacity = '1';
         }
+
+        // We intentionally do not compute grid-row spans here anymore.
+        // Thumbnails use a fixed-ish tile height and images are centered with
+        // object-fit:contain to preserve aspect ratio while rendering smaller.
 
         // Remove loading state
         this.showLoadedState(container, image);
@@ -364,14 +388,51 @@ export class ThumbnailView extends GalleryView {
         const imgContainer = (content as any).createEl('div', { cls: 'gallery-modal-image' });
         const img = (imgContainer as any).createEl('img', {
             attr: {
-                'src': image.getDisplayUrl(),
                 'alt': image.displayName
             }
         });
 
-        img.addEventListener('load', () => {
-            (modal as any).addClass && (modal as any).addClass('gallery-modal-loaded');
-        });
+        // Load modal image respecting remote settings and timeout
+        const loadModalImage = (imgEl: HTMLImageElement, srcImage: IImageSource) => {
+            if (srcImage.type === 'external' && !(this as any).allowRemoteImages) {
+                imgEl.alt = 'External image blocked';
+                // Optionally show a placeholder class
+                imgEl.classList.add('gallery-external-blocked');
+                return;
+            }
+
+            const temp = new Image();
+            let timeoutHandle: any = null;
+
+            const onLoad = () => {
+                clearTimeout(timeoutHandle);
+                try { imgEl.src = temp.src; } catch {}
+                (modal as any).addClass && (modal as any).addClass('gallery-modal-loaded');
+                cleanup();
+            };
+
+            const onError = () => {
+                clearTimeout(timeoutHandle);
+                imgEl.alt = 'Failed to load';
+                cleanup();
+            };
+
+            const cleanup = () => {
+                temp.onload = null;
+                temp.onerror = null;
+            };
+
+            temp.onload = onLoad;
+            temp.onerror = onError;
+
+                timeoutHandle = setTimeout(() => {
+                    onError();
+                }, this.remoteLoadTimeoutMs ?? 10000);
+
+            try { temp.src = srcImage.getDisplayUrl(); } catch (e) { onError(); }
+        };
+
+        loadModalImage(img as HTMLImageElement, image);
 
         // Navigation helper: move by delta (-1 or 1)
         const navigate = (delta: number) => {

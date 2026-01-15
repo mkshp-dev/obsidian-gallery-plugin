@@ -8,19 +8,21 @@ export class GalleryConfig implements IGalleryConfig {
     public readonly path: string;
     public readonly view: 'thumbnail' | 'carousel' | 'grid';
     public readonly recursive: boolean;
+    public readonly urls?: string[];
 
-    constructor(config: Partial<IGalleryConfig>) {
-        // Validate required path
-        if (!config.path || typeof config.path !== 'string' || config.path.trim() === '') {
-            throw new Error('Gallery path is required and must be a non-empty string');
+    constructor(config: Partial<IGalleryConfig> & { urls?: string[] }) {
+        // Path may be optional if urls are provided
+        if ((!config.path || typeof config.path !== 'string' || config.path.trim() === '') && !(config as any).urls) {
+            throw new Error('Gallery path is required unless remote urls are provided');
         }
 
-        // Sanitize and validate path
-        this.path = this.sanitizePath(config.path.trim());
+        // Sanitize and validate path if present
+        this.path = config.path && typeof config.path === 'string' ? this.sanitizePath(config.path.trim()) : '';
         
         // Set defaults for optional parameters
-        this.view = config.view || 'thumbnail';
-        this.recursive = config.recursive !== undefined ? config.recursive : true;
+    this.view = config.view || 'thumbnail';
+    this.recursive = config.recursive !== undefined ? config.recursive : true;
+    this.urls = (config as any).urls;
 
         // Validate view type
         if (!['thumbnail', 'carousel', 'grid'].includes(this.view)) {
@@ -55,8 +57,9 @@ export class GalleryConfig implements IGalleryConfig {
         return new GalleryConfig({
             path: yamlData.path,
             view: yamlData.view,
-            recursive: yamlData.recursive
-        });
+            recursive: yamlData.recursive,
+            urls: yamlData.urls
+        } as any);
     }
 
     /**

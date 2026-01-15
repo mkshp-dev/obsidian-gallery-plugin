@@ -33,3 +33,13 @@ Object.defineProperty(window, 'IntersectionObserver', {
 
 // Mock fetch for external URL testing
 global.fetch = jest.fn();
+
+// Avoid jsdom's unimplemented canvas getContext from printing noisy errors in tests.
+// Return null so code paths that check getContext will fallback cleanly.
+try {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  HTMLCanvasElement.prototype.getContext = function () { return null; };
+} catch (e) {
+  // ignore if environment doesn't allow mutation
+}

@@ -1,7 +1,7 @@
 {
   "id": "image-gallery",
   "name": "Image Gallery",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "0.15.0",
   "description": "Create interactive image galleries in your notes using obs-gallery code blocks. Supports multiple view types (thumbnail, carousel, grid) and both local vault images and external URLs.",
   "author": "mkshp",

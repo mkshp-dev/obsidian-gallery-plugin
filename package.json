@@ -1,12 +1,12 @@
 {
   "name": "obsidian-gallery-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Interactive image galleries for Obsidian notes using code blocks",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "version": "node scripts/bump-manifest.mjs && git add manifest.json",
+    "version": "node scripts/bump-manifest.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src --ext .ts",

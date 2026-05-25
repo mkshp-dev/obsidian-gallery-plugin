@@ -24,4 +24,4 @@ urls:
 
 - Remote images are not downloaded into your vault. To keep permanent local copies, mirror the assets manually.
 - Enable **Validate remote content type** to have the plugin perform a lightweight HEAD request before loading each URL. This reduces accidental loading of non-image resources at the cost of one extra network request per URL.
-- The **Remote load timeout** setting controls how long the plugin waits before giving up on a slow URL.
+- The **Remote load timeout** setting controls how long the plugin waits before giving up on a slow URL. You can change it in the settings.

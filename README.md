@@ -1,30 +1,28 @@
-# 🖼️ Obsidian Gallery Plugin
+# Image Gallery
 
-Create beautiful, interactive image galleries in your Obsidian notes using simple code blocks. Display images from your vault folders with thumbnail grids and click-to-expand modal viewing.
+Create interactive image galleries in your Obsidian notes using simple code blocks. Display images from your vault folders with thumbnail grids and click-to-expand modal viewing.
 
-![Plugin Demo](https://img.shields.io/badge/status-beta-yellow) ![Version](https://img.shields.io/badge/version-1.0.0--beta-blue) ![Obsidian](https://img.shields.io/badge/obsidian-0.15.0+-purple)
+![Version](https://img.shields.io/badge/version-1.0.0-blue) ![Obsidian](https://img.shields.io/badge/obsidian-0.15.0+-purple)
 
-> **🎯 BETA RELEASE**: This plugin is ready for beta testing! See [BETA_RELEASE.md](./BETA_RELEASE.md) for testing instructions and known limitations.
+## Features
 
-## ✨ Features
+- **Thumbnail galleries** — Display images in responsive grid layouts
+- **Modal viewer** — Click thumbnails to view full-size images
+- **Folder support** — Scan entire folders or individual files
+- **Simple syntax** — Easy `obs-gallery` code blocks
+- **Responsive design** — Works on desktop and mobile
+- **Performance** — Lazy loading for large image collections
+- **Clean styling** — Integrates seamlessly with Obsidian themes
+- **Error handling** — Graceful fallbacks for missing paths
 
-- 🖼️ **Thumbnail Galleries** - Display images in responsive grid layouts
-- 🔍 **Modal Viewer** - Click thumbnails to view full-size images
-- 📁 **Folder Support** - Scan entire folders or individual files
-- 🎯 **Simple Syntax** - Easy `obs-gallery` code blocks
-- 📱 **Responsive Design** - Works on desktop and mobile
-- ⚡ **Performance** - Lazy loading for large image collections
-- 🎨 **Clean Styling** - Integrates seamlessly with Obsidian themes
-- ❌ **Error Handling** - Graceful fallbacks for missing paths
-
-## 🚀 Quick Start
+## Quick start
 
 ### Installation
 
 1. Download the plugin files (`main.js`, `manifest.json`, `styles.css`)
-2. Create folder: `YourVault/.obsidian/plugins/obsidian-gallery-plugin/`
+2. Create folder: `YourVault/.obsidian/plugins/image-gallery/`
 3. Copy files to the plugin folder
-4. Enable "Gallery Plugin" in Obsidian Settings → Community Plugins
+4. Enable "Image Gallery" in Obsidian Settings → Community Plugins
 
 ### Basic Usage
 
@@ -37,7 +35,7 @@ view: thumbnail
 ```
 ````
 
-## 📖 Usage Examples
+## Usage examples
 
 ### Folder Gallery
 Display all images from a folder:
@@ -79,15 +77,66 @@ view: grid
 ```
 ````
 
-## 🎛️ Configuration Options
+## Configuration options
 
-| Parameter | Description | Default | Example |
-|-----------|-------------|---------|---------|
-| `path` | Folder or file path (required when not using `urls`) | - | `Images/Photos` |
-| `view` | Display style | `thumbnail` | `thumbnail` |
-| `urls` | Optional list of remote image URLs (opt-in). Use when you want to reference images hosted externally. | - | see example below |
-| `allowRemoteImages` | Plugin setting (opt-in). When false, remote images from `urls` will be blocked and a helpful message will be shown. This is controlled from the plugin settings page. | `false` | n/a |
-| `remoteLoadTimeoutMs` | Plugin setting controlling how long (ms) the plugin will wait for a remote image to load before giving up. Applies to images in `urls`. | `10000` | n/a |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `path` | Folder or file path (required when not using `urls`) | — |
+| `view` | Display style: `thumbnail`, `carousel`, `grid` | `thumbnail` |
+| `urls` | Optional list of remote image URLs (opt-in) | — |
+| `recursive` | Include images in subfolders | `false` |
+
+## 🔗 Templater Integration (opt-in)
+
+You can use [Templater](https://github.com/SilentVoid13/Templater) variables in your gallery code blocks to dynamically populate URLs and paths. This is useful for:
+
+- Pulling image URLs from frontmatter
+- Using dynamic folder paths based on file location
+- Referencing user-defined Templater functions
+
+**Requirements:**
+- Templater plugin must be installed and enabled
+- Enable "Templater integration" in Gallery Plugin settings
+
+**Example - Frontmatter URLs:**
+````markdown
+---
+coverImage: https://example.com/cover.jpg
+galleryUrl: https://cdn.example.com/photo.png
+---
+
+```obs-gallery
+view: thumbnail
+urls:
+  - <% tp.frontmatter.coverImage %>
+  - <% tp.frontmatter.galleryUrl %>
+```
+````
+
+**Example - Dynamic Paths:**
+````markdown
+```obs-gallery
+path: <% tp.file.folder() %>/Screenshots
+view: grid
+recursive: true
+```
+````
+
+**Example - Custom Functions:**
+````markdown
+```obs-gallery
+urls:
+  - <% tp.user.getProjectCover() %>
+  - <% tp.user.getDailyCover() %>
+view: carousel
+```
+````
+
+**Notes:**
+- Templater variables are expanded **before** YAML parsing
+- All standard Templater syntax is supported (`<% %>`, `<%* %>`, etc.)
+- If Templater is not installed or disabled, galleries will use the literal text
+- Use "Enable lifecycle logging" in settings to debug Templater expansion
 
 ## 🌐 Remote images (opt-in)
 
@@ -114,14 +163,14 @@ Notes:
 - Remote images are not automatically downloaded into your vault. If you need permanent local copies, mirror the assets manually.
 
 
-## 🖼️ Supported Formats
+## Supported formats
 
 - **JPEG** (`.jpg`, `.jpeg`)
 - **PNG** (`.png`)
 - **GIF** (`.gif`)
 - **WebP** (`.webp`)
 
-## 🎨 Interface
+## Interface
 
 ### Thumbnail Grid
 - Responsive grid layout adapts to screen size
@@ -136,7 +185,7 @@ Notes:
   - Click outside the image
 - Image name displayed at bottom
 
-## 🛠️ Development
+## Development
 
 ### Building from Source
 
@@ -171,7 +220,7 @@ obsidian-gallery-plugin/
     └── processors/      # Content processing
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Gallery Not Appearing
 - Check that the path exists and has correct case sensitivity
@@ -193,7 +242,7 @@ obsidian-gallery-plugin/
 - Consider organizing large collections into subfolders
 - Modal loads full-resolution images on demand
 
-## 🗺️ Roadmap
+## Roadmap
 
 ### Current (v1.0.0)
 - ✅ Basic thumbnail galleries
@@ -221,24 +270,16 @@ Contributions are welcome! Please feel free to:
 3. Use `npm run dev` for development with auto-rebuilding
 4. Test in your Obsidian vault
 
-## 📄 License
+## License
 
-MIT License - see LICENSE file for details.
+MIT License — see [LICENSE](./LICENSE) for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built for the [Obsidian](https://obsidian.md) community
-- Developed using [SpecKit](https://github.com/specify/specify) methodology
-- Thanks to all contributors and testers
 
-## 📞 Support
+## Support
 
-- 🐛 **Bug Reports**: [GitHub Issues](../../issues)
-- 💡 **Feature Requests**: [GitHub Discussions](../../discussions)
-- 📖 **Documentation**: [Plugin Wiki](../../wiki)
-
----
-
-**Made with ❤️ for the Obsidian community**
-
-*Transform your vault into a visual experience with beautiful image galleries!*
+- **Bug reports**: [GitHub Issues](../../issues)
+- **Feature requests**: [GitHub Discussions](../../discussions)
+- **Documentation**: [Plugin docs](https://mkshp-dev.github.io/obsidian-gallery-plugin)

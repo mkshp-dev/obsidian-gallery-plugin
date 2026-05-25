@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "build-simple": "node build-simple.mjs",
-    "build-mvp": "node build-simple.mjs",
+    "version": "node scripts/bump-manifest.mjs && git add manifest.json",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src --ext .ts",
@@ -20,7 +19,7 @@
     "images",
     "markdown"
   ],
-  "author": "Gallery Plugin Team",
+  "author": "mkshp",
   "license": "MIT",
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

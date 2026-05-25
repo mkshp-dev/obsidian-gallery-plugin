@@ -1,4 +1,4 @@
-import { Plugin, TFile, PluginSettingTab, Setting, App } from 'obsidian';
+import { Plugin, PluginSettingTab, Setting, App } from 'obsidian';
 import { ContentScanner } from './src/services/ContentScanner';
 import { ViewFactory } from './src/views/ViewFactory';
 import { GalleryProcessor } from './src/processors/GalleryProcessor';
@@ -36,8 +36,6 @@ class GallerySettingsTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-
-        containerEl.createEl('h2', { text: 'Gallery Plugin Settings' });
 
         new Setting(containerEl)
             .setName('Allow remote images')
@@ -90,6 +88,7 @@ class GallerySettingsTab extends PluginSettingTab {
                     this.plugin.settings.enableLifecycleLogging = value;
                     await this.plugin.saveSettings();
                 }));
+
     }
 }
 
@@ -103,7 +102,6 @@ export default class GalleryPlugin extends Plugin {
     private _onOpenSettingsRequested: ((e?: Event) => void) | null = null;
     
     async onload() {
-        console.log('Loading Gallery Plugin');
 
         await this.loadSettings();
 
@@ -156,8 +154,6 @@ export default class GalleryPlugin extends Plugin {
             }
         };
         document.addEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
-
-        console.log('Gallery Plugin loaded successfully');
     }
 
     async loadSettings() {
@@ -170,8 +166,7 @@ export default class GalleryPlugin extends Plugin {
     }
 
     onunload() {
-        console.log('Unloading Gallery Plugin');
-        
+
         // Clean up gallery processor
         if (this.galleryProcessor) {
             this.galleryProcessor.destroy();
@@ -213,16 +208,10 @@ export default class GalleryPlugin extends Plugin {
      */
     private refreshGalleries(): void {
         if (!this.galleryProcessor) {
-            console.warn('Gallery processor not available for refresh');
             return;
         }
 
-        console.log('Refreshing galleries due to vault changes');
-        
-        // Use the gallery processor's refresh functionality
-        this.galleryProcessor.refreshAllGalleries().then(() => {
-            console.log('All galleries refreshed successfully');
-        }).catch(error => {
+        this.galleryProcessor.refreshAllGalleries().catch(error => {
             console.error('Error refreshing galleries:', error);
         });
     }
@@ -258,9 +247,6 @@ export default class GalleryPlugin extends Plugin {
 
             if (!result.success) {
                 console.error('Gallery processing failed:', result.errors);
-                // Error handling is already done by the processor
-            } else {
-                console.log(`Gallery processed successfully: ${result.imagesLoaded}/${result.imagesFound} images loaded`);
             }
 
         } catch (error) {

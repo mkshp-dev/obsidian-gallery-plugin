@@ -1,9 +1,12 @@
 # Dependencies
 node_modules/
+docs/node_modules/
 
 # Build outputs
 dist/
 build/
+docs/build/
+docs/.docusaurus/
 main.js
 styles.css
 

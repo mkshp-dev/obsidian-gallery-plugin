@@ -1,4 +1,4 @@
-import * as yaml from 'js-yaml';
+import { parseYaml, stringifyYaml } from 'obsidian';
 import { IGalleryConfig, IConfigError } from '../models/interfaces';
 import { GalleryConfig } from '../models/GalleryConfig';
 
@@ -54,7 +54,7 @@ export class ParameterParser {
         let parsedData: any;
         try {
             // Try parsing normalized YAML
-            parsedData = yaml.load(normalizedContent);
+            parsedData = parseYaml(normalizedContent);
         } catch (yamlError) {
             // If YAML parsing fails, try simple key-value parsing on the normalized content
             try {
@@ -289,14 +289,10 @@ recursive: true`;
      * Format configuration as YAML string
      */
     static formatAsYaml(config: IGalleryConfig): string {
-        return yaml.dump({
+        return stringifyYaml({
             path: config.path,
             view: config.view,
             recursive: config.recursive
-        }, {
-            indent: 2,
-            lineWidth: 80,
-            noRefs: true
         });
     }
 }

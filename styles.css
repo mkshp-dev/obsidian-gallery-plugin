@@ -55,7 +55,6 @@
   overflow: hidden;
   cursor: pointer;
   transition: all 0.24s cubic-bezier(0.4, 0, 0.2, 1);
-  background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   backdrop-filter: blur(8px);
@@ -128,9 +127,7 @@
 .gallery-thumbnail-item--large { grid-column: span 1; }
 .gallery-thumbnail-item--wide { grid-column: span 1; }
 .gallery-thumbnail-item--tall {
-  /* tall items will usually get larger row spans; ensure they don't break */
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
+  /* tall items naturally expand within grid rows */
 }
 
 /* Make large/wide tiles span two columns only on wider viewports */
@@ -261,22 +258,18 @@
 /* Grid View */
 .gallery-grid {
   padding: 16px;
-  /* Use a responsive column width so images are larger by default */
-  columns: auto 260px;
-  column-gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
 .gallery-grid-item {
-  display: inline-block;
+  display: block;
   width: 100%;
-  margin-bottom: 16px;
   border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.2s ease;
-  /* Prevent items from breaking across columns */
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
 }
 
 .gallery-grid-item:hover {
@@ -324,8 +317,8 @@
   }
   
   .gallery-grid {
-    columns: 2;
-    column-gap: 16px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
     padding: 16px;
   }
   
@@ -361,8 +354,8 @@
   }
   
   .gallery-grid {
-    columns: 1;
-    column-gap: 0;
+    grid-template-columns: 1fr;
+    gap: 0;
   }
   
   .gallery-carousel-nav {
@@ -379,7 +372,6 @@
 /* High DPI displays */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .gallery-thumbnail-image {
-    image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
   }
 }

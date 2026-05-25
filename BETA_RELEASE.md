@@ -4,7 +4,7 @@
 **Release Date:** November 11, 2025  
 **Status:** Beta Testing
 
-## 🎯 What's Ready for Beta Testing
+## 🎯 What's Ready for Beta Testing.
 
 ### Core Features (Fully Implemented)
 - ✅ **Gallery Code Blocks**: Use `obs-gallery` code blocks to create image galleries

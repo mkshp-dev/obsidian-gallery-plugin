@@ -86,59 +86,7 @@ view: grid
 | `urls` | Optional list of remote image URLs (opt-in) | — |
 | `recursive` | Include images in subfolders | `false` |
 
-## 🔗 Templater Integration (opt-in)
-
-You can use [Templater](https://github.com/SilentVoid13/Templater) variables in your gallery code blocks to dynamically populate URLs and paths. This is useful for:
-
-- Pulling image URLs from frontmatter
-- Using dynamic folder paths based on file location
-- Referencing user-defined Templater functions
-
-**Requirements:**
-- Templater plugin must be installed and enabled
-- Enable "Templater integration" in Gallery Plugin settings
-
-**Example - Frontmatter URLs:**
-````markdown
----
-coverImage: https://example.com/cover.jpg
-galleryUrl: https://cdn.example.com/photo.png
----
-
-```obs-gallery
-view: thumbnail
-urls:
-  - <% tp.frontmatter.coverImage %>
-  - <% tp.frontmatter.galleryUrl %>
-```
-````
-
-**Example - Dynamic Paths:**
-````markdown
-```obs-gallery
-path: <% tp.file.folder() %>/Screenshots
-view: grid
-recursive: true
-```
-````
-
-**Example - Custom Functions:**
-````markdown
-```obs-gallery
-urls:
-  - <% tp.user.getProjectCover() %>
-  - <% tp.user.getDailyCover() %>
-view: carousel
-```
-````
-
-**Notes:**
-- Templater variables are expanded **before** YAML parsing
-- All standard Templater syntax is supported (`<% %>`, `<%* %>`, etc.)
-- If Templater is not installed or disabled, galleries will use the literal text
-- Use "Enable lifecycle logging" in settings to debug Templater expansion
-
-## 🌐 Remote images (opt-in)
+## Remote images (opt-in)
 
 You can reference externally hosted images using the `urls:` YAML list in your `obs-gallery` code block. Remote images are disabled by default to preserve privacy. The plugin exposes these related settings in the Gallery Plugin settings panel:
 

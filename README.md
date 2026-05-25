@@ -1,4 +1,4 @@
-# Image Gallery
+# Gallery View
 
 Create interactive image galleries in your Obsidian notes using simple code blocks. Display images from your vault folders with thumbnail grids and click-to-expand modal viewing.
 
@@ -20,9 +20,9 @@ Create interactive image galleries in your Obsidian notes using simple code bloc
 ### Installation
 
 1. Download the plugin files (`main.js`, `manifest.json`, `styles.css`)
-2. Create folder: `YourVault/.obsidian/plugins/image-gallery/`
+2. Create folder: `YourVault/.obsidian/plugins/gallery-view/`
 3. Copy files to the plugin folder
-4. Enable "Image Gallery" in Obsidian Settings → Community Plugins
+4. Enable "Gallery View" in Obsidian Settings → Community Plugins
 
 ### Basic Usage
 

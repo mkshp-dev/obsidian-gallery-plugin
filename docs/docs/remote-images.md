@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Remote images
 
-Remote images are disabled by default to protect your privacy. To use them:
+Remote images are disabled by default to protect your privacy. To use them, follow:
 
 1. Open **Settings → Image Gallery**.
 2. Enable **Allow remote images**.

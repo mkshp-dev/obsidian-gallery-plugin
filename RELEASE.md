@@ -2,6 +2,8 @@
 
 Releases are automated via GitHub Actions. Pushing a version tag to `main` triggers a build and creates a draft GitHub release with the compiled plugin assets attached.
 
+The `npm version` command handles version bumping — it updates `package.json`, automatically syncs `manifest.json` via the `version` lifecycle script, commits both files, and creates a local git tag in one step.
+
 ---
 
 ## One-time setup
@@ -23,7 +25,7 @@ These steps only need to be done once before the first release.
 
 ### 3. Submit to the community store (first release only)
 
-Before submitting, make sure `main` has the final `manifest.json` with:
+Before submitting, make sure `main` has the final `manifest.json` committed with:
 - `id`: `image-gallery`
 - `version`: your release version (e.g. `1.0.0`)
 
@@ -39,17 +41,7 @@ The automated review runs against the `main` branch. Once it passes, your plugin
 
 ## Making a release
 
-### Step 1 — Work on Dev
-
-Do all development on the `Dev` branch. When the feature or fix is ready:
-
-```bash
-# Make sure Dev is up to date and tests pass
-git checkout Dev
-npm test
-```
-
-### Step 2 — Merge to main
+### Step 1 — Work on Dev, then merge to main
 
 ```bash
 git checkout main
@@ -57,79 +49,54 @@ git merge Dev
 git push origin main
 ```
 
-### Step 3 — Bump the version
+### Step 2 — Bump the version
 
-Edit **two files** — both must have the same version string:
+Choose the bump type based on what changed:
 
-| File | Field |
-|------|-------|
-| `manifest.json` | `"version"` |
-| `package.json` | `"version"` |
-
-Follow [Semantic Versioning](https://semver.org/):
-
-| Change | Example |
-|--------|---------|
-| Bug fix | `1.0.0` → `1.0.1` |
-| New feature (backwards-compatible) | `1.0.1` → `1.1.0` |
-| Breaking change | `1.1.0` → `2.0.0` |
-
-### Step 4 — Commit the version bump
+| Command | When to use | Example |
+|---------|-------------|---------|
+| `npm version patch` | Bug fixes only | `1.0.0` → `1.0.1` |
+| `npm version minor` | New features, backwards-compatible | `1.0.1` → `1.1.0` |
+| `npm version major` | Breaking changes | `1.1.0` → `2.0.0` |
 
 ```bash
-git add manifest.json package.json
-git commit -m "chore: release x.y.z"
-git push origin main
+npm version patch   # or minor / major
 ```
 
-### Step 5 — Tag the release
+This single command:
+- Bumps the version in `package.json`
+- Syncs the same version into `manifest.json` (via the `version` npm lifecycle script)
+- Creates a git commit with both files staged
+- Creates a local annotated tag matching the version
 
-The tag **must exactly match** the `version` field in `manifest.json`. The workflow will fail if they differ.
+### Step 3 — Push the commit and tag
 
 ```bash
-git tag -a x.y.z -m "x.y.z"
-git push origin x.y.z
+git push origin main --follow-tags
 ```
 
-### Step 6 — Publish the draft release
+`--follow-tags` pushes both the version commit and the tag in one go. The tag triggers the GitHub Actions release workflow.
+
+### Step 4 — Publish the draft release
 
 1. Go to your repository on GitHub and open the **Releases** tab.
 2. You will see a **draft release** created by the workflow with `main.js`, `manifest.json`, and `styles.css` attached.
 3. Click the pencil icon to edit it.
-4. Write release notes (what changed, fixed, added).
+4. Write release notes describing what changed.
 5. Click **Publish release**.
 
-Obsidian picks up the new version automatically. Users who have the plugin installed will be notified of the update.
-
----
-
-## Versioning the `versions.json` (optional)
-
-If you want older versions of Obsidian to know which minimum app version a plugin release requires, maintain a `versions.json` file at the repo root:
-
-```json
-{
-  "1.0.0": "0.15.0",
-  "1.1.0": "0.15.0"
-}
-```
-
-Each key is a plugin version; the value is the minimum Obsidian version that release supports. Add a new entry for each release.
+Obsidian picks up the new version automatically — users who have the plugin installed will be notified of the update.
 
 ---
 
 ## Quick reference
 
 ```bash
-# Full release flow (replace x.y.z with actual version)
+# Full release flow
 git checkout main
 git merge Dev
 git push origin main
-# Edit manifest.json and package.json to bump version
-git add manifest.json package.json
-git commit -m "chore: release x.y.z"
-git push origin main
-git tag -a x.y.z -m "x.y.z"
-git push origin x.y.z
-# Then publish the draft on GitHub Releases
+npm version patch          # or minor / major
+git push origin main --follow-tags
+# Then publish the draft on GitHub → Releases
 ```

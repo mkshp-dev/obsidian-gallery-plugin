@@ -8,7 +8,6 @@ build/
 docs/build/
 docs/.docusaurus/
 main.js
-styles.css
 
 # Development
 *.log

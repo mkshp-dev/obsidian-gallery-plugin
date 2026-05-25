@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Checkout
@@ -35,6 +37,16 @@ jobs:
             echo "ERROR: Tag '$tag' does not match manifest.json version '$manifest_version'"
             exit 1
           fi
+
+      - name: Attest build provenance for main.js
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: main.js
+
+      - name: Attest build provenance for styles.css
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: styles.css
 
       - name: Create GitHub release
         env:

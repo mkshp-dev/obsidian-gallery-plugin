@@ -1,4 +1,4 @@
-import { Plugin, TFile, PluginSettingTab, Setting, App } from 'obsidian';
+import { Plugin, PluginSettingTab, Setting, App } from 'obsidian';
 import { ContentScanner } from './src/services/ContentScanner';
 import { ViewFactory } from './src/views/ViewFactory';
 import { GalleryProcessor } from './src/processors/GalleryProcessor';
@@ -16,8 +16,6 @@ interface GalleryPluginSettings {
     gracePeriodMs?: number;
     // Enable verbose lifecycle logging to help debug detach/reattach behavior
     enableLifecycleLogging?: boolean;
-    // Enable Templater plugin integration for dynamic variable expansion
-    enableTemplaterIntegration?: boolean;
 }
 
 const DEFAULT_SETTINGS: GalleryPluginSettings = {
@@ -26,7 +24,6 @@ const DEFAULT_SETTINGS: GalleryPluginSettings = {
     ,validateRemoteContentType: false
     ,gracePeriodMs: 30000
     ,enableLifecycleLogging: false
-    ,enableTemplaterIntegration: false
 };
 
 class GallerySettingsTab extends PluginSettingTab {
@@ -39,8 +36,6 @@ class GallerySettingsTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-
-        containerEl.createEl('h2', { text: 'Gallery Plugin Settings' });
 
         new Setting(containerEl)
             .setName('Allow remote images')
@@ -94,15 +89,6 @@ class GallerySettingsTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
-            .setName('Enable Templater integration')
-            .setDesc('Allow Templater variables in gallery code blocks (e.g., <% tp.frontmatter.coverImage %>). Requires Templater plugin to be installed.')
-            .addToggle(toggle => toggle
-                .setValue(!!this.plugin.settings.enableTemplaterIntegration)
-                .onChange(async (value) => {
-                    this.plugin.settings.enableTemplaterIntegration = value;
-                    await this.plugin.saveSettings();
-                }));
     }
 }
 
@@ -116,7 +102,6 @@ export default class GalleryPlugin extends Plugin {
     private _onOpenSettingsRequested: ((e?: Event) => void) | null = null;
     
     async onload() {
-        console.log('Loading Gallery Plugin');
 
         await this.loadSettings();
 
@@ -169,8 +154,6 @@ export default class GalleryPlugin extends Plugin {
             }
         };
         document.addEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
-
-        console.log('Gallery Plugin loaded successfully');
     }
 
     async loadSettings() {
@@ -183,8 +166,7 @@ export default class GalleryPlugin extends Plugin {
     }
 
     onunload() {
-        console.log('Unloading Gallery Plugin');
-        
+
         // Clean up gallery processor
         if (this.galleryProcessor) {
             this.galleryProcessor.destroy();
@@ -226,102 +208,12 @@ export default class GalleryPlugin extends Plugin {
      */
     private refreshGalleries(): void {
         if (!this.galleryProcessor) {
-            console.warn('Gallery processor not available for refresh');
             return;
         }
 
-        console.log('Refreshing galleries due to vault changes');
-        
-        // Use the gallery processor's refresh functionality
-        this.galleryProcessor.refreshAllGalleries().then(() => {
-            console.log('All galleries refreshed successfully');
-        }).catch(error => {
+        this.galleryProcessor.refreshAllGalleries().catch(error => {
             console.error('Error refreshing galleries:', error);
         });
-    }
-
-    /**
-     * Expand Templater variables in gallery code block content
-     * @param source - Raw code block content
-     * @param ctx - Markdown post processor context
-     * @returns Expanded content or original if Templater unavailable
-     */
-    private async expandTemplaterVariables(
-        source: string,
-        ctx: any
-    ): Promise<string> {
-        // Check if Templater integration is enabled in settings
-        if (!this.settings.enableTemplaterIntegration) {
-            if (this.settings.enableLifecycleLogging) {
-                console.log('Templater integration disabled in settings');
-            }
-            return source;
-        }
-
-        try {
-            // Check if Templater plugin is installed and enabled
-            const templater = (this.app as any).plugins?.getPlugin('templater-obsidian');
-            if (!templater) {
-                if (this.settings.enableLifecycleLogging) {
-                    console.log('Templater plugin not found or not enabled');
-                }
-                return source;
-            }
-
-            // Get the current file from context if available
-            const file = ctx?.sourcePath ? this.app.vault.getAbstractFileByPath(ctx.sourcePath) : null;
-            
-            if (!file || !(file instanceof TFile)) {
-                if (this.settings.enableLifecycleLogging) {
-                    console.log('No valid file context for Templater expansion');
-                }
-                return source;
-            }
-
-            // Use Templater's internal functions to parse template content
-            // IMPORTANT: Use read_and_parse_template with run_mode to avoid file modification
-            // Templater's API has different methods:
-            // - parse_template(content, file) - may modify file
-            // - read_and_parse_template(file) - reads and parses but shouldn't modify
-            // We need to use the functions object directly for inline parsing
-            
-            if (templater.templater?.functions_generator) {
-                // Create a functions object for the current file context
-                const functions = await templater.templater.functions_generator.generate_object(
-                    file,
-                    templater.templater.functions_generator.internal_functions.modules_array
-                );
-                
-                // Parse the template content without modifying the file
-                // This uses Templater's parser directly on the string
-                if (templater.templater.parser?.parse_commands) {
-                    const expanded = await templater.templater.parser.parse_commands(source, functions);
-                    
-                    if (this.settings.enableLifecycleLogging) {
-                        console.log('Templater expansion completed (non-destructive)');
-                        if (expanded !== source) {
-                            console.log('Template variables were expanded');
-                        }
-                    }
-                    
-                    return expanded;
-                } else {
-                    if (this.settings.enableLifecycleLogging) {
-                        console.warn('Templater parser not available');
-                    }
-                    return source;
-                }
-            } else {
-                if (this.settings.enableLifecycleLogging) {
-                    console.warn('Templater API not available (functions_generator not found)');
-                }
-                return source;
-            }
-
-        } catch (error) {
-            console.warn('Templater expansion failed, using original source:', error);
-            return source; // Graceful fallback
-        }
     }
 
     /**
@@ -341,11 +233,8 @@ export default class GalleryPlugin extends Plugin {
         }
 
         try {
-            // Expand Templater variables first (if enabled)
-            const expandedSource = await this.expandTemplaterVariables(source, ctx);
-            
             // Use the comprehensive gallery processor with professional features
-            const result = await this.galleryProcessor.processCodeBlock(expandedSource, el, ctx, {
+            const result = await this.galleryProcessor.processCodeBlock(source, el, ctx, {
                 showLoadingFeedback: true,
                 enableValidation: true,
                 maxRetries: 3,
@@ -358,9 +247,6 @@ export default class GalleryPlugin extends Plugin {
 
             if (!result.success) {
                 console.error('Gallery processing failed:', result.errors);
-                // Error handling is already done by the processor
-            } else {
-                console.log(`Gallery processed successfully: ${result.imagesLoaded}/${result.imagesFound} images loaded`);
             }
 
         } catch (error) {

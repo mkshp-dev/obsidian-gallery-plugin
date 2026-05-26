@@ -134,7 +134,13 @@ export class ContentScanner implements IContentScanner {
      */
     isImageFile(path: string): boolean {
         // Remove query parameters and fragments from path for extension detection
-        const cleanPath = path.split('?')[0].split('#')[0];
+        // Optimized: indexOf is much faster than string splitting for large directories
+        let cleanPath = path;
+        const qIndex = cleanPath.indexOf('?');
+        if (qIndex !== -1) cleanPath = cleanPath.substring(0, qIndex);
+        const hIndex = cleanPath.indexOf('#');
+        if (hIndex !== -1) cleanPath = cleanPath.substring(0, hIndex);
+
         const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
         return this.SUPPORTED_EXTENSIONS.includes(extension);
     }

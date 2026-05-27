@@ -259,8 +259,9 @@
 .gallery-grid {
   padding: 16px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 16px;
+  container-type: inline-size;
 }
 
 .gallery-grid-item {
@@ -317,7 +318,7 @@
   }
   
   .gallery-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 16px;
     padding: 16px;
   }
@@ -354,8 +355,8 @@
   }
   
   .gallery-grid {
-    grid-template-columns: 1fr;
-    gap: 0;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
   }
   
   .gallery-carousel-nav {

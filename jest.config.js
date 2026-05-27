@@ -23,6 +23,7 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^obsidian$': '<rootDir>/tests/__mocks__/obsidian.ts'
   }
 };

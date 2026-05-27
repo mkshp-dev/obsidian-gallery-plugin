@@ -26,6 +26,17 @@ export class GridView extends GalleryView {
     super('grid', container);
   }
 
+  /**
+   * Override to prevent adding 'gallery-grid' layout class to the outer container.
+   * The inner div created in render() carries that class; having it on the outer
+   * container too turns it into a grid itself, constraining the inner div to a
+   * single narrow track and causing single-column display.
+   */
+  protected initializeContainer(): void {
+    this.safeAddClass(this.container, 'gallery-view');
+    try { this.container.setAttribute('data-view-type', this._type); } catch {}
+  }
+
   render(): void {
     if (this._isDestroyed) return;
     // Clear container (use DOM-agnostic helper)

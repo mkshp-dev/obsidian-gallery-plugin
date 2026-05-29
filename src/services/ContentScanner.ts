@@ -192,10 +192,15 @@ export class ContentScanner implements IContentScanner {
                 images.push(imageSource);
             }
             
-            // Remove duplicates based on path
-            const uniqueImages = images.filter((image, index, arr) => 
-                arr.findIndex(img => img.path === image.path) === index
-            );
+            // Remove duplicates based on path (O(N) performance optimization)
+            const seenPaths = new Set<string>();
+            const uniqueImages: IImageSource[] = [];
+            for (const image of images) {
+                if (!seenPaths.has(image.path)) {
+                    seenPaths.add(image.path);
+                    uniqueImages.push(image);
+                }
+            }
             
             return uniqueImages;
             

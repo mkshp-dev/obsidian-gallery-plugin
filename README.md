@@ -46,6 +46,8 @@ view: thumbnail
 ```
 ````
 
+![Thumbnail View](docs/docs/views/Thumb.png)
+
 ### Carousel View
 Horizontal scrolling carousel with controls:
 ````markdown
@@ -54,6 +56,8 @@ path: Images/Screenshots
 view: carousel
 ```
 ````
+
+![Carousel View](docs/docs/views/Carousel.png)
 
 ### Masonry Grid
 Pinterest-style layout with variable heights:
@@ -65,17 +69,22 @@ recursive: true
 ```
 ````
 
+![Grid View](docs/docs/views/Grid.png)
+
 ### With External Images (Beta)
 Include remote images (requires enabling in settings):
 ````markdown
 ```obs-gallery
-path: Photos/Local
 urls:
-  - https://example.com/image1.jpg
-  - https://example.com/image2.png
+  - https://picsum.photos/800/600?random=1
+  - https://picsum.photos/800/600?random=2
+  - https://picsum.photos/800/600?random=3
+  - https://picsum.photos/800/600?random=4
 view: grid
 ```
 ````
+
+![External URLs](docs/docs/views/External-linksOnly.png)
 
 ## Configuration options
 

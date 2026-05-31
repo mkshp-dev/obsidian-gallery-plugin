@@ -67,6 +67,8 @@ export class FolderScanner {
         }
 
         const images: IImageSource[] = [];
+        const imagePromises: Promise<IImageSource | null>[] = [];
+        const folderPromises: Promise<IImageSource[]>[] = [];
         
         // Get all children of the folder
         const children = folder.children;
@@ -75,24 +77,35 @@ export class FolderScanner {
             if (child instanceof TFile) {
                 // Check if it's an image file
                 if (this.isImageFile(child.path)) {
-                    try {
-                        const imageSource = await this.createImageSource(child);
-                        images.push(imageSource);
-                    } catch (error) {
+                    const promise = this.createImageSource(child).catch(error => {
                         console.warn('Failed to process image file:', child.path, error);
-                        // Continue with other files
-                    }
+                        return null;
+                    });
+                    imagePromises.push(promise);
                 }
             } else if (child instanceof TFolder && recursive) {
                 // Recursively scan subdirectory
-                try {
-                    const subImages = await this.performScan(child.path, recursive, depth + 1);
-                    images.push(...subImages);
-                } catch (error) {
+                const promise = this.performScan(child.path, recursive, depth + 1).catch(error => {
                     console.warn('Failed to scan subdirectory:', child.path, error);
-                    // Continue with other directories
-                }
+                    return [];
+                });
+                folderPromises.push(promise);
             }
+        }
+
+        const [resolvedImages, resolvedFolders] = await Promise.all([
+            Promise.all(imagePromises),
+            Promise.all(folderPromises)
+        ]);
+
+        for (const img of resolvedImages) {
+            if (img !== null) {
+                images.push(img);
+            }
+        }
+
+        for (const subImages of resolvedFolders) {
+            images.push(...subImages);
         }
         
         // Sort images by name for consistent ordering

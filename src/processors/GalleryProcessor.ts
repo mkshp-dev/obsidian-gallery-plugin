@@ -15,6 +15,7 @@ import { ImageLoader } from '../utils/ImageLoader';
 import { ImageSource } from '../models/ImageSource';
 
 export interface IGalleryProcessingOptions {
+  errorDisplayMode?: 'full' | 'text' | 'hidden';
   showLoadingFeedback?: boolean;
   enableValidation?: boolean;
   maxRetries?: number;
@@ -49,6 +50,7 @@ export class GalleryProcessor {
     private activeGalleries: Map<string, GalleryInstance> = new Map();
 
     private readonly DEFAULT_OPTIONS: Required<IGalleryProcessingOptions> = {
+        errorDisplayMode: 'full',
         showLoadingFeedback: true,
         enableValidation: true,
         maxRetries: 3,
@@ -162,7 +164,7 @@ export class GalleryProcessor {
             result.processingTimeMs = Date.now() - startTime;
 
             console.error('Error processing gallery code block:', error);
-            this.handleProcessingError(error as Error, el);
+            this.handleProcessingError(error as Error, el, opts);
 
             return result;
 
@@ -788,7 +790,32 @@ export class GalleryProcessor {
     /**
      * Handle processing errors
      */
-    private handleProcessingError(error: Error, container: HTMLElement): void {
+    private handleProcessingError(error: Error, container: HTMLElement, options?: Required<IGalleryProcessingOptions>): void {
+        const errorDisplayMode = options?.errorDisplayMode || this.DEFAULT_OPTIONS.errorDisplayMode;
+
+        if (errorDisplayMode === 'hidden') {
+            // Clear container and do not render any error message
+            if ((container as any).empty && typeof (container as any).empty === 'function') {
+                (container as any).empty();
+            } else {
+                while (container.firstChild) container.removeChild(container.firstChild);
+            }
+            return;
+        }
+
+        if (errorDisplayMode === 'text') {
+            if ((container as any).empty && typeof (container as any).empty === 'function') {
+                (container as any).empty();
+            } else {
+                while (container.firstChild) container.removeChild(container.firstChild);
+            }
+
+            const errorEl = container.ownerDocument.createElement('div');
+            errorEl.className = 'gallery-error-text';
+            errorEl.textContent = `Gallery Error: ${error.message}`;
+            container.appendChild(errorEl);
+            return;
+        }
         // Clear container (support both Obsidian helpers and plain DOM)
         if ((container as any).empty && typeof (container as any).empty === 'function') {
             (container as any).empty();

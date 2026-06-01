@@ -1064,4 +1064,4 @@
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
-}
+}.gallery-error-text { color: var(--text-error); font-size: var(--font-ui-small); padding: var(--size-4-2); }

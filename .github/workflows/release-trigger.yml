@@ -1,0 +1,76 @@
+name: Release Trigger
+
+on:
+  push:
+    branches:
+      - Dev
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check commit message
+        id: check
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+
+          if [[ "$MSG" =~ ^Release[[:space:]]v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "Not a release commit. Skipping."
+          fi
+
+      - name: Verify versions
+        if: steps.check.outputs.is_release == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.version }}"
+
+          MANIFEST=$(jq -r '.version' manifest.json)
+          PACKAGE=$(jq -r '.version' package.json)
+
+          if [ "$VERSION" != "$MANIFEST" ]; then
+            echo "manifest.json mismatch ($VERSION vs $MANIFEST)"
+            exit 1
+          fi
+
+          if [ "$VERSION" != "$PACKAGE" ]; then
+            echo "package.json mismatch ($VERSION vs $PACKAGE)"
+            exit 1
+          fi
+
+      - name: Create PR
+        if: steps.check.outputs.is_release == 'true'
+        env:
+          # IMPORTANT: To trigger the push workflow on main,
+          # replace github.token with a PAT (e.g. secrets.RELEASE_PAT)
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+        run: |
+          gh pr create \
+            --base main \
+            --head Dev \
+            --title "Release ${{ steps.check.outputs.version }}" \
+            --body "Automated release PR"
+
+      - name: Merge PR
+        if: steps.check.outputs.is_release == 'true'
+        env:
+          # IMPORTANT: Same PAT requirement here
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+        run: |
+          PR=$(gh pr list \
+            --head Dev \
+            --base main \
+            --json number \
+            --jq '.[0].number')
+
+          gh pr merge $PR --merge --delete-branch=false

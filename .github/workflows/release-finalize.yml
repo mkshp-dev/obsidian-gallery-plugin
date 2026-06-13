@@ -1,0 +1,123 @@
+name: Finalize Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' manifest.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        run: |
+          if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "Tag exists"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Extract release notes
+        run: |
+          awk '
+          /^## In-progress/ {flag=1; next}
+          /^## / && flag {exit}
+          flag
+          ' CHANGELOG.md > release_notes.md
+
+          if [ ! -s release_notes.md ]; then
+            echo "No changelog entries"
+            exit 1
+          fi
+
+      - name: Create tag
+        run: |
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
+
+      - name: Draft Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create \
+            "${{ steps.version.outputs.version }}" \
+            main.js \
+            manifest.json \
+            styles.css \
+            --draft \
+            --title "${{ steps.version.outputs.version }}" \
+            --notes-file release_notes.md
+
+      - name: Checkout Dev
+        run: |
+          git fetch origin Dev
+          git checkout Dev
+          git pull origin Dev
+
+      - name: Rewrite changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          export DATE=$(date +%F)
+
+          python -c '
+          import os, re
+
+          version = os.environ["VERSION"]
+          date = os.environ["DATE"]
+
+          with open("CHANGELOG.md") as f:
+              text = f.read()
+
+          pattern = r"(## In-progress\s*\n)(.*?)(\n## )"
+          m = re.search(pattern, text, re.S)
+
+          if not m:
+              print("Pattern not found in CHANGELOG.md")
+              exit(1)
+
+          notes = m.group(2).strip()
+
+          replacement = (
+              "## In-progress\n\n"
+              f"## {version} - {date}\n\n"
+              f"{notes}\n\n"
+              "## "
+          )
+
+          text = re.sub(pattern, replacement, text, count=1, flags=re.S)
+
+          with open("CHANGELOG.md", "w") as f:
+              f.write(text)
+          '
+
+      - name: Commit changelog
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          git add CHANGELOG.md
+
+          git commit -m "chore: prepare changelog for next release" || exit 0
+
+          git push origin Dev

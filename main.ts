@@ -9,6 +9,7 @@ import { LazyLoader } from './src/utils/LazyLoader';
  * Plugin settings
  */
 interface GalleryPluginSettings {
+    errorDisplayMode?: 'full' | 'text' | 'hidden';
     allowRemoteImages: boolean;
     remoteLoadTimeoutMs: number;
     validateRemoteContentType?: boolean;
@@ -19,6 +20,7 @@ interface GalleryPluginSettings {
 }
 
 const DEFAULT_SETTINGS: GalleryPluginSettings = {
+    errorDisplayMode: 'full',
     allowRemoteImages: false,
     remoteLoadTimeoutMs: 30000
     ,validateRemoteContentType: false
@@ -36,6 +38,20 @@ class GallerySettingsTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
+
+        new Setting(containerEl)
+            .setName('Error display mode')
+            .setDesc('How to display errors when the block processor encounters them.')
+            .addDropdown(dropdown => dropdown
+                .addOption('full', 'Full')
+                .addOption('text', 'Text only')
+                .addOption('hidden', 'Hidden')
+                .setValue(this.plugin.settings.errorDisplayMode || 'full')
+                .onChange(async (value) => {
+                    this.plugin.settings.errorDisplayMode = value as 'full' | 'text' | 'hidden';
+                    await this.plugin.saveSettings();
+                }));
+
 
         new Setting(containerEl)
             .setName('Allow remote images')
@@ -225,16 +241,26 @@ export default class GalleryPlugin extends Plugin {
         ctx: any
     ): Promise<void> {
         if (!this.galleryProcessor) {
-            el.createEl('div', {
-                text: 'Gallery processor not initialized',
-                cls: 'gallery-error'
-            });
+            if (this.settings.errorDisplayMode === 'hidden') {
+                return;
+            } else if (this.settings.errorDisplayMode === 'text') {
+                el.createEl('div', {
+                    text: 'Gallery processor not initialized',
+                    cls: 'gallery-error-text'
+                });
+            } else {
+                el.createEl('div', {
+                    text: 'Gallery processor not initialized',
+                    cls: 'gallery-error'
+                });
+            }
             return;
         }
 
         try {
             // Use the comprehensive gallery processor with professional features
             const result = await this.galleryProcessor.processCodeBlock(source, el, ctx, {
+                errorDisplayMode: this.settings.errorDisplayMode,
                 showLoadingFeedback: true,
                 enableValidation: true,
                 maxRetries: 3,
@@ -251,10 +277,19 @@ export default class GalleryPlugin extends Plugin {
 
         } catch (error) {
             console.error('Unexpected error in gallery processing:', error);
-            el.createEl('div', {
-                text: `Gallery Error: ${error instanceof Error ? error.message : String(error)}`,
-                cls: 'gallery-error'
-            });
+            if (this.settings.errorDisplayMode === 'hidden') {
+                return;
+            } else if (this.settings.errorDisplayMode === 'text') {
+                el.createEl('div', {
+                    text: `Gallery Error: ${error instanceof Error ? error.message : String(error)}`,
+                    cls: 'gallery-error-text'
+                });
+            } else {
+                el.createEl('div', {
+                    text: `Gallery Error: ${error instanceof Error ? error.message : String(error)}`,
+                    cls: 'gallery-error'
+                });
+            }
         }
     }
 }

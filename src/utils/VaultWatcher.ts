@@ -22,7 +22,7 @@ export class VaultWatcher {
   private vault: Vault;
   private options: Required<IVaultWatcherOptions>;
   private callbacks: IVaultWatcherCallback;
-  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private debounceTimers: Map<string, number> = new Map();
   private isActive: boolean = false;
   
   // Store event references for proper cleanup
@@ -76,7 +76,7 @@ export class VaultWatcher {
     this.log('Stopping VaultWatcher');
 
     // Clear any pending debounce timers
-    this.debounceTimers.forEach(timer => clearTimeout(timer));
+    this.debounceTimers.forEach(timer => window.clearTimeout(timer));
     this.debounceTimers.clear();
 
     // Unregister all event handlers
@@ -223,11 +223,11 @@ export class VaultWatcher {
     // Clear existing timer for this file/action
     const existingTimer = this.debounceTimers.get(key);
     if (existingTimer) {
-      clearTimeout(existingTimer);
+      window.clearTimeout(existingTimer);
     }
 
     // Set new timer
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       this.debounceTimers.delete(key);
       callback();
     }, this.options.debounceMs);
@@ -276,7 +276,7 @@ export class VaultWatcher {
     this.log('Force refresh requested');
     
     // Clear all pending timers
-    this.debounceTimers.forEach(timer => clearTimeout(timer));
+    this.debounceTimers.forEach(timer => window.clearTimeout(timer));
     this.debounceTimers.clear();
 
     // Get all image files in vault

@@ -159,7 +159,7 @@ export class LazyLoader {
         console.log(`Retrying image load (${newRetryCount}/${this.options.retryAttempts}):`, src);
         
         // Retry after delay
-        setTimeout(() => {
+        window.setTimeout(() => {
           this.loadImage(img);
         }, this.options.retryDelay);
 
@@ -208,20 +208,20 @@ export class LazyLoader {
       };
       
       // Set loading timeout
-      const timeout = setTimeout(() => {
+      const timeout = window.setTimeout(() => {
         tempImg.onload = null;
         tempImg.onerror = null;
         reject(new Error(`Image load timeout: ${src}`));
       }, this.options.timeoutMs);
       
       tempImg.onload = () => {
-        clearTimeout(timeout);
+        window.clearTimeout(timeout);
         img.src = src;
         resolve();
       };
       
       tempImg.onerror = () => {
-        clearTimeout(timeout);
+        window.clearTimeout(timeout);
         reject(new Error(`Failed to load image: ${src}`));
       };
       

@@ -176,7 +176,7 @@ export class ErrorPlaceholder {
               this.options.retryAction();
             } catch (error) {
               // Reset button state if retry fails immediately
-              setTimeout(() => {
+              window.setTimeout(() => {
                 retryButton.textContent = 'Try Again';
                 retryButton.disabled = false;
               }, 1000);

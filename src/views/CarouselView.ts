@@ -170,7 +170,7 @@ export class CarouselView extends GalleryView {
         let timeoutHandle: any = null;
 
         const onLoad = () => {
-            clearTimeout(timeoutHandle);
+            window.clearTimeout(timeoutHandle);
             try {
                 imgEl.src = temp.src;
             } catch (error) { console.debug('Ignored error:', error); }
@@ -179,7 +179,7 @@ export class CarouselView extends GalleryView {
         };
 
         const onError = (err?: Error) => {
-            clearTimeout(timeoutHandle);
+            window.clearTimeout(timeoutHandle);
             this.handleImageError(image, err || new Error('Failed to load'));
             cleanup();
         };
@@ -193,7 +193,7 @@ export class CarouselView extends GalleryView {
         temp.onerror = () => onError(new Error('Failed to load'));
 
         // Timeout
-        timeoutHandle = setTimeout(() => {
+        timeoutHandle = window.setTimeout(() => {
             onError(new Error('Image loading timed out'));
         }, this.remoteLoadTimeoutMs ?? 10000);
 
@@ -258,9 +258,9 @@ export class CarouselView extends GalleryView {
                     if (imgEl && nextImage) {
                         // load via temp to respect timeout
                         const temp = new Image();
-                        const timeout = setTimeout(() => { temp.onload = null; temp.onerror = null; imgEl.alt = 'Failed to load'; }, this.remoteLoadTimeoutMs ?? 10000);
-                        temp.onload = () => { clearTimeout(timeout); try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); } };
-                        temp.onerror = () => { clearTimeout(timeout); imgEl.alt = 'Failed to load'; };
+                        const timeout = window.setTimeout(() => { temp.onload = null; temp.onerror = null; imgEl.alt = 'Failed to load'; }, this.remoteLoadTimeoutMs ?? 10000);
+                        temp.onload = () => { window.clearTimeout(timeout); try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); } };
+                        temp.onerror = () => { window.clearTimeout(timeout); imgEl.alt = 'Failed to load'; };
                         try { temp.src = nextImage.getDisplayUrl(); } catch { imgEl.alt = 'Failed to load'; }
                     }
                     if (titleEl && nextImage) titleEl.textContent = nextImage.displayName || '';
@@ -285,7 +285,7 @@ export class CarouselView extends GalleryView {
     closeBtn.setAttribute('role', 'button');
 
         modal.setAttribute('tabindex', '-1');
-        setTimeout(() => { try { modal.focus(); } catch (error) { console.debug('Ignored error:', error); } try { closeBtn.focus(); } catch (error) { console.debug('Ignored error:', error); } }, 0);
+        window.setTimeout(() => { try { modal.focus(); } catch (error) { console.debug('Ignored error:', error); } try { closeBtn.focus(); } catch (error) { console.debug('Ignored error:', error); } }, 0);
 
         const prevBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav prev', text: '\u2039' }) as HTMLElement;
         prevBtn.setAttribute('aria-label', 'Previous image'); prevBtn.addEventListener('click', () => navigate(-1));
@@ -306,11 +306,11 @@ export class CarouselView extends GalleryView {
             }
             const temp = new Image();
             let timeoutHandle: any = null;
-            const onLoad = () => { clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); } cleanup(); };
-            const onError = () => { clearTimeout(timeoutHandle); imgEl.alt = 'Failed to load'; cleanup(); };
+            const onLoad = () => { window.clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); } cleanup(); };
+            const onError = () => { window.clearTimeout(timeoutHandle); imgEl.alt = 'Failed to load'; cleanup(); };
             const cleanup = () => { temp.onload = null; temp.onerror = null; };
             temp.onload = onLoad; temp.onerror = onError;
-            timeoutHandle = setTimeout(() => onError(), this.remoteLoadTimeoutMs ?? 10000);
+            timeoutHandle = window.setTimeout(() => onError(), this.remoteLoadTimeoutMs ?? 10000);
             try { temp.src = srcImage.getDisplayUrl(); } catch (e) { onError(); }
         };
 
@@ -350,7 +350,7 @@ export class CarouselView extends GalleryView {
             if (cleanup && typeof cleanup === 'function') cleanup();
         } catch (error) { console.debug('Ignored error:', error); }
 
-        setTimeout(() => {
+        window.setTimeout(() => {
             try { modal.remove(); } catch (error) { console.debug('Ignored error:', error); }
             if (this.lastFocusedElement) {
                 try { this.lastFocusedElement.focus(); } catch (error) { console.debug('Ignored error:', error); }

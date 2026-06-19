@@ -206,7 +206,7 @@ export class ErrorPlaceholder {
    */
   show(): void {
     if (this.placeholderElement) {
-      this.placeholderElement.style.display = '';
+      this.placeholderElement.setCssStyles({ display: '' });
       this.placeholderElement.addClass('gallery-error-visible');
     }
   }

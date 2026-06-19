@@ -144,7 +144,7 @@ export class ThumbnailView extends GalleryView {
         caption.textContent = image.displayName || '';
 
         // Set initial opacity to 0 for fade-in effect
-        imgEl.style.opacity = '0';
+        imgEl.setCssStyles({ opacity: '0' });
 
         // Add to lazy loading observer
         if (this.lazyLoadObserver) {
@@ -225,7 +225,7 @@ export class ThumbnailView extends GalleryView {
         const imgEl = container.querySelector('img') as HTMLImageElement;
         if (imgEl) {
             imgEl.src = img.src;
-            imgEl.style.opacity = '1';
+            imgEl.setCssStyles({ opacity: '1' });
         }
 
         // We intentionally do not compute grid-row spans here anymore.

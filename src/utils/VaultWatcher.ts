@@ -1,3 +1,4 @@
+import { Logger } from './Logger';
 /**
  * Vault file system watcher for automatic gallery updates
  * Monitors file system changes and triggers gallery refreshes
@@ -241,9 +242,9 @@ export class VaultWatcher {
   private log(message: string, data?: any): void {
     if (this.options.enableLogging) {
       if (data) {
-        console.log(`[VaultWatcher] ${message}`, data);
+        Logger.debug(`[VaultWatcher] ${message}`, data);
       } else {
-        console.log(`[VaultWatcher] ${message}`);
+        Logger.debug(`[VaultWatcher] ${message}`);
       }
     }
   }

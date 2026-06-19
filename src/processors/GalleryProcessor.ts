@@ -1,3 +1,4 @@
+import { Logger } from './utils/Logger';
 import { MarkdownPostProcessorContext } from 'obsidian';
 import { IGalleryConfig, IContentScanner, IGalleryView } from '../models/interfaces';
 import { GalleryConfig } from '../models/GalleryConfig';
@@ -163,7 +164,7 @@ export class GalleryProcessor {
             result.errors.push(errorMessage);
             result.processingTimeMs = Date.now() - startTime;
 
-            console.error('Error processing gallery code block:', error);
+            Logger.error('Error processing gallery code block:', error);
             this.handleProcessingError(error as Error, el, opts);
 
             return result;
@@ -186,7 +187,7 @@ export class GalleryProcessor {
     ): Promise<void> {
         const result = await this.processCodeBlock(source, el, ctx);
         if (!result.success) {
-            console.error('Gallery processing failed:', result.errors);
+            Logger.error('Gallery processing failed:', result.errors);
         }
     }
 
@@ -401,7 +402,7 @@ export class GalleryProcessor {
             try {
                 const existing = Array.from(this.activeGalleries.values()).find(g => g.config.path === config.path && g.id !== undefined);
                 if (existing) {
-                    console.log(`GalleryProcessor: found existing gallery for path ${config.path} (id=${existing.id}), destroying before creating new instance.`);
+                    Logger.debug(`GalleryProcessor: found existing gallery for path ${config.path} (id=${existing.id}), destroying before creating new instance.`);
                     this.destroyGallery(existing.id);
                 }
             } catch (e) {
@@ -459,7 +460,7 @@ export class GalleryProcessor {
                         throw renderError;
                     }
                     
-                    console.warn(`Render attempt ${retryCount} failed, retrying...`, renderError);
+                    Logger.warn(`Render attempt ${retryCount} failed, retrying...`, renderError);
                     
                     if (loadingManager) {
                         loadingManager.updateText('render', `Retrying render (${retryCount}/${options.maxRetries})...`);
@@ -553,10 +554,10 @@ export class GalleryProcessor {
             // Render gallery
             view.render();
             
-            console.log(`Gallery created: ${gallery.id} with ${images.length} images`);
+            Logger.debug(`Gallery created: ${gallery.id} with ${images.length} images`);
             
         } catch (error) {
-            console.error('Error creating gallery:', error);
+            Logger.error('Error creating gallery:', error);
             throw new Error(`Gallery creation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -606,7 +607,7 @@ export class GalleryProcessor {
                     {
                         label: 'Open Settings',
                         action: () => {
-                            try { document.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch {};
+                            try { activeDocument.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch {};
                         },
                         type: 'primary',
                         icon: '⚙️'
@@ -655,7 +656,7 @@ export class GalleryProcessor {
                 {} as MarkdownPostProcessorContext
             );
         } catch (error) {
-            console.error('Error refreshing gallery:', error);
+            Logger.error('Error refreshing gallery:', error);
         }
     }
 
@@ -705,11 +706,11 @@ export class GalleryProcessor {
             // If we see a removal, don't immediately destroy: Obsidian may transiently
             // move or reparent nodes when toggling sidebars or changing layouts. Defer
             // the actual destruction check by a short timeout and only destroy if the
-            // gallery container remains detached from the document.
+            // gallery container remains detached from the activeDocument.
             let sawRemoval = false;
             mutations.forEach((mutation) => {
                 mutation.removedNodes.forEach((node) => {
-                    if (node === gallery.container || (node instanceof Element && node.contains(gallery.container))) {
+                    if (node === gallery.container || (node.instanceOf(Element) && (node as Element).contains(gallery.container))) {
                         sawRemoval = true;
                     }
                 });
@@ -745,14 +746,14 @@ export class GalleryProcessor {
 
                         const GRACE_PERIOD_MS = Math.max(0, options.gracePeriodMs || 30000);
                         if (options.enableLifecycleLogging) {
-                            console.log(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
+                            Logger.debug(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
                         }
 
                         setTimeout(() => {
                             try {
                                 if ((gallery as any)._detached) {
                                     if (options.enableLifecycleLogging) {
-                                        console.log(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
+                                        Logger.debug(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
                                     }
                                     this.destroyGallery(gallery.id);
                                 }
@@ -778,7 +779,7 @@ export class GalleryProcessor {
             setTimeout(tryCheck, attempts[0]);
         });
 
-        // Observe the parent document for changes
+        // Observe the parent activeDocument for changes
         if (gallery.container.ownerDocument) {
             observer.observe(gallery.container.ownerDocument.body, {
                 childList: true,
@@ -844,7 +845,7 @@ export class GalleryProcessor {
     async refreshGallery(galleryId: string): Promise<void> {
         const gallery = this.activeGalleries.get(galleryId);
         if (!gallery) {
-            console.warn('Gallery not found for refresh:', galleryId);
+            Logger.warn('Gallery not found for refresh:', galleryId);
             return;
         }
 
@@ -861,10 +862,10 @@ export class GalleryProcessor {
             // Update gallery
             gallery.update(images);
             
-            console.log(`Gallery refreshed: ${galleryId} with ${images.length} images`);
+            Logger.debug(`Gallery refreshed: ${galleryId} with ${images.length} images`);
             
         } catch (error) {
-            console.error('Error refreshing gallery:', error);
+            Logger.error('Error refreshing gallery:', error);
             ErrorHandler.handlePluginError(error as Error, 'gallery refresh', gallery.container);
         }
     }
@@ -877,7 +878,7 @@ export class GalleryProcessor {
         if (gallery) {
             gallery.destroy();
             this.activeGalleries.delete(galleryId);
-            console.log(`Gallery destroyed: ${galleryId}`);
+            Logger.debug(`Gallery destroyed: ${galleryId}`);
         }
     }
 
@@ -912,7 +913,7 @@ export class GalleryProcessor {
             .map(id => this.refreshGallery(id));
         
         await Promise.allSettled(refreshPromises);
-        console.log('All galleries refreshed');
+        Logger.debug('All galleries refreshed');
     }
 
     /**
@@ -921,7 +922,7 @@ export class GalleryProcessor {
     destroyAllGalleries(): void {
         const galleryIds = Array.from(this.activeGalleries.keys());
         galleryIds.forEach(id => this.destroyGallery(id));
-        console.log(`Destroyed ${galleryIds.length} galleries`);
+        Logger.debug(`Destroyed ${galleryIds.length} galleries`);
     }
 
     /**
@@ -979,6 +980,6 @@ export class GalleryProcessor {
     destroy(): void {
         this.destroyAllGalleries();
         this.contentScanner.destroy?.();
-        console.log('Gallery processor destroyed');
+        Logger.debug('Gallery processor destroyed');
     }
 }

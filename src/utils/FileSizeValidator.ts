@@ -1,3 +1,4 @@
+import { Logger } from './Logger';
 /**
  * File size validation utility for gallery images
  * Prevents loading of files that exceed size limits
@@ -85,7 +86,7 @@ export class FileSizeValidator {
       if (!contentLength) {
         // If no Content-Length header, we can't validate size
         // Allow the download but warn user
-        console.warn(`No Content-Length header for URL: ${url}`);
+        Logger.warn(`No Content-Length header for URL: ${url}`);
         return {
           isValid: true,
           error: 'Size unknown - no Content-Length header',

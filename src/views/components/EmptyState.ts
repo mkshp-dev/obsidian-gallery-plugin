@@ -252,7 +252,7 @@ export class EmptyState {
    */
   show(): void {
     if (this.emptyElement) {
-      this.emptyElement.style.display = '';
+      this.emptyElement.setCssStyles({ display: '' });
       this.emptyElement.addClass('gallery-empty-visible');
     }
   }

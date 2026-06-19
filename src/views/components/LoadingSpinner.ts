@@ -202,7 +202,7 @@ export class LoadingSpinner {
    */
   show(): void {
     if (this.spinnerElement) {
-      this.spinnerElement.style.display = '';
+      this.spinnerElement.setCssStyles({ display: '' });
       this.addClass(this.spinnerElement, 'gallery-loading-visible');
     }
   }
@@ -218,7 +218,7 @@ export class LoadingSpinner {
       // Remove after animation
       window.setTimeout(() => {
         if (this.spinnerElement) {
-          this.spinnerElement.style.display = 'none';
+          this.spinnerElement.setCssStyles({ display: 'none' });
         }
       }, 300);
     }

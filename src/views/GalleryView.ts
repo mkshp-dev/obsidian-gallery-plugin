@@ -308,7 +308,7 @@ export abstract class GalleryView implements IGalleryView {
         // Show actual image
         const img = element.querySelector('img');
         if (img) {
-            img.style.opacity = '1';
+            img.setCssStyles({ opacity: '1' });
         }
     }
 

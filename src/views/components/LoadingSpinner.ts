@@ -91,13 +91,13 @@ export class LoadingSpinner {
   const spinnerIcon = this.createDiv(this.spinnerElement!, 'gallery-spinner-icon');
     
     // Create SVG spinner using standard DOM API
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const svg = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', this.getSizePixels().toString());
     svg.setAttribute('height', this.getSizePixels().toString());
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('class', 'gallery-spinner-rotating');
 
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    const circle = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
     circle.setAttribute('cx', '12');
     circle.setAttribute('cy', '12');
     circle.setAttribute('r', '10');
@@ -228,7 +228,7 @@ export class LoadingSpinner {
    */
   private createDiv(parent: HTMLElement, arg?: string | { cls?: string }): HTMLElement {
     if (!parent) {
-      return document.createElement('div');
+      return activeDocument.createElement('div');
     }
 
     // If parent provides createDiv, use it
@@ -239,7 +239,7 @@ export class LoadingSpinner {
     }
 
     // Fallback to standard DOM
-    const el = document.createElement('div');
+    const el = activeDocument.createElement('div');
     if (typeof arg === 'string') el.className = arg;
     else if (arg && arg.cls) el.className = arg.cls;
     parent.appendChild(el);

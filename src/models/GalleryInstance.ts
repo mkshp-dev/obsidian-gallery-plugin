@@ -198,7 +198,7 @@ export class GalleryInstance implements IGalleryInstance {
             return anyParent.createEl(tag, options || {});
         }
 
-        const el = document.createElement(tag);
+        const el = activeDocument.createElement(tag);
         if (options) {
             if (options.cls) el.className = options.cls;
             if (options.text) el.textContent = options.text;

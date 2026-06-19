@@ -24,7 +24,7 @@ export class ErrorHandler {
 
         // Plain DOM fallback
         const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
-        const el = document.createElement(tagName);
+        const el = activeDocument.createElement(tagName);
         if (options) {
             if (typeof options === 'string') {
                 el.className = options;
@@ -227,7 +227,7 @@ export class ErrorHandler {
             const event = new CustomEvent('gallery:retry-image', {
                 detail: { source, element: loadingEl }
             });
-            document.dispatchEvent(event);
+            activeDocument.dispatchEvent(event);
         }, 500);
     }
 

@@ -169,7 +169,7 @@ export default class GalleryPlugin extends Plugin {
                 console.warn('Failed to open settings via command', e);
             }
         };
-        document.addEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
+        activeDocument.addEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
     }
 
     async loadSettings() {
@@ -215,7 +215,7 @@ export default class GalleryPlugin extends Plugin {
 
         // Remove document listener
         try {
-            document.removeEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
+            activeDocument.removeEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
         } catch (error) {
             console.debug('Error removing document listener:', error);
         }

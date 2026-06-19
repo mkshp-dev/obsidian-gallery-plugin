@@ -34,7 +34,7 @@ export class GridView extends GalleryView {
    */
   protected initializeContainer(): void {
     this.safeAddClass(this.container, 'gallery-view');
-    try { this.container.setAttribute('data-view-type', this._type); } catch {}
+    try { this.container.setAttribute('data-view-type', this._type); } catch (error) { console.debug('Ignored error:', error); }
   }
 
   render(): void {
@@ -117,7 +117,7 @@ export class GridView extends GalleryView {
 
     const onLoad = () => {
       clearTimeout(timeoutHandle);
-      try { imgEl.src = temp.src; } catch {}
+      try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); }
       this.handleImageLoad(image);
       cleanup();
     };

@@ -429,13 +429,13 @@ export class GalleryProcessor {
                     try {
                         // Preferred: view has a setOptions API
                         (view as any).setOptions?.({ remoteLoadTimeoutMs: options.timeoutMs, allowRemoteImages: options.allowRemoteImages });
-                    } catch {}
+                    } catch (error) { console.debug('Ignored error:', error); }
 
                     // Backwards-compat: set properties directly for simple views
                     try {
                         (view as any).remoteLoadTimeoutMs = options.timeoutMs;
                         (view as any).allowRemoteImages = options.allowRemoteImages;
-                    } catch {}
+                    } catch (error) { console.debug('Ignored error:', error); }
 
                     await view.update(images);
                     view.render();
@@ -606,7 +606,7 @@ export class GalleryProcessor {
                     {
                         label: 'Open Settings',
                         action: () => {
-                            try { document.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch {};
+                            try { document.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch (error) { console.debug('Ignored error:', error); };
                         },
                         type: 'primary',
                         icon: '⚙️'
@@ -741,7 +741,7 @@ export class GalleryProcessor {
                         // schedule a final destruction after a longer grace period so
                         // that the markdown post-processor can reattach a new container
                         // without losing the opportunity to recreate the gallery.
-                        try { (gallery as any)._detached = true; } catch {}
+                        try { (gallery as any)._detached = true; } catch (error) { console.debug('Ignored error:', error); }
 
                         const GRACE_PERIOD_MS = Math.max(0, options.gracePeriodMs || 30000);
                         if (options.enableLifecycleLogging) {
@@ -757,11 +757,11 @@ export class GalleryProcessor {
                                     this.destroyGallery(gallery.id);
                                 }
                             } catch (e) {
-                                try { this.destroyGallery(gallery.id); } catch {}
+                                try { this.destroyGallery(gallery.id); } catch (error) { console.debug('Ignored error:', error); }
                             }
                         }, GRACE_PERIOD_MS);
 
-                        try { observer.disconnect(); } catch {}
+                        try { observer.disconnect(); } catch (error) { console.debug('Ignored error:', error); }
                         return;
                     }
 
@@ -769,8 +769,8 @@ export class GalleryProcessor {
                     setTimeout(tryCheck, attempts[attemptIndex]);
                 } catch (e) {
                     // If something unexpected happens, attempt a safe cleanup
-                    try { this.destroyGallery(gallery.id); } catch {}
-                    try { observer.disconnect(); } catch {}
+                    try { this.destroyGallery(gallery.id); } catch (error) { console.debug('Ignored error:', error); }
+                    try { observer.disconnect(); } catch (error) { console.debug('Ignored error:', error); }
                 }
             };
 

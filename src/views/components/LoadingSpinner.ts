@@ -251,7 +251,7 @@ export class LoadingSpinner {
       const anyEl = el as any;
       if (anyEl.addClass && typeof anyEl.addClass === 'function') anyEl.addClass(cls);
       else el.classList.add(cls);
-    } catch {}
+    } catch (error) { console.debug('Ignored error:', error); }
   }
 
   private removeClass(el: HTMLElement, cls: string) {
@@ -259,7 +259,7 @@ export class LoadingSpinner {
       const anyEl = el as any;
       if (anyEl.removeClass && typeof anyEl.removeClass === 'function') anyEl.removeClass(cls);
       else el.classList.remove(cls);
-    } catch {}
+    } catch (error) { console.debug('Ignored error:', error); }
   }
 
   /**

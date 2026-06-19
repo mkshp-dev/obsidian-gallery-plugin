@@ -57,7 +57,7 @@ export default tseslint.config(
 			"@typescript-eslint/await-thenable": "off",
 			"@typescript-eslint/no-unused-expressions": "off",
 			"@typescript-eslint/only-throw-error": "off",
-			"no-empty": "off",
+			"no-empty": "error",
 			"no-undef": "off",
 			"no-restricted-globals": "off",
 			"obsidianmd/prefer-active-doc": "off",

@@ -215,7 +215,7 @@ export class LoadingSpinner {
       this.addClass(this.spinnerElement, 'gallery-loading-hidden');
       
       // Remove after animation
-      setTimeout(() => {
+      window.setTimeout(() => {
         if (this.spinnerElement) {
           this.spinnerElement.style.display = 'none';
         }

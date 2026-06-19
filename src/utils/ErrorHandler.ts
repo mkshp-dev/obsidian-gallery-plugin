@@ -223,7 +223,7 @@ export class ErrorHandler {
         errorElement.remove();
 
         // Trigger reload after short delay
-        setTimeout(() => {
+        window.setTimeout(() => {
             const event = new CustomEvent('gallery:retry-image', {
                 detail: { source, element: loadingEl }
             });

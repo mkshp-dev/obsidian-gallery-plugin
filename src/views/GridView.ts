@@ -116,14 +116,14 @@ export class GridView extends GalleryView {
     let timeoutHandle: any = null;
 
     const onLoad = () => {
-      clearTimeout(timeoutHandle);
+      window.clearTimeout(timeoutHandle);
       try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); }
       this.handleImageLoad(image);
       cleanup();
     };
 
     const onError = (err?: Error) => {
-      clearTimeout(timeoutHandle);
+      window.clearTimeout(timeoutHandle);
       this.handleImageError(image, err || new Error('Failed to load'));
       cleanup();
     };
@@ -133,7 +133,7 @@ export class GridView extends GalleryView {
     temp.onload = onLoad;
     temp.onerror = () => onError(new Error('Failed to load'));
 
-    timeoutHandle = setTimeout(() => onError(new Error('Image loading timed out')), this.remoteLoadTimeoutMs ?? 10000);
+    timeoutHandle = window.setTimeout(() => onError(new Error('Image loading timed out')), this.remoteLoadTimeoutMs ?? 10000);
     try { temp.src = image.getDisplayUrl(); } catch (e) { onError(e as Error); }
   }
 

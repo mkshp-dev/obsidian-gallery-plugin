@@ -38,7 +38,7 @@ export class ImageLoader {
       let isResolved = false;
 
       // Timeout handler
-      const timeoutId = setTimeout(() => {
+      const timeoutId = window.setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
           resolve({
@@ -53,7 +53,7 @@ export class ImageLoader {
       img.onload = () => {
         if (!isResolved) {
           isResolved = true;
-          clearTimeout(timeoutId);
+          window.clearTimeout(timeoutId);
           resolve({
             success: true,
             element: img,
@@ -66,7 +66,7 @@ export class ImageLoader {
       img.onerror = () => {
         if (!isResolved) {
           isResolved = true;
-          clearTimeout(timeoutId);
+          window.clearTimeout(timeoutId);
           resolve({
             success: false,
             error: 'Failed to load image',
@@ -79,7 +79,7 @@ export class ImageLoader {
       img.onabort = () => {
         if (!isResolved) {
           isResolved = true;
-          clearTimeout(timeoutId);
+          window.clearTimeout(timeoutId);
           resolve({
             success: false,
             error: 'Image loading was aborted',
@@ -149,14 +149,14 @@ export class ImageLoader {
   static async validateImageUrl(url: string, timeoutMs: number = 5000): Promise<boolean> {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(url, {
         method: 'HEAD',
         signal: controller.signal
       });
 
-      clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId);
 
       if (!response.ok) {
         return false;

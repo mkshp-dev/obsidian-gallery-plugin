@@ -195,7 +195,7 @@ export class ThumbnailView extends GalleryView {
                 let timeoutHandle: any = null;
                 if (image.type === 'external') {
                         const timeoutMs = this.remoteLoadTimeoutMs ?? 10000;
-                    timeoutHandle = setTimeout(() => {
+                    timeoutHandle = window.setTimeout(() => {
                         if (image.loadState === 'loading') {
                             img.onload = null;
                             img.onerror = null;
@@ -347,7 +347,7 @@ export class ThumbnailView extends GalleryView {
 
         // Make modal focusable and focus it so it receives key events
         modal.setAttribute('tabindex', '-1');
-        setTimeout(() => {
+        window.setTimeout(() => {
             try {
                 modal.focus();
             } catch (error) { console.debug('Ignored error:', error); }
@@ -405,14 +405,14 @@ export class ThumbnailView extends GalleryView {
             let timeoutHandle: any = null;
 
             const onLoad = () => {
-                clearTimeout(timeoutHandle);
+                window.clearTimeout(timeoutHandle);
                 try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); }
                 (modal as any).addClass && (modal as any).addClass('gallery-modal-loaded');
                 cleanup();
             };
 
             const onError = () => {
-                clearTimeout(timeoutHandle);
+                window.clearTimeout(timeoutHandle);
                 imgEl.alt = 'Failed to load';
                 cleanup();
             };
@@ -425,7 +425,7 @@ export class ThumbnailView extends GalleryView {
             temp.onload = onLoad;
             temp.onerror = onError;
 
-                timeoutHandle = setTimeout(() => {
+                timeoutHandle = window.setTimeout(() => {
                     onError();
                 }, this.remoteLoadTimeoutMs ?? 10000);
 
@@ -474,7 +474,7 @@ export class ThumbnailView extends GalleryView {
             if (cleanup) cleanup();
         } catch (error) { console.debug('Ignored error:', error); }
 
-        setTimeout(() => {
+        window.setTimeout(() => {
             modal.remove();
             // Restore focus to previously focused element
             if (this.lastFocusedElement) {

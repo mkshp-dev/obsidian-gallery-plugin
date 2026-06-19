@@ -242,7 +242,7 @@ export class GalleryProcessor {
                 const scanned = await Promise.race([
                     this.contentScanner.scanPath(config.path, config.recursive),
                     new Promise<never>((_, reject) => 
-                        setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
+                        window.setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
                     )
                 ]);
                 images = scanned || [];
@@ -466,7 +466,7 @@ export class GalleryProcessor {
                     }
                     
                     // Wait before retry
-                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                    await new Promise(resolve => window.setTimeout(resolve, 1000 * retryCount));
                 }
             }
 
@@ -483,16 +483,16 @@ export class GalleryProcessor {
      */
     private async waitForInitialRender(view: IGalleryView, timeoutMs: number): Promise<void> {
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
+            const timeout = window.setTimeout(() => {
                 reject(new Error('Render timeout'));
             }, timeoutMs);
 
             // Check render status periodically
-            const checkInterval = setInterval(() => {
+            const checkInterval = window.setInterval(() => {
                 const stats = (view as any).getStats?.() || { loadedImages: 0, errorImages: 0 };
                 if (stats.loadedImages > 0 || stats.errorImages > 0) {
-                    clearTimeout(timeout);
-                    clearInterval(checkInterval);
+                    window.clearTimeout(timeout);
+                    window.clearInterval(checkInterval);
                     resolve();
                 }
             }, 100);
@@ -500,8 +500,8 @@ export class GalleryProcessor {
             // Also resolve immediately if view reports ready
             const stats = (view as any).getStats?.() || { totalImages: 0 };
             if (stats.totalImages > 0) {
-                clearTimeout(timeout);
-                clearInterval(checkInterval);
+                window.clearTimeout(timeout);
+                window.clearInterval(checkInterval);
                 resolve();
             }
         });
@@ -748,7 +748,7 @@ export class GalleryProcessor {
                             console.log(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
                         }
 
-                        setTimeout(() => {
+                        window.setTimeout(() => {
                             try {
                                 if ((gallery as any)._detached) {
                                     if (options.enableLifecycleLogging) {
@@ -766,7 +766,7 @@ export class GalleryProcessor {
                     }
 
                     // schedule next check
-                    setTimeout(tryCheck, attempts[attemptIndex]);
+                    window.setTimeout(tryCheck, attempts[attemptIndex]);
                 } catch (e) {
                     // If something unexpected happens, attempt a safe cleanup
                     try { this.destroyGallery(gallery.id); } catch (error) { console.debug('Ignored error:', error); }
@@ -775,7 +775,7 @@ export class GalleryProcessor {
             };
 
             // Start checks
-            setTimeout(tryCheck, attempts[0]);
+            window.setTimeout(tryCheck, attempts[0]);
         });
 
         // Observe the parent document for changes

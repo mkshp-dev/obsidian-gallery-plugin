@@ -63,14 +63,14 @@ export class FileSizeValidator {
   static async validateExternalUrl(url: string, timeoutMs: number = 5000): Promise<IFileSizeValidationResult> {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(url, {
         method: 'HEAD',
         signal: controller.signal
       });
 
-      clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId);
 
       if (!response.ok) {
         return {

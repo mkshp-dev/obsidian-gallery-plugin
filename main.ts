@@ -1,3 +1,4 @@
+import { Logger } from "./src/utils/Logger";
 import { Plugin, PluginSettingTab, Setting, App } from 'obsidian';
 import { ContentScanner } from './src/services/ContentScanner';
 import { ViewFactory } from './src/views/ViewFactory';
@@ -118,6 +119,7 @@ export default class GalleryPlugin extends Plugin {
     private _onOpenSettingsRequested: ((e?: Event) => void) | null = null;
     
     async onload() {
+        Logger.setDebugEnabled(true);
 
         await this.loadSettings();
 

@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { IGalleryView, IImageSource } from '../models/interfaces';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 
@@ -133,7 +134,7 @@ export abstract class GalleryView implements IGalleryView {
      */
     update(images: IImageSource[]): void {
         if (this._isDestroyed) {
-            console.warn('Cannot update destroyed view');
+            Logger.warn('Cannot update destroyed view');
             return;
         }
 

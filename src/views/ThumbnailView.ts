@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
 import { IImageSource } from '../models/interfaces';
 
@@ -59,7 +60,7 @@ export class ThumbnailView extends GalleryView {
             this.renderThumbnailItem(gridContainer, image, idx);
         });
 
-        console.log(`Thumbnail view rendered with ${this._images.length} images`);
+        Logger.debug(`Thumbnail view rendered with ${this._images.length} images`);
     }
 
     /**
@@ -328,7 +329,7 @@ export class ThumbnailView extends GalleryView {
                 modal.removeEventListener('keydown', closeOnEscape as any);
                 doc.removeEventListener('focus', keepFocus as any, true);
                 modal.removeEventListener('keydown', modalKeyHandler as any);
-            } catch (error) { console.debug('Ignored error:', error); }
+            } catch (error) { Logger.debug('Ignored error:', error); }
         };
         (modal as any).__cleanup = cleanup;
 
@@ -350,9 +351,9 @@ export class ThumbnailView extends GalleryView {
         window.setTimeout(() => {
             try {
                 modal.focus();
-            } catch (error) { console.debug('Ignored error:', error); }
+            } catch (error) { Logger.debug('Ignored error:', error); }
             // Also focus close button as a visible focus target
-            try { closeBtn.focus(); } catch (error) { console.debug('Ignored error:', error); }
+            try { closeBtn.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
         }, 0);
 
         // Create Prev/Next buttons for modal navigation (mouse-friendly)
@@ -406,7 +407,7 @@ export class ThumbnailView extends GalleryView {
 
             const onLoad = () => {
                 window.clearTimeout(timeoutHandle);
-                try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); }
+                try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); }
                 if ((modal as any).addClass) {
                     (modal as any).addClass('gallery-modal-loaded');
                 }
@@ -460,7 +461,7 @@ export class ThumbnailView extends GalleryView {
         try {
             doc.body.appendChild(modal);
         } catch (appendErr) {
-            console.warn('Failed to append modal to document body, falling back to activeDocument.body:', appendErr);
+            Logger.warn('Failed to append modal to document body, falling back to activeDocument.body:', appendErr);
             activeDocument.body.appendChild(modal);
         }
     }
@@ -476,13 +477,13 @@ export class ThumbnailView extends GalleryView {
         try {
             const cleanup = (modal as any).__cleanup as (() => void) | undefined;
             if (cleanup) cleanup();
-        } catch (error) { console.debug('Ignored error:', error); }
+        } catch (error) { Logger.debug('Ignored error:', error); }
 
         window.setTimeout(() => {
             modal.remove();
             // Restore focus to previously focused element
             if (this.lastFocusedElement) {
-                try { this.lastFocusedElement.focus(); } catch (error) { console.debug('Ignored error:', error); }
+                try { this.lastFocusedElement.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
                 this.lastFocusedElement = null;
             }
         }, 200);

@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
 import { IImageSource } from '../models/interfaces';
 
@@ -173,7 +174,7 @@ export class CarouselView extends GalleryView {
             window.clearTimeout(timeoutHandle);
             try {
                 imgEl.src = temp.src;
-            } catch (error) { console.debug('Ignored error:', error); }
+            } catch (error) { Logger.debug('Ignored error:', error); }
             this.handleImageLoad(image);
             cleanup();
         };
@@ -259,7 +260,7 @@ export class CarouselView extends GalleryView {
                         // load via temp to respect timeout
                         const temp = new Image();
                         const timeout = window.setTimeout(() => { temp.onload = null; temp.onerror = null; imgEl.alt = 'Failed to load'; }, this.remoteLoadTimeoutMs ?? 10000);
-                        temp.onload = () => { window.clearTimeout(timeout); try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); } };
+                        temp.onload = () => { window.clearTimeout(timeout); try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); } };
                         temp.onerror = () => { window.clearTimeout(timeout); imgEl.alt = 'Failed to load'; };
                         try { temp.src = nextImage.getDisplayUrl(); } catch { imgEl.alt = 'Failed to load'; }
                     }
@@ -275,7 +276,7 @@ export class CarouselView extends GalleryView {
                 modal.removeEventListener('keydown', closeOnEscape as any);
                 doc.removeEventListener('focus', keepFocus as any, true);
                 modal.removeEventListener('keydown', modalKeyHandler as any);
-            } catch (error) { console.debug('Ignored error:', error); }
+            } catch (error) { Logger.debug('Ignored error:', error); }
         };
 
     const content = this.createElement(modal, 'div', { cls: 'gallery-modal-content' });
@@ -285,7 +286,7 @@ export class CarouselView extends GalleryView {
     closeBtn.setAttribute('role', 'button');
 
         modal.setAttribute('tabindex', '-1');
-        window.setTimeout(() => { try { modal.focus(); } catch (error) { console.debug('Ignored error:', error); } try { closeBtn.focus(); } catch (error) { console.debug('Ignored error:', error); } }, 0);
+        window.setTimeout(() => { try { modal.focus(); } catch (error) { Logger.debug('Ignored error:', error); } try { closeBtn.focus(); } catch (error) { Logger.debug('Ignored error:', error); } }, 0);
 
         const prevBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav prev', text: '\u2039' }) as HTMLElement;
         prevBtn.setAttribute('aria-label', 'Previous image'); prevBtn.addEventListener('click', () => navigate(-1));
@@ -306,7 +307,7 @@ export class CarouselView extends GalleryView {
             }
             const temp = new Image();
             let timeoutHandle: any = null;
-            const onLoad = () => { window.clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); } cleanup(); };
+            const onLoad = () => { window.clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); } cleanup(); };
             const onError = () => { window.clearTimeout(timeoutHandle); imgEl.alt = 'Failed to load'; cleanup(); };
             const cleanup = () => { temp.onload = null; temp.onerror = null; };
             temp.onload = onLoad; temp.onerror = onError;
@@ -329,7 +330,7 @@ export class CarouselView extends GalleryView {
             currentImage = nextImage;
         };
 
-        try { doc.body.appendChild(modal); } catch (appendErr) { try { activeDocument.body.appendChild(modal); } catch (error) { console.debug('Ignored error:', error); } }
+        try { doc.body.appendChild(modal); } catch (appendErr) { try { activeDocument.body.appendChild(modal); } catch (error) { Logger.debug('Ignored error:', error); } }
     }
 
     /**
@@ -343,17 +344,17 @@ export class CarouselView extends GalleryView {
             } else {
                 modal.classList.add('gallery-modal-closing');
             }
-        } catch (error) { console.debug('Ignored error:', error); }
+        } catch (error) { Logger.debug('Ignored error:', error); }
 
         try {
             const cleanup = (modal as any).__cleanup;
             if (cleanup && typeof cleanup === 'function') cleanup();
-        } catch (error) { console.debug('Ignored error:', error); }
+        } catch (error) { Logger.debug('Ignored error:', error); }
 
         window.setTimeout(() => {
-            try { modal.remove(); } catch (error) { console.debug('Ignored error:', error); }
+            try { modal.remove(); } catch (error) { Logger.debug('Ignored error:', error); }
             if (this.lastFocusedElement) {
-                try { this.lastFocusedElement.focus(); } catch (error) { console.debug('Ignored error:', error); }
+                try { this.lastFocusedElement.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
                 this.lastFocusedElement = null;
             }
         }, 200);

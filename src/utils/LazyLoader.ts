@@ -1,3 +1,4 @@
+import { Logger } from "./Logger";
 /**
  * Lazy loading utility using Intersection Observer API
  * Optimizes gallery performance by loading images only when needed
@@ -52,7 +53,7 @@ export class LazyLoader {
    */
   private initializeObserver(): void {
     if (!('IntersectionObserver' in window)) {
-      console.warn('IntersectionObserver not supported, falling back to immediate loading');
+      Logger.warn('IntersectionObserver not supported, falling back to immediate loading');
       return;
     }
 
@@ -156,7 +157,7 @@ export class LazyLoader {
         const newRetryCount = retryCount + 1;
         this.loadingElements.set(img, { src, retryCount: newRetryCount });
         
-        console.log(`Retrying image load (${newRetryCount}/${this.options.retryAttempts}):`, src);
+        Logger.debug(`Retrying image load (${newRetryCount}/${this.options.retryAttempts}):`, src);
         
         // Retry after delay
         window.setTimeout(() => {

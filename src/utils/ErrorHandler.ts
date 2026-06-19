@@ -1,3 +1,4 @@
+import { Logger } from "./Logger";
 import { IConfigError, ILoadError, IImageSource } from '../models/interfaces';
 
 /**
@@ -33,7 +34,7 @@ export class ErrorHandler {
                 if (options.text) el.textContent = options.text;
                 if (options.attr) {
                     for (const k of Object.keys(options.attr)) {
-                        try { el.setAttribute(k, String(options.attr[k])); } catch (error) { console.debug('Ignored error:', error); }
+                        try { el.setAttribute(k, String(options.attr[k])); } catch (error) { Logger.debug('Ignored error:', error); }
                     }
                 }
                 if (options.href && el instanceof HTMLAnchorElement) {
@@ -59,7 +60,7 @@ export class ErrorHandler {
      * Handle configuration errors
      */
     static handleConfigError(error: IConfigError, container: HTMLElement): void {
-        console.error('Gallery Config Error:', error);
+        Logger.error('Gallery Config Error:', error);
         
         const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-config-error' });
 
@@ -84,7 +85,7 @@ export class ErrorHandler {
      * Handle loading errors
      */
     static handleLoadError(error: ILoadError, container: HTMLElement): HTMLElement {
-        console.error('Gallery Load Error:', error);
+        Logger.error('Gallery Load Error:', error);
         
         const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-load-error', attr: { 'data-error-type': error.reason } });
 
@@ -117,7 +118,7 @@ export class ErrorHandler {
      * Handle general plugin errors
      */
     static handlePluginError(error: Error, context: string, container?: HTMLElement): void {
-        console.error(`Gallery Plugin Error (${context}):`, error);
+        Logger.error(`Gallery Plugin Error (${context}):`, error);
         
         if (container) {
             const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-plugin-error' });
@@ -291,7 +292,7 @@ export class ErrorHandler {
             try {
                 callback(error);
             } catch (callbackError) {
-                console.error('Error in error callback:', callbackError);
+                Logger.error('Error in error callback:', callbackError);
             }
         }
     }

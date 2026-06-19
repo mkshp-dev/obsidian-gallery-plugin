@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
 import { IImageSource } from '../models/interfaces';
 import { LazyLoader } from '../utils/LazyLoader';
@@ -34,7 +35,7 @@ export class GridView extends GalleryView {
    */
   protected initializeContainer(): void {
     this.safeAddClass(this.container, 'gallery-view');
-    try { this.container.setAttribute('data-view-type', this._type); } catch (error) { console.debug('Ignored error:', error); }
+    try { this.container.setAttribute('data-view-type', this._type); } catch (error) { Logger.debug('Ignored error:', error); }
   }
 
   render(): void {
@@ -117,7 +118,7 @@ export class GridView extends GalleryView {
 
     const onLoad = () => {
       window.clearTimeout(timeoutHandle);
-      try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); }
+      try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); }
       this.handleImageLoad(image);
       cleanup();
     };

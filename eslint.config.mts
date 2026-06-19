@@ -62,7 +62,7 @@ export default tseslint.config(
 			"no-restricted-globals": "off",
 			// "obsidianmd/prefer-active-doc": "off",
 			//"obsidianmd/prefer-window-timers": "off",
-			"obsidianmd/rule-custom-message": "off",
+			// "obsidianmd/rule-custom-message": "off",
 			"obsidianmd/no-static-styles-assignment": "off",
 			"obsidianmd/prefer-instanceof": "off",
 			"obsidianmd/no-tfile-tfolder-cast": "off"

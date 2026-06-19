@@ -43,3 +43,5 @@ try {
 } catch (e) {
   // ignore if environment doesn't allow mutation
 }
+
+global.activeDocument = global.document;

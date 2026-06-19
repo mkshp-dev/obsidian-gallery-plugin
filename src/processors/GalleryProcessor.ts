@@ -606,7 +606,7 @@ export class GalleryProcessor {
                     {
                         label: 'Open Settings',
                         action: () => {
-                            try { document.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch (error) { console.debug('Ignored error:', error); };
+                            try { activeDocument.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch (error) { console.debug('Ignored error:', error); };
                         },
                         type: 'primary',
                         icon: '⚙️'
@@ -705,7 +705,7 @@ export class GalleryProcessor {
             // If we see a removal, don't immediately destroy: Obsidian may transiently
             // move or reparent nodes when toggling sidebars or changing layouts. Defer
             // the actual destruction check by a short timeout and only destroy if the
-            // gallery container remains detached from the document.
+            // gallery container remains detached from the activeDocument.
             let sawRemoval = false;
             mutations.forEach((mutation) => {
                 mutation.removedNodes.forEach((node) => {

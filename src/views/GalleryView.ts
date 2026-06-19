@@ -94,7 +94,7 @@ export abstract class GalleryView implements IGalleryView {
             return (parent as any).createEl(tag, props);
         }
 
-        const el = document.createElement(tag);
+        const el = activeDocument.createElement(tag);
         if (props) {
             if (props.cls) el.className = props.cls;
             if (props.text) el.textContent = props.text;
@@ -228,8 +228,8 @@ export abstract class GalleryView implements IGalleryView {
         if (!imageElement) return false;
 
         const rect = imageElement.getBoundingClientRect();
-        const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-        const windowWidth = window.innerWidth || document.documentElement.clientWidth;
+        const windowHeight = window.innerHeight || activeDocument.documentElement.clientHeight;
+        const windowWidth = window.innerWidth || activeDocument.documentElement.clientWidth;
 
         return (
             rect.top < windowHeight &&

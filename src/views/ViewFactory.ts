@@ -69,7 +69,7 @@ export class ViewFactory implements IViewFactory {
         
         // Test that the view class is valid by creating a temporary instance
         try {
-            const testContainer = document.createElement('div');
+            const testContainer = activeDocument.createElement('div');
             const testInstance = new viewClass(testContainer);
             
             // Verify required interface

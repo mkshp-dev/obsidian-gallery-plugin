@@ -177,7 +177,7 @@ export class ImageLoader {
     const img = new Image();
     
     // Create a simple placeholder using data URL
-    const canvas = document.createElement('canvas');
+    const canvas = activeDocument.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     
@@ -212,7 +212,7 @@ export class ImageLoader {
   static createErrorPlaceholder(width: number = 200, height: number = 200, errorMessage: string = 'Failed to load'): HTMLImageElement {
     const img = new Image();
     
-    const canvas = document.createElement('canvas');
+    const canvas = activeDocument.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     

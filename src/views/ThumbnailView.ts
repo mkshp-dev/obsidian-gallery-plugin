@@ -250,13 +250,13 @@ export class ThumbnailView extends GalleryView {
      */
     private expandImage(image: IImageSource): void {
         // Save the element that had focus so we can restore it later
-        const active = document.activeElement;
+        const active = activeDocument.activeElement;
         if (active && active instanceof HTMLElement) {
             this.lastFocusedElement = active;
         }
 
         // Create modal overlay using ownerDocument for compatibility with different rendering contexts
-    const doc = this.container.ownerDocument || document;
+    const doc = this.container.ownerDocument || activeDocument;
     const modal = doc.createElement('div');
         modal.className = 'gallery-modal';
         // Accessibility: treat modal as dialog
@@ -460,8 +460,8 @@ export class ThumbnailView extends GalleryView {
         try {
             doc.body.appendChild(modal);
         } catch (appendErr) {
-            console.warn('Failed to append modal to document body, falling back to document.body:', appendErr);
-            document.body.appendChild(modal);
+            console.warn('Failed to append modal to document body, falling back to activeDocument.body:', appendErr);
+            activeDocument.body.appendChild(modal);
         }
     }
 

@@ -335,7 +335,7 @@ export class LazyLoader {
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
 
     try {
-      const canvas = document.createElement('canvas');
+      const canvas = activeDocument.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
 
@@ -372,7 +372,7 @@ export class LazyLoader {
    * Retry failed images
    */
   retryFailed(): void {
-    const failedImages = document.querySelectorAll(`.${this.options.errorClass}`);
+    const failedImages = activeDocument.querySelectorAll(`.${this.options.errorClass}`);
     
     failedImages.forEach(img => {
       if (img instanceof HTMLImageElement) {
@@ -406,7 +406,7 @@ export class LazyLoader {
     const loader = new LazyLoader(options);
     
     images.forEach(({ src, alt }, index) => {
-      const img = document.createElement('img');
+      const img = activeDocument.createElement('img');
       img.alt = alt || `Gallery image ${index + 1}`;
       img.dataset.src = src;
       

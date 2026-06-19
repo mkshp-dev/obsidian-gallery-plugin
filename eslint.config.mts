@@ -55,7 +55,7 @@ export default tseslint.config(
 			"@typescript-eslint/no-unused-vars": "off",
 			"@typescript-eslint/no-deprecated": "off",
 			"@typescript-eslint/await-thenable": "off",
-			"@typescript-eslint/no-unused-expressions": "off",
+			//"@typescript-eslint/no-unused-expressions": "off",
 			"@typescript-eslint/only-throw-error": "off",
 			"no-empty": "error",
 			"no-undef": "off",

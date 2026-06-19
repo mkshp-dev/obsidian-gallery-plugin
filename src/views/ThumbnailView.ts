@@ -407,7 +407,9 @@ export class ThumbnailView extends GalleryView {
             const onLoad = () => {
                 window.clearTimeout(timeoutHandle);
                 try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); }
-                (modal as any).addClass && (modal as any).addClass('gallery-modal-loaded');
+                if ((modal as any).addClass) {
+                    (modal as any).addClass('gallery-modal-loaded');
+                }
                 cleanup();
             };
 
@@ -467,7 +469,9 @@ export class ThumbnailView extends GalleryView {
      * Close modal
      */
     private closeModal(modal: HTMLElement): void {
-        (modal as any).addClass && (modal as any).addClass('gallery-modal-closing');
+        if ((modal as any).addClass) {
+            (modal as any).addClass('gallery-modal-closing');
+        }
         // Call modal-specific cleanup if present
         try {
             const cleanup = (modal as any).__cleanup as (() => void) | undefined;

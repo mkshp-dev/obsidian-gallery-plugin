@@ -47,9 +47,9 @@ export class GalleryInstance implements IGalleryInstance {
     private initializeContainer(): void {
         // Support both Obsidian container helpers and plain DOM elements
         this.addClass(this.container, 'gallery-container');
-        try { this.container.setAttribute('data-gallery-id', this.id); } catch {}
-        try { this.container.setAttribute('data-gallery-type', this.config.view || 'thumbnail'); } catch {}
-        try { this.container.setAttribute('data-gallery-path', this.config.path); } catch {}
+        try { this.container.setAttribute('data-gallery-id', this.id); } catch (error) { console.debug('Ignored error:', error); }
+        try { this.container.setAttribute('data-gallery-type', this.config.view || 'thumbnail'); } catch (error) { console.debug('Ignored error:', error); }
+        try { this.container.setAttribute('data-gallery-path', this.config.path); } catch (error) { console.debug('Ignored error:', error); }
     }
 
     /**
@@ -204,7 +204,7 @@ export class GalleryInstance implements IGalleryInstance {
             if (options.text) el.textContent = options.text;
             if (options.attr) {
                 for (const k of Object.keys(options.attr)) {
-                    try { el.setAttribute(k, String(options.attr[k])); } catch {}
+                    try { el.setAttribute(k, String(options.attr[k])); } catch (error) { console.debug('Ignored error:', error); }
                 }
             }
         }
@@ -218,7 +218,7 @@ export class GalleryInstance implements IGalleryInstance {
             anyEl.addClass(cls);
             return;
         }
-        try { el.classList.add(cls); } catch {}
+        try { el.classList.add(cls); } catch (error) { console.debug('Ignored error:', error); }
     }
 
     private removeClass(el: HTMLElement, cls: string) {
@@ -227,13 +227,13 @@ export class GalleryInstance implements IGalleryInstance {
             anyEl.removeClass(cls);
             return;
         }
-        try { el.classList.remove(cls); } catch {}
+        try { el.classList.remove(cls); } catch (error) { console.debug('Ignored error:', error); }
     }
 
     private emptyElement(el: HTMLElement) {
         const anyEl = el as any;
         if (anyEl.empty && typeof anyEl.empty === 'function') {
-            try { anyEl.empty(); return; } catch {}
+            try { anyEl.empty(); return; } catch (error) { console.debug('Ignored error:', error); }
         }
         while (el.firstChild) el.removeChild(el.firstChild);
     }
@@ -338,9 +338,9 @@ export class GalleryInstance implements IGalleryInstance {
     // Clear container (support plain DOM)
     this.emptyElement(this.container);
     this.removeClass(this.container, 'gallery-container');
-    try { this.container.removeAttribute('data-gallery-id'); } catch {}
-    try { this.container.removeAttribute('data-gallery-type'); } catch {}
-    try { this.container.removeAttribute('data-gallery-path'); } catch {}
+    try { this.container.removeAttribute('data-gallery-id'); } catch (error) { console.debug('Ignored error:', error); }
+    try { this.container.removeAttribute('data-gallery-type'); } catch (error) { console.debug('Ignored error:', error); }
+    try { this.container.removeAttribute('data-gallery-path'); } catch (error) { console.debug('Ignored error:', error); }
         
         // Clear references
         this._images = [];

@@ -328,7 +328,7 @@ export class ThumbnailView extends GalleryView {
                 modal.removeEventListener('keydown', closeOnEscape as any);
                 doc.removeEventListener('focus', keepFocus as any, true);
                 modal.removeEventListener('keydown', modalKeyHandler as any);
-            } catch {}
+            } catch (error) { console.debug('Ignored error:', error); }
         };
         (modal as any).__cleanup = cleanup;
 
@@ -350,9 +350,9 @@ export class ThumbnailView extends GalleryView {
         setTimeout(() => {
             try {
                 modal.focus();
-            } catch {}
+            } catch (error) { console.debug('Ignored error:', error); }
             // Also focus close button as a visible focus target
-            try { closeBtn.focus(); } catch {}
+            try { closeBtn.focus(); } catch (error) { console.debug('Ignored error:', error); }
         }, 0);
 
         // Create Prev/Next buttons for modal navigation (mouse-friendly)
@@ -406,7 +406,7 @@ export class ThumbnailView extends GalleryView {
 
             const onLoad = () => {
                 clearTimeout(timeoutHandle);
-                try { imgEl.src = temp.src; } catch {}
+                try { imgEl.src = temp.src; } catch (error) { console.debug('Ignored error:', error); }
                 (modal as any).addClass && (modal as any).addClass('gallery-modal-loaded');
                 cleanup();
             };
@@ -472,13 +472,13 @@ export class ThumbnailView extends GalleryView {
         try {
             const cleanup = (modal as any).__cleanup as (() => void) | undefined;
             if (cleanup) cleanup();
-        } catch {}
+        } catch (error) { console.debug('Ignored error:', error); }
 
         setTimeout(() => {
             modal.remove();
             // Restore focus to previously focused element
             if (this.lastFocusedElement) {
-                try { this.lastFocusedElement.focus(); } catch {}
+                try { this.lastFocusedElement.focus(); } catch (error) { console.debug('Ignored error:', error); }
                 this.lastFocusedElement = null;
             }
         }, 200);

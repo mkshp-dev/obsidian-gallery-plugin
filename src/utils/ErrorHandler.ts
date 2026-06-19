@@ -33,7 +33,7 @@ export class ErrorHandler {
                 if (options.text) el.textContent = options.text;
                 if (options.attr) {
                     for (const k of Object.keys(options.attr)) {
-                        try { el.setAttribute(k, String(options.attr[k])); } catch {}
+                        try { el.setAttribute(k, String(options.attr[k])); } catch (error) { console.debug('Ignored error:', error); }
                     }
                 }
                 if (options.href && el instanceof HTMLAnchorElement) {

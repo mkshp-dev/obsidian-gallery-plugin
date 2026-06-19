@@ -216,7 +216,9 @@ export default class GalleryPlugin extends Plugin {
         // Remove document listener
         try {
             document.removeEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
-        } catch {}
+        } catch (error) {
+            console.debug('Error removing document listener:', error);
+        }
     }
 
     /**

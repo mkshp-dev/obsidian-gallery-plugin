@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Added Support section to README
 - Optimize gallery rendering performance and improve array deduplication.
 - Fix syntax and indentation issues in the jules-dispatch GitHub Actions workflow.
 - Added attestation for release assets

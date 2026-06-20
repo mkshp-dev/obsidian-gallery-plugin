@@ -1,18 +1,22 @@
 ## Summary
 
-<!-- What does this PR change and why? -->
+*
 
-## Type of change
+## Linked issue
 
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
-- [ ] Refactor / cleanup
-- [ ] Release version bump
+Closes #
 
-## Checklist
+## Verification
 
-- [ ] `npm test` passes
-- [ ] `npm run build` succeeds
-- [ ] `manifest.json` version updated (release PRs only)
-- [ ] `package.json` version updated (release PRs only)
+* [ ] `npm run lint`
+* [ ] `npm run build`
+* [ ] `npm test`
+
+## Changelog
+
+* [ ] Added exactly one bullet under `CHANGELOG.md` → `## In-progress`
+
+## Notes
+
+*
+

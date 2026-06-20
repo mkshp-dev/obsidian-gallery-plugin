@@ -264,9 +264,12 @@ export class FolderScanner {
         }
         
         return recentImages.sort((a, b) => {
-            const fileA = this.vault.getAbstractFileByPath(a.path) as TFile;
-            const fileB = this.vault.getAbstractFileByPath(b.path) as TFile;
-            return fileB.stat.mtime - fileA.stat.mtime;
+            const fileA = this.vault.getAbstractFileByPath(a.path);
+            const fileB = this.vault.getAbstractFileByPath(b.path);
+            if (fileA instanceof TFile && fileB instanceof TFile) {
+                return fileB.stat.mtime - fileA.stat.mtime;
+            }
+            return 0;
         });
     }
 

@@ -2,6 +2,7 @@
  * Image loading utility with timeout and error handling
  * Provides robust image loading for gallery components
  */
+import { requestUrl } from 'obsidian';
 
 export interface IImageLoadResult {
   success: boolean;
@@ -148,21 +149,25 @@ export class ImageLoader {
    */
   static async validateImageUrl(url: string, timeoutMs: number = 5000): Promise<boolean> {
     try {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+      const response = await Promise.race([
+        requestUrl({
+          url,
+          method: 'HEAD',
+          throw: false
+        }),
+        new Promise<never>((_, reject) =>
+          window.setTimeout(() => reject(new Error('timeout')), timeoutMs)
+        )
+      ]);
 
-      const response = await fetch(url, {
-        method: 'HEAD',
-        signal: controller.signal
-      });
-
-      window.clearTimeout(timeoutId);
-
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         return false;
       }
 
-      const contentType = response.headers.get('Content-Type');
+      const contentTypeKey = Object.keys(response.headers).find(
+        key => key.toLowerCase() === 'content-type'
+      );
+      const contentType = contentTypeKey ? response.headers[contentTypeKey] : null;
       return contentType ? contentType.startsWith('image/') : false;
 
     } catch (error) {

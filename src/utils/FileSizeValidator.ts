@@ -1,4 +1,5 @@
 import { Logger } from "./Logger";
+import { requestUrl } from 'obsidian';
 /**
  * File size validation utility for gallery images
  * Prevents loading of files that exceed size limits
@@ -63,25 +64,29 @@ export class FileSizeValidator {
    */
   static async validateExternalUrl(url: string, timeoutMs: number = 5000): Promise<IFileSizeValidationResult> {
     try {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+      const response = await Promise.race([
+        requestUrl({
+          url,
+          method: 'HEAD',
+          throw: false
+        }),
+        new Promise<never>((_, reject) =>
+          window.setTimeout(() => reject(new Error('timeout')), timeoutMs)
+        )
+      ]);
 
-      const response = await fetch(url, {
-        method: 'HEAD',
-        signal: controller.signal
-      });
-
-      window.clearTimeout(timeoutId);
-
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         return {
           isValid: false,
-          error: `HTTP ${response.status}: ${response.statusText}`,
+          error: `HTTP ${response.status}`,
           maxSize: this.MAX_FILE_SIZE
         };
       }
 
-      const contentLength = response.headers.get('Content-Length');
+      const contentLengthKey = Object.keys(response.headers).find(
+        key => key.toLowerCase() === 'content-length'
+      );
+      const contentLength = contentLengthKey ? response.headers[contentLengthKey] : null;
       
       if (!contentLength) {
         // If no Content-Length header, we can't validate size
@@ -120,7 +125,7 @@ export class FileSizeValidator {
       };
 
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.message === 'timeout') {
         return {
           isValid: false,
           error: `Request timeout after ${timeoutMs}ms`,

@@ -59,12 +59,12 @@ export default tseslint.config(
 			// "@typescript-eslint/only-throw-error": "off",
 			"no-empty": "error",
 			"no-undef": "off",
-			"no-restricted-globals": "off",
+			// "no-restricted-globals": "off",
 			// "obsidianmd/prefer-active-doc": "off",
 			//"obsidianmd/prefer-window-timers": "off",
 			// "obsidianmd/rule-custom-message": "off",
 			// "obsidianmd/prefer-instanceof": "off",
-			"obsidianmd/no-tfile-tfolder-cast": "off"
+			// "obsidianmd/no-tfile-tfolder-cast": "off"
 		}
 	}
 );

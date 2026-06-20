@@ -438,7 +438,7 @@ export class GalleryProcessor {
                         (view as any).allowRemoteImages = options.allowRemoteImages;
                     } catch (error) { Logger.debug('Ignored error:', error); }
 
-                    await view.update(images);
+                    view.update(images);
                     view.render();
                     
                     // Wait for initial render

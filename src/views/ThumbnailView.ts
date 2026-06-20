@@ -28,7 +28,7 @@ export class ThumbnailView extends GalleryView {
                     if (entry.isIntersecting) {
                         const imagePath = entry.target.getAttribute('data-image-path');
                         if (imagePath && !this.loadedImages.has(imagePath)) {
-                            this.loadImage(imagePath, entry.target as HTMLElement);
+                            void this.loadImage(imagePath, entry.target as HTMLElement);
                         }
                     }
                 });
@@ -118,7 +118,7 @@ export class ThumbnailView extends GalleryView {
             if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
                 const parent = itemEl.parentElement;
                 if (!parent) return;
-                const items = Array.from(parent.querySelectorAll('.gallery-thumbnail-item')) as HTMLElement[];
+                const items = Array.from(parent.querySelectorAll('.gallery-thumbnail-item')) as unknown as HTMLElement[];
                 const idx = items.indexOf(itemEl);
                 if (idx === -1) return;
 
@@ -151,7 +151,7 @@ export class ThumbnailView extends GalleryView {
             this.lazyLoadObserver.observe(itemEl);
         } else {
             // Fallback: load immediately if no IntersectionObserver
-            this.loadImage(image.path, itemEl);
+            void this.loadImage(image.path, itemEl);
         }
 
         // Add loading spinner
@@ -291,7 +291,7 @@ export class ThumbnailView extends GalleryView {
         const keepFocus = (e: Event) => {
             if (!modal.contains(doc.activeElement)) {
                 // Focus the close button as a sensible default
-                const btn = modal.querySelector('.gallery-modal-close') as HTMLElement | null;
+                const btn = modal.querySelector('.gallery-modal-close') as unknown as HTMLElement | null;
                 if (btn) btn.focus();
             }
         };
@@ -307,8 +307,8 @@ export class ThumbnailView extends GalleryView {
                 if (nextIndex >= 0 && nextIndex < this._images.length) {
                     const nextImage = this._images[nextIndex];
                     // Update modal image and info
-                    const imgEl = modal.querySelector('.gallery-modal-image img') as HTMLImageElement | null;
-                    const titleEl = modal.querySelector('.gallery-modal-info h3') as HTMLElement | null;
+                    const imgEl = modal.querySelector('.gallery-modal-image img') as unknown as HTMLImageElement | null;
+                    const titleEl = modal.querySelector('.gallery-modal-info h3') as unknown as HTMLElement | null;
                     if (imgEl && nextImage) {
                         imgEl.src = nextImage.getDisplayUrl();
                     }
@@ -449,8 +449,8 @@ export class ThumbnailView extends GalleryView {
             if (nextIndex < 0 || nextIndex >= this._images.length) return;
 
             const nextImage = this._images[nextIndex];
-            const modalImg = modal.querySelector('.gallery-modal-image img') as HTMLImageElement | null;
-            const titleEl = modal.querySelector('.gallery-modal-info h3') as HTMLElement | null;
+            const modalImg = modal.querySelector('.gallery-modal-image img') as unknown as HTMLImageElement | null;
+            const titleEl = modal.querySelector('.gallery-modal-info h3') as unknown as HTMLElement | null;
             if (modalImg && nextImage) {
                 modalImg.src = nextImage.getDisplayUrl();
                 modalImg.alt = nextImage.displayName || '';
@@ -480,7 +480,7 @@ export class ThumbnailView extends GalleryView {
         }
         // Call modal-specific cleanup if present
         try {
-            const cleanup = (modal as unknown as { __cleanup?: () => void }).__cleanup as (() => void) | undefined;
+            const cleanup = (modal as unknown as { __cleanup?: () => void }).__cleanup;
             if (cleanup) cleanup();
         } catch (error) { Logger.debug('Ignored error:', error); }
 

@@ -73,7 +73,7 @@ export class LazyLoader {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const img = entry.target as HTMLImageElement;
-        this.loadImage(img);
+        void this.loadImage(img);
         this.observer?.unobserve(img);
       }
     });
@@ -102,7 +102,7 @@ export class LazyLoader {
     if (this.observer) {
       this.observer.observe(img);
     } else {
-      this.loadImage(img);
+      void this.loadImage(img);
     }
   }
 
@@ -161,7 +161,7 @@ export class LazyLoader {
         
         // Retry after delay
         window.setTimeout(() => {
-          this.loadImage(img);
+          void this.loadImage(img);
         }, this.options.retryDelay);
 
         return {

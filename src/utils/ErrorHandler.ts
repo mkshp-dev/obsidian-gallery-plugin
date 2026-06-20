@@ -38,7 +38,7 @@ export class ErrorHandler {
             if (typeof options === 'string') {
                 el.className = options;
             } else {
-                const opts = options as CreateElementOptions;
+                const opts = options;
                 if (opts.cls) el.className = opts.cls;
                 if (opts.text) el.textContent = opts.text;
                 if (opts.attr) {

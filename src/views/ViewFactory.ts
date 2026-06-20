@@ -24,10 +24,10 @@ export class ViewFactory implements IViewFactory {
         this.viewTypes.set('thumbnail', ThumbnailView);
             
         // Register CarouselView (real implementation)
-        this.viewTypes.set('carousel', CarouselView as new (container: HTMLElement) => IGalleryView);
+        this.viewTypes.set('carousel', CarouselView);
             
         // Register real GridView implementation
-        this.viewTypes.set('grid', GridView as new (container: HTMLElement) => IGalleryView);
+        this.viewTypes.set('grid', GridView);
     }
 
     /**

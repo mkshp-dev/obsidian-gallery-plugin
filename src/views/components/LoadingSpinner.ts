@@ -73,7 +73,7 @@ export class LoadingSpinner {
 
     // Add text if provided
     if (this.options.text) {
-      this.textElement = this.createDiv(this.spinnerElement!, 'gallery-loading-text');
+      this.textElement = this.createDiv(this.spinnerElement, 'gallery-loading-text');
       this.textElement.textContent = this.options.text;
       // Accessibility: announce loading text to assistive tech
       this.textElement.setAttribute('role', 'status');

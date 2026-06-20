@@ -28,7 +28,7 @@ export class CarouselView extends GalleryView {
         this.containerEl = this.createElement(this.container, 'div', { cls: 'gallery-carousel' });
 
         // Viewport and track
-        this.viewport = this.createElement(this.containerEl!, 'div', { cls: 'gallery-carousel-viewport' });
+        this.viewport = this.createElement(this.containerEl, 'div', { cls: 'gallery-carousel-viewport' });
         this.trackEl = this.createElement(this.viewport, 'div', { cls: 'gallery-carousel-container' });
 
         // Render items
@@ -44,8 +44,8 @@ export class CarouselView extends GalleryView {
             item.addEventListener('click', () => this.expandImage(img));
         });
         // Prev/Next controls (visual)
-        const prev = this.createElement(this.containerEl!, 'button', { cls: 'gallery-carousel-nav prev', text: '‹' });
-        const next = this.createElement(this.containerEl!, 'button', { cls: 'gallery-carousel-nav next', text: '›' });
+        const prev = this.createElement(this.containerEl, 'button', { cls: 'gallery-carousel-nav prev', text: '‹' });
+        const next = this.createElement(this.containerEl, 'button', { cls: 'gallery-carousel-nav next', text: '›' });
         prev.setAttribute('aria-label', 'Previous image');
         next.setAttribute('aria-label', 'Next image');
 
@@ -53,7 +53,7 @@ export class CarouselView extends GalleryView {
         next.addEventListener('click', () => this.next());
 
         // Indicators
-        const indicators = this.createElement(this.containerEl!, 'div', { cls: 'gallery-carousel-indicators' });
+        const indicators = this.createElement(this.containerEl, 'div', { cls: 'gallery-carousel-indicators' });
         this._images.forEach((_, idx) => {
             const dot = this.createElement(indicators, 'button', { cls: 'gallery-carousel-indicator' });
             dot.setAttribute('aria-label', `Go to image ${idx + 1}`);
@@ -77,7 +77,7 @@ export class CarouselView extends GalleryView {
         this.containerEl.setAttribute('tabindex', '0');
 
         // Touch support - basic swipe
-        this.addTouchSupport(this.viewport!);
+        this.addTouchSupport(this.viewport);
     }
 
     update(images: IImageSource[]): void {
@@ -243,7 +243,7 @@ export class CarouselView extends GalleryView {
 
         const keepFocus = (e: Event) => {
             if (!modal.contains(doc.activeElement)) {
-                const btn = modal.querySelector('.gallery-modal-close') as HTMLElement | null;
+                const btn = modal.querySelector('.gallery-modal-close') as unknown as HTMLElement | null;
                 if (btn) btn.focus();
             }
         };
@@ -257,8 +257,8 @@ export class CarouselView extends GalleryView {
                 const nextIndex = e.key === 'ArrowRight' ? currentIndex + 1 : currentIndex - 1;
                 if (nextIndex >= 0 && nextIndex < this._images.length) {
                     const nextImage = this._images[nextIndex];
-                    const imgEl = modal.querySelector('.gallery-modal-image img') as HTMLImageElement | null;
-                    const titleEl = modal.querySelector('.gallery-modal-info h3') as HTMLElement | null;
+                    const imgEl = modal.querySelector('.gallery-modal-image img') as unknown as HTMLImageElement | null;
+                    const titleEl = modal.querySelector('.gallery-modal-info h3') as unknown as HTMLElement | null;
                     if (imgEl && nextImage) {
                         // load via temp to respect timeout
                         const temp = new Image();
@@ -291,9 +291,9 @@ export class CarouselView extends GalleryView {
         modal.setAttribute('tabindex', '-1');
         window.setTimeout(() => { try { modal.focus(); } catch (error) { Logger.debug('Ignored error:', error); } try { closeBtn.focus(); } catch (error) { Logger.debug('Ignored error:', error); } }, 0);
 
-        const prevBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav prev', text: '\u2039' }) as HTMLElement;
+        const prevBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav prev', text: '\u2039' });
         prevBtn.setAttribute('aria-label', 'Previous image'); prevBtn.addEventListener('click', () => navigate(-1));
-        const nextBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav next', text: '\u203A' }) as HTMLElement;
+        const nextBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav next', text: '\u203A' });
         nextBtn.setAttribute('aria-label', 'Next image'); nextBtn.addEventListener('click', () => navigate(1));
 
     const info = this.createElement(content, 'div', { cls: 'gallery-modal-info' });
@@ -326,8 +326,8 @@ export class CarouselView extends GalleryView {
             const nextIndex = currentIndex + delta;
             if (nextIndex < 0 || nextIndex >= this._images.length) return;
             const nextImage = this._images[nextIndex];
-            const modalImg = modal.querySelector('.gallery-modal-image img') as HTMLImageElement | null;
-            const titleEl = modal.querySelector('.gallery-modal-info h3') as HTMLElement | null;
+            const modalImg = modal.querySelector('.gallery-modal-image img') as unknown as HTMLImageElement | null;
+            const titleEl = modal.querySelector('.gallery-modal-info h3') as unknown as HTMLElement | null;
             if (modalImg && nextImage) { loadModalImage(modalImg, nextImage); modalImg.alt = nextImage.displayName || ''; }
             if (titleEl && nextImage) titleEl.textContent = nextImage.displayName || '';
             currentImage = nextImage;
@@ -375,7 +375,7 @@ export class CarouselView extends GalleryView {
 
         // Fallback: if model doesn't report states yet, infer from DOM
         if (total === 0 && this.trackEl) {
-            const imgs = Array.from(this.trackEl.querySelectorAll('img')) as HTMLImageElement[];
+            const imgs = Array.from(this.trackEl.querySelectorAll('img'));
             total = imgs.length;
             loaded = imgs.filter(i => i.complete && i.naturalWidth > 0).length;
             error = imgs.filter(i => i.complete && i.naturalWidth === 0).length;

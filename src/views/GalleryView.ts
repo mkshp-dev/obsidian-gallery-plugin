@@ -257,7 +257,7 @@ export abstract class GalleryView implements IGalleryView {
         // Avoid using CSS.escape / complex selectors to prevent SelectorSyntaxError in jsdom.
         // Instead, iterate elements with the attribute and compare the attribute value directly.
         try {
-            const nodes = Array.from(this.container.querySelectorAll('[data-image-path]')) as HTMLElement[];
+            const nodes = Array.from(this.container.querySelectorAll('[data-image-path]')) as unknown as HTMLElement[];
             for (const n of nodes) {
                 try {
                     const val = n.getAttribute('data-image-path');

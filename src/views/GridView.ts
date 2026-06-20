@@ -80,7 +80,7 @@ export class GridView extends GalleryView {
     });
 
     // Observe all images we just created
-    const imgs = Array.from(this.gridContainer!.querySelectorAll('img')) as HTMLImageElement[];
+    const imgs = Array.from(this.gridContainer.querySelectorAll('img'));
     imgs.forEach((imgEl) => {
       const src = (imgEl.dataset && (imgEl.dataset.src || imgEl.getAttribute('data-src'))) || (imgEl.getAttribute('src') || '');
       if (src) this.loader!.observe(imgEl, src);
@@ -103,7 +103,7 @@ export class GridView extends GalleryView {
    * Reload image in a specific element (used by retry)
    */
   protected reloadImage(element: HTMLElement, image: IImageSource): void {
-    const imgEl = element.querySelector('img') as HTMLImageElement | null;
+    const imgEl = element.querySelector('img');
     if (!imgEl) return;
 
     if (image.type === 'external' && !this.allowRemoteImages) {
@@ -149,7 +149,7 @@ export class GridView extends GalleryView {
 
     // Fallback to DOM inspection if model states are not yet set
     if (total === 0 && this.gridContainer) {
-      const imgs = Array.from(this.gridContainer.querySelectorAll('img')) as HTMLImageElement[];
+      const imgs = Array.from(this.gridContainer.querySelectorAll('img'));
       total = imgs.length;
       loaded = imgs.filter(i => i.complete && i.naturalWidth > 0).length;
       error = imgs.filter(i => i.complete && i.naturalWidth === 0).length;

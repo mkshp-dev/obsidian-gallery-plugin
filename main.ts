@@ -177,7 +177,7 @@ export default class GalleryPlugin extends Plugin {
                 console.warn('Failed to open settings via command', e);
             }
         };
-        activeDocument.addEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
+        activeDocument.addEventListener('gallery-open-settings', this._onOpenSettingsRequested);
     }
 
     async loadSettings() {

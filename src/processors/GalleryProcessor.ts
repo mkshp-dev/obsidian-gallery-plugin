@@ -621,7 +621,7 @@ export class GalleryProcessor {
                     },
                     {
                         label: 'Scan Again',
-                        action: () => this.refreshGalleryByConfig(container, config),
+                        action: () => { void this.refreshGalleryByConfig(container, config); },
                         type: 'secondary',
                         icon: '🔄'
                     }
@@ -633,7 +633,7 @@ export class GalleryProcessor {
                 config.path, 
                 result.imagesFound,
                 result.errors,
-                () => this.refreshGalleryByConfig(container, config)
+                () => { void this.refreshGalleryByConfig(container, config); }
             );
         } else if (hasPermissionError) {
             EmptyState.createPermissionDenied(container, config.path);
@@ -643,7 +643,7 @@ export class GalleryProcessor {
                 container,
                 config.path,
                 config.recursive || true,
-                () => this.refreshGalleryByConfig(container, config)
+                () => { void this.refreshGalleryByConfig(container, config); }
             );
         }
     }

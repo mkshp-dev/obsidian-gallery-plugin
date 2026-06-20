@@ -102,7 +102,7 @@ export class ParameterParser {
 
         // Create and validate GalleryConfig
         try {
-            return GalleryConfig.fromYaml(parsedData as Record<string, unknown>);
+            return GalleryConfig.fromYaml(parsedData);
         } catch (error) {
             throw this.createConfigError('validation', error instanceof Error ? error.message : String(error),
                 'Check the parameter documentation for valid values');

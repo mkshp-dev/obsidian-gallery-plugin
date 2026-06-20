@@ -209,12 +209,12 @@ export class CarouselView extends GalleryView {
      * Expand image into a modal/lightbox. Similar behavior to ThumbnailView.
      */
     public expandImage(image: IImageSource): void {
-        const active = activeDocument.activeElement;
-        if (active && active.instanceOf(HTMLElement)) {
-            this.lastFocusedElement = active as HTMLElement;
+        const active = document.activeElement;
+        if (active && active instanceof HTMLElement) {
+            this.lastFocusedElement = active;
         }
 
-        const doc = this.container.ownerDocument || activeDocument;
+        const doc = this.container.ownerDocument || document;
         const modal = doc.createElement('div');
         modal.className = 'gallery-modal';
         modal.setAttribute('role', 'dialog');
@@ -329,7 +329,7 @@ export class CarouselView extends GalleryView {
             currentImage = nextImage;
         };
 
-        try { doc.body.appendChild(modal); } catch (appendErr) { try { activeDocument.body.appendChild(modal); } catch {} }
+        try { doc.body.appendChild(modal); } catch (appendErr) { try { document.body.appendChild(modal); } catch {} }
     }
 
     /**

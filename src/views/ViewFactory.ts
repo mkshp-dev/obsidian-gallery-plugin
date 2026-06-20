@@ -1,4 +1,3 @@
-import { Logger } from './utils/Logger';
 import { IGalleryView, IViewFactory } from '../models/interfaces';
 import { ThumbnailView } from './ThumbnailView';
 import { CarouselView } from './CarouselView';
@@ -43,7 +42,7 @@ export class ViewFactory implements IViewFactory {
         try {
             return new ViewClass(container);
         } catch (error) {
-            Logger.error(`Error creating view of type "${type}":`, error);
+            console.error(`Error creating view of type "${type}":`, error);
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to create ${type} view: ${errorMessage}`);
         }
@@ -70,7 +69,7 @@ export class ViewFactory implements IViewFactory {
         
         // Test that the view class is valid by creating a temporary instance
         try {
-            const testContainer = activeDocument.createElement('div');
+            const testContainer = document.createElement('div');
             const testInstance = new viewClass(testContainer);
             
             // Verify required interface
@@ -88,7 +87,7 @@ export class ViewFactory implements IViewFactory {
         // Register the view type
         this.viewTypes.set(type, viewClass);
         
-        Logger.debug(`Gallery view type "${type}" registered successfully`);
+        console.log(`Gallery view type "${type}" registered successfully`);
     }
 
     /**
@@ -119,7 +118,7 @@ export class ViewFactory implements IViewFactory {
         try {
             return this.createView(type, container);
         } catch (error) {
-            Logger.warn(`Failed to create view of type "${type}", falling back to default:`, error);
+            console.warn(`Failed to create view of type "${type}", falling back to default:`, error);
             return this.createView(this.getDefaultViewType(), container);
         }
     }
@@ -185,7 +184,7 @@ export class ViewFactory implements IViewFactory {
             try {
                 (view as any).configure(config);
             } catch (error) {
-                Logger.warn(`Error applying configuration to ${type} view:`, error);
+                console.warn(`Error applying configuration to ${type} view:`, error);
             }
         }
         
@@ -227,7 +226,7 @@ export class ViewFactory implements IViewFactory {
                 const view = this.createView(type, viewContainer);
                 views.push(view);
             } catch (error) {
-                Logger.error(`Failed to create view of type "${type}":`, error);
+                console.error(`Failed to create view of type "${type}":`, error);
             }
         }
         

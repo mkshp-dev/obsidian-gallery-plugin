@@ -34,9 +34,6 @@ Object.defineProperty(window, 'IntersectionObserver', {
 // Mock fetch for external URL testing
 global.fetch = jest.fn();
 
-// Polyfill activeDocument for Obsidian popout window compatibility
-(global as any).activeDocument = (global as any).document;
-
 // Avoid jsdom's unimplemented canvas getContext from printing noisy errors in tests.
 // Return null so code paths that check getContext will fallback cleanly.
 try {

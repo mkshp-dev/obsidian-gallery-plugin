@@ -1,4 +1,3 @@
-import { Logger } from './utils/Logger';
 import { GalleryView } from './GalleryView';
 import { IImageSource } from '../models/interfaces';
 
@@ -60,7 +59,7 @@ export class ThumbnailView extends GalleryView {
             this.renderThumbnailItem(gridContainer, image, idx);
         });
 
-        Logger.debug(`Thumbnail view rendered with ${this._images.length} images`);
+        console.log(`Thumbnail view rendered with ${this._images.length} images`);
     }
 
     /**
@@ -251,13 +250,13 @@ export class ThumbnailView extends GalleryView {
      */
     private expandImage(image: IImageSource): void {
         // Save the element that had focus so we can restore it later
-        const active = activeDocument.activeElement;
-        if (active && active.instanceOf(HTMLElement)) {
-            this.lastFocusedElement = active as HTMLElement;
+        const active = document.activeElement;
+        if (active && active instanceof HTMLElement) {
+            this.lastFocusedElement = active;
         }
 
         // Create modal overlay using ownerDocument for compatibility with different rendering contexts
-    const doc = this.container.ownerDocument || activeDocument;
+    const doc = this.container.ownerDocument || document;
     const modal = doc.createElement('div');
         modal.className = 'gallery-modal';
         // Accessibility: treat modal as dialog
@@ -284,7 +283,7 @@ export class ThumbnailView extends GalleryView {
                 doc.removeEventListener('keydown', modalKeyHandler as any);
             }
     };
-    // Attach close handler to the modal (avoid activeDocument-level handler to prevent double firing)
+    // Attach close handler to the modal (avoid document-level handler to prevent double firing)
     modal.addEventListener('keydown', closeOnEscape as any);
 
         // Keep focus inside modal (simple trap)
@@ -455,12 +454,12 @@ export class ThumbnailView extends GalleryView {
             currentImage = nextImage;
         };
 
-        // Append modal to activeDocument body
+        // Append modal to document body
         try {
             doc.body.appendChild(modal);
         } catch (appendErr) {
-            Logger.warn('Failed to append modal to activeDocument body, falling back to activeDocument.body:', appendErr);
-            activeDocument.body.appendChild(modal);
+            console.warn('Failed to append modal to document body, falling back to document.body:', appendErr);
+            document.body.appendChild(modal);
         }
     }
 

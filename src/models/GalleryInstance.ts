@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { IGalleryInstance, IGalleryConfig, IImageSource, IGalleryView } from './interfaces';
 
 /**
@@ -38,7 +39,7 @@ export class GalleryInstance implements IGalleryInstance {
      * Generate unique identifier for this gallery instance
      */
     private generateId(): string {
-        return `gallery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        return `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
 
     /**
@@ -47,9 +48,9 @@ export class GalleryInstance implements IGalleryInstance {
     private initializeContainer(): void {
         // Support both Obsidian container helpers and plain DOM elements
         this.addClass(this.container, 'gallery-container');
-        try { this.container.setAttribute('data-gallery-id', this.id); } catch {}
-        try { this.container.setAttribute('data-gallery-type', this.config.view || 'thumbnail'); } catch {}
-        try { this.container.setAttribute('data-gallery-path', this.config.path); } catch {}
+        try { this.container.setAttribute('data-gallery-id', this.id); } catch (error) { Logger.debug('Ignored error:', error); }
+        try { this.container.setAttribute('data-gallery-type', this.config.view || 'thumbnail'); } catch (error) { Logger.debug('Ignored error:', error); }
+        try { this.container.setAttribute('data-gallery-path', this.config.path); } catch (error) { Logger.debug('Ignored error:', error); }
     }
 
     /**
@@ -123,7 +124,7 @@ export class GalleryInstance implements IGalleryInstance {
      */
     update(images: IImageSource[]): void {
         if (this._isDestroyed) {
-            console.warn('Cannot update destroyed gallery instance');
+            Logger.warn('Cannot update destroyed gallery instance');
             return;
         }
 
@@ -138,7 +139,7 @@ export class GalleryInstance implements IGalleryInstance {
         try {
             this.view.update(this._images);
         } catch (error) {
-            console.error('Error updating gallery view:', error);
+            Logger.error('Error updating gallery view:', error);
             this.showError('Failed to update gallery view');
         }
 
@@ -177,14 +178,14 @@ export class GalleryInstance implements IGalleryInstance {
      */
     private showError(message: string): void {
         this.emptyElement(this.container);
-        const err = this.createElement(this.container, 'div', { cls: 'gallery-error', text: message });
+        this.createElement(this.container, 'div', { cls: 'gallery-error', text: message });
         return;
     }
 
     /**
      * Trigger gallery event
      */
-    private triggerEvent(eventType: string, data: any): void {
+    private triggerEvent(eventType: string, data: unknown): void {
         const event = new CustomEvent(eventType, { detail: data });
         this.container.dispatchEvent(event);
     }
@@ -192,19 +193,26 @@ export class GalleryInstance implements IGalleryInstance {
     /**
      * Helper to create an element into a parent supporting Obsidian helpers or plain DOM
      */
-    private createElement(parent: HTMLElement, tag: string = 'div', options?: any): HTMLElement {
-        const anyParent = parent as any;
-        if (anyParent.createEl && typeof anyParent.createEl === 'function') {
-            return anyParent.createEl(tag, options || {});
+    private createElement(parent: HTMLElement, tag: string = 'div', options?: { cls?: string; text?: string; attr?: Record<string, unknown> }): HTMLElement {
+        interface ObsidianDOMExtensions {
+            createEl?: (tag: string, o?: unknown) => HTMLElement;
+            addClass?: (cls: string) => void;
+            removeClass?: (cls: string) => void;
+            empty?: () => void;
         }
 
-        const el = document.createElement(tag);
+        const obsParent = parent as unknown as ObsidianDOMExtensions;
+        if (obsParent.createEl && typeof obsParent.createEl === 'function') {
+            return obsParent.createEl(tag, options || {});
+        }
+
+        const el = activeDocument.createElement(tag);
         if (options) {
             if (options.cls) el.className = options.cls;
             if (options.text) el.textContent = options.text;
             if (options.attr) {
                 for (const k of Object.keys(options.attr)) {
-                    try { el.setAttribute(k, String(options.attr[k])); } catch {}
+                    try { el.setAttribute(k, String(options.attr[k])); } catch (error) { Logger.debug('Ignored error:', error); }
                 }
             }
         }
@@ -213,27 +221,48 @@ export class GalleryInstance implements IGalleryInstance {
     }
 
     private addClass(el: HTMLElement, cls: string) {
-        const anyEl = el as any;
-        if (anyEl.addClass && typeof anyEl.addClass === 'function') {
-            anyEl.addClass(cls);
+        interface ObsidianDOMExtensions {
+            createEl?: (tag: string, o?: unknown) => HTMLElement;
+            addClass?: (cls: string) => void;
+            removeClass?: (cls: string) => void;
+            empty?: () => void;
+        }
+
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        if (obsEl.addClass && typeof obsEl.addClass === 'function') {
+            obsEl.addClass(cls);
             return;
         }
-        try { el.classList.add(cls); } catch {}
+        try { el.classList.add(cls); } catch (error) { Logger.debug('Ignored error:', error); }
     }
 
     private removeClass(el: HTMLElement, cls: string) {
-        const anyEl = el as any;
-        if (anyEl.removeClass && typeof anyEl.removeClass === 'function') {
-            anyEl.removeClass(cls);
+        interface ObsidianDOMExtensions {
+            createEl?: (tag: string, o?: unknown) => HTMLElement;
+            addClass?: (cls: string) => void;
+            removeClass?: (cls: string) => void;
+            empty?: () => void;
+        }
+
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        if (obsEl.removeClass && typeof obsEl.removeClass === 'function') {
+            obsEl.removeClass(cls);
             return;
         }
-        try { el.classList.remove(cls); } catch {}
+        try { el.classList.remove(cls); } catch (error) { Logger.debug('Ignored error:', error); }
     }
 
     private emptyElement(el: HTMLElement) {
-        const anyEl = el as any;
-        if (anyEl.empty && typeof anyEl.empty === 'function') {
-            try { anyEl.empty(); return; } catch {}
+        interface ObsidianDOMExtensions {
+            createEl?: (tag: string, o?: unknown) => HTMLElement;
+            addClass?: (cls: string) => void;
+            removeClass?: (cls: string) => void;
+            empty?: () => void;
+        }
+
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        if (obsEl.empty && typeof obsEl.empty === 'function') {
+            try { obsEl.empty(); return; } catch (error) { Logger.debug('Ignored error:', error); }
         }
         while (el.firstChild) el.removeChild(el.firstChild);
     }
@@ -248,7 +277,7 @@ export class GalleryInstance implements IGalleryInstance {
             this.view.render();
             this.updateCounters();
         } catch (error) {
-            console.error('Error refreshing gallery:', error);
+            Logger.error('Error refreshing gallery:', error);
             this.showError('Failed to refresh gallery');
         }
     }
@@ -261,7 +290,7 @@ export class GalleryInstance implements IGalleryInstance {
         
         // Check if image already exists
         if (this._images.some(img => img.path === image.path)) {
-            console.warn('Image already exists in gallery:', image.path);
+            Logger.warn('Image already exists in gallery:', image.path);
             return;
         }
         
@@ -332,15 +361,15 @@ export class GalleryInstance implements IGalleryInstance {
         try {
             this.view.destroy();
         } catch (error) {
-            console.error('Error destroying gallery view:', error);
+            Logger.error('Error destroying gallery view:', error);
         }
         
     // Clear container (support plain DOM)
     this.emptyElement(this.container);
     this.removeClass(this.container, 'gallery-container');
-    try { this.container.removeAttribute('data-gallery-id'); } catch {}
-    try { this.container.removeAttribute('data-gallery-type'); } catch {}
-    try { this.container.removeAttribute('data-gallery-path'); } catch {}
+    try { this.container.removeAttribute('data-gallery-id'); } catch (error) { Logger.debug('Ignored error:', error); }
+    try { this.container.removeAttribute('data-gallery-type'); } catch (error) { Logger.debug('Ignored error:', error); }
+    try { this.container.removeAttribute('data-gallery-path'); } catch (error) { Logger.debug('Ignored error:', error); }
         
         // Clear references
         this._images = [];

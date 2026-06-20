@@ -34,8 +34,6 @@
   "exclude": [
     "node_modules",
     "dist", 
-    "main.js",
-    "src/processors/GalleryProcessor.ts",
-    "src/processors/ParameterParser.ts"
+    "main.js"
   ]
 }

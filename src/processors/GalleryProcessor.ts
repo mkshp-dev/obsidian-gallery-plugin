@@ -1,13 +1,12 @@
+import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext } from 'obsidian';
-import { IGalleryConfig, IContentScanner, IGalleryView } from '../models/interfaces';
-import { GalleryConfig } from '../models/GalleryConfig';
+import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ObsidianDOMExtensions } from '../models/interfaces';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
-import { ErrorManager } from '../views/components/ErrorPlaceholder';
 import { EmptyState } from '../views/components/EmptyState';
 import { ImageValidator } from '../utils/ImageValidator';
 import { FileSizeValidator } from '../utils/FileSizeValidator';
@@ -89,12 +88,12 @@ export class GalleryProcessor {
         };
 
         let loadingManager: LoadingManager | null = null;
-        let errorManager: ErrorManager | null = null;
 
         try {
             // Clear previous content (use safe clear for environments where `empty()` helper is unavailable)
-            if ((el as any).empty && typeof (el as any).empty === 'function') {
-                (el as any).empty();
+            const obsEl = el as unknown as ObsidianDOMExtensions;
+            if (obsEl.empty && typeof obsEl.empty === 'function') {
+                obsEl.empty();
             } else {
                 while (el.firstChild) el.removeChild(el.firstChild);
             }
@@ -102,7 +101,6 @@ export class GalleryProcessor {
             // Initialize managers
             if (opts.showLoadingFeedback) {
                 loadingManager = new LoadingManager(el);
-                errorManager = new ErrorManager(el);
             }
 
             // Step 1: Parse and validate configuration
@@ -123,14 +121,14 @@ export class GalleryProcessor {
             const validImages = await this.validateImages(images, result, opts, loadingManager);
             if (validImages.length === 0) {
                 // If there were external images but remote loading is disabled, show a friendly empty state
-                const hadExternal = images.some((img: any) => img.type === 'external');
+                const hadExternal = images.some((img: IImageSource) => img.type === 'external');
                 if (hadExternal && !opts.allowRemoteImages) {
                     const msg = 'No valid images: external URLs were present but remote image loading is disabled in plugin settings.';
                     result.errors.push(msg);
                     // Render an explanatory empty state to guide the user rather than throwing
                     try {
                         this.showProfessionalEmptyState(el, config, result);
-                    } catch (e) {
+                    } catch {
                         // Fallback to throwing if rendering fails
                         throw new Error(msg);
                     }
@@ -163,7 +161,7 @@ export class GalleryProcessor {
             result.errors.push(errorMessage);
             result.processingTimeMs = Date.now() - startTime;
 
-            console.error('Error processing gallery code block:', error);
+            Logger.error('Error processing gallery code block:', error);
             this.handleProcessingError(error as Error, el, opts);
 
             return result;
@@ -186,7 +184,7 @@ export class GalleryProcessor {
     ): Promise<void> {
         const result = await this.processCodeBlock(source, el, ctx);
         if (!result.success) {
-            console.error('Gallery processing failed:', result.errors);
+            Logger.error('Gallery processing failed:', result.errors);
         }
     }
 
@@ -236,29 +234,28 @@ export class GalleryProcessor {
 
         try {
             // If a path is provided, scan the vault; otherwise start with empty list
-            let images: any[] = [];
+            let images: IImageSource[] = [];
 
             if (config.path && config.path.trim() !== '') {
                 const scanned = await Promise.race([
                     this.contentScanner.scanPath(config.path, config.recursive),
                     new Promise<never>((_, reject) => 
-                        setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
+                        window.setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
                     )
                 ]);
                 images = scanned || [];
             }
 
             // Include any external URLs provided in the config (merge, avoid duplicates)
-            const configAny = config as any;
-            if (Array.isArray(configAny.urls) && configAny.urls.length > 0) {
-                for (const url of configAny.urls) {
+            if (config.urls && Array.isArray(config.urls) && config.urls.length > 0) {
+                for (const url of config.urls) {
                     try {
-                        const external = ImageSource.fromUrl(url as string);
+                        const external = ImageSource.fromUrl(url);
                         // Avoid duplicates by path
                         if (!images.find(img => img.path === external.path)) {
                             images.push(external);
                         }
-                    } catch (err) {
+                    } catch {
                         // Ignore invalid URL entries but record error
                         result.errors.push(`Invalid URL in urls list: ${url}`);
                     }
@@ -284,11 +281,11 @@ export class GalleryProcessor {
      * Step 3: Validate images
      */
     private async validateImages(
-        images: any[], 
+        images: IImageSource[], 
         result: IGalleryRenderResult,
         options: Required<IGalleryProcessingOptions>,
         loadingManager: LoadingManager | null
-    ) {
+    ): Promise<IImageSource[]> {
         if (!options.enableValidation) {
             result.imagesValid = images.length;
             return images;
@@ -298,7 +295,7 @@ export class GalleryProcessor {
             loadingManager.startLoading('validate', { type: 'pulse', text: `Validating ${images.length} images...` });
         }
 
-        const validImages: any[] = [];
+        const validImages: IImageSource[] = [];
         const validationErrors: string[] = [];
 
         for (let i = 0; i < images.length; i++) {
@@ -351,7 +348,7 @@ export class GalleryProcessor {
                                 validationErrors.push(`External URL does not appear to be an image: ${image.path}`);
                                 continue;
                             }
-                        } catch (e) {
+                        } catch {
                             validationErrors.push(`Failed to validate external URL: ${image.path}`);
                             continue;
                         }
@@ -384,7 +381,7 @@ export class GalleryProcessor {
     private async createAndRenderGallery(
         config: IGalleryConfig,
         container: HTMLElement,
-        images: any[],
+        images: IImageSource[],
         result: IGalleryRenderResult,
         options: Required<IGalleryProcessingOptions>,
         loadingManager: LoadingManager | null
@@ -401,10 +398,10 @@ export class GalleryProcessor {
             try {
                 const existing = Array.from(this.activeGalleries.values()).find(g => g.config.path === config.path && g.id !== undefined);
                 if (existing) {
-                    console.log(`GalleryProcessor: found existing gallery for path ${config.path} (id=${existing.id}), destroying before creating new instance.`);
+                    Logger.debug(`GalleryProcessor: found existing gallery for path ${config.path} (id=${existing.id}), destroying before creating new instance.`);
                     this.destroyGallery(existing.id);
                 }
-            } catch (e) {
+            } catch {
                 // swallow errors to avoid breaking rendering
             }
 
@@ -428,23 +425,25 @@ export class GalleryProcessor {
                     // Pass runtime options to view when supported (backwards-compatible)
                     try {
                         // Preferred: view has a setOptions API
-                        (view as any).setOptions?.({ remoteLoadTimeoutMs: options.timeoutMs, allowRemoteImages: options.allowRemoteImages });
-                    } catch {}
+                        if (view.setOptions) {
+                            view.setOptions({ remoteLoadTimeoutMs: options.timeoutMs, allowRemoteImages: options.allowRemoteImages });
+                        }
+                    } catch (error) { Logger.debug('Ignored error:', error); }
 
                     // Backwards-compat: set properties directly for simple views
                     try {
-                        (view as any).remoteLoadTimeoutMs = options.timeoutMs;
-                        (view as any).allowRemoteImages = options.allowRemoteImages;
-                    } catch {}
+                        view.remoteLoadTimeoutMs = options.timeoutMs;
+                        view.allowRemoteImages = options.allowRemoteImages;
+                    } catch (error) { Logger.debug('Ignored error:', error); }
 
-                    await view.update(images);
+                    view.update(images);
                     view.render();
                     
                     // Wait for initial render
                     await this.waitForInitialRender(view, options.timeoutMs);
                     
                     // Get stats if available (fallback for interface compatibility)
-                    const stats = (view as any).getStats?.() || { loadedImages: images.length };
+                    const stats = view.getStats?.() || { loadedImages: images.length };
                     result.imagesLoaded = stats.loadedImages;
                     
                     if (loadingManager) {
@@ -459,14 +458,14 @@ export class GalleryProcessor {
                         throw renderError;
                     }
                     
-                    console.warn(`Render attempt ${retryCount} failed, retrying...`, renderError);
+                    Logger.warn(`Render attempt ${retryCount} failed, retrying...`, renderError);
                     
                     if (loadingManager) {
                         loadingManager.updateText('render', `Retrying render (${retryCount}/${options.maxRetries})...`);
                     }
                     
                     // Wait before retry
-                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                    await new Promise(resolve => window.setTimeout(resolve, 1000 * retryCount));
                 }
             }
 
@@ -483,25 +482,25 @@ export class GalleryProcessor {
      */
     private async waitForInitialRender(view: IGalleryView, timeoutMs: number): Promise<void> {
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
+            const timeout = window.setTimeout(() => {
                 reject(new Error('Render timeout'));
             }, timeoutMs);
 
             // Check render status periodically
-            const checkInterval = setInterval(() => {
-                const stats = (view as any).getStats?.() || { loadedImages: 0, errorImages: 0 };
+            const checkInterval = window.setInterval(() => {
+                const stats = view.getStats?.() || { loadedImages: 0, errorImages: 0 };
                 if (stats.loadedImages > 0 || stats.errorImages > 0) {
-                    clearTimeout(timeout);
-                    clearInterval(checkInterval);
+                    window.clearTimeout(timeout);
+                    window.clearInterval(checkInterval);
                     resolve();
                 }
             }, 100);
 
             // Also resolve immediately if view reports ready
-            const stats = (view as any).getStats?.() || { totalImages: 0 };
+            const stats = view.getStats?.() || { totalImages: 0 };
             if (stats.totalImages > 0) {
-                clearTimeout(timeout);
-                clearInterval(checkInterval);
+                window.clearTimeout(timeout);
+                window.clearInterval(checkInterval);
                 resolve();
             }
         });
@@ -553,10 +552,10 @@ export class GalleryProcessor {
             // Render gallery
             view.render();
             
-            console.log(`Gallery created: ${gallery.id} with ${images.length} images`);
+            Logger.debug(`Gallery created: ${gallery.id} with ${images.length} images`);
             
         } catch (error) {
-            console.error('Error creating gallery:', error);
+            Logger.error('Error creating gallery:', error);
             throw new Error(`Gallery creation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -570,7 +569,12 @@ export class GalleryProcessor {
         result: IGalleryRenderResult
     ): void {
         // Clear container
-        (container as any).empty();
+        const obsContainer = container as unknown as ObsidianDOMExtensions;
+        if (obsContainer.empty && typeof obsContainer.empty === 'function') {
+            obsContainer.empty();
+        } else {
+            while (container.firstChild) container.removeChild(container.firstChild);
+        }
 
         // Determine the type of empty state based on the errors
         const hasPathError = result.errors.some(error => 
@@ -606,14 +610,14 @@ export class GalleryProcessor {
                     {
                         label: 'Open Settings',
                         action: () => {
-                            try { document.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch {};
+                            try { activeDocument.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch (error) { Logger.debug('Ignored error:', error); };
                         },
                         type: 'primary',
                         icon: '⚙️'
                     },
                     {
                         label: 'Scan Again',
-                        action: () => this.refreshGalleryByConfig(container, config),
+                        action: () => { void this.refreshGalleryByConfig(container, config); },
                         type: 'secondary',
                         icon: '🔄'
                     }
@@ -625,7 +629,7 @@ export class GalleryProcessor {
                 config.path, 
                 result.imagesFound,
                 result.errors,
-                () => this.refreshGalleryByConfig(container, config)
+                () => { void this.refreshGalleryByConfig(container, config); }
             );
         } else if (hasPermissionError) {
             EmptyState.createPermissionDenied(container, config.path);
@@ -635,7 +639,7 @@ export class GalleryProcessor {
                 container,
                 config.path,
                 config.recursive || true,
-                () => this.refreshGalleryByConfig(container, config)
+                () => { void this.refreshGalleryByConfig(container, config); }
             );
         }
     }
@@ -655,7 +659,7 @@ export class GalleryProcessor {
                 {} as MarkdownPostProcessorContext
             );
         } catch (error) {
-            console.error('Error refreshing gallery:', error);
+            Logger.error('Error refreshing gallery:', error);
         }
     }
 
@@ -676,19 +680,18 @@ export class GalleryProcessor {
         }
         
         // Add any additional config properties that exist
-        const configAny = config as any;
-        if (configAny.limit && configAny.limit > 0) {
-            lines.push(`limit: ${configAny.limit}`);
+        if (config.limit && config.limit > 0) {
+            lines.push(`limit: ${config.limit}`);
         }
         
-        if (configAny.sort && configAny.sort !== 'name') {
-            lines.push(`sort: ${configAny.sort}`);
+        if (config.sort && config.sort !== 'name') {
+            lines.push(`sort: ${config.sort}`);
         }
 
-        if (Array.isArray(configAny.urls) && configAny.urls.length > 0) {
+        if (config.urls && Array.isArray(config.urls) && config.urls.length > 0) {
             // Serialize urls as YAML list
             lines.push('urls:');
-            for (const u of configAny.urls) {
+            for (const u of config.urls) {
                 lines.push(`  - ${u}`);
             }
         }
@@ -705,11 +708,11 @@ export class GalleryProcessor {
             // If we see a removal, don't immediately destroy: Obsidian may transiently
             // move or reparent nodes when toggling sidebars or changing layouts. Defer
             // the actual destruction check by a short timeout and only destroy if the
-            // gallery container remains detached from the document.
+            // gallery container remains detached from the activeDocument.
             let sawRemoval = false;
             mutations.forEach((mutation) => {
                 mutation.removedNodes.forEach((node) => {
-                    if (node === gallery.container || (node instanceof Element && node.contains(gallery.container))) {
+                    if (node === gallery.container || (node.instanceOf(Element) && node.contains(gallery.container))) {
                         sawRemoval = true;
                     }
                 });
@@ -741,41 +744,41 @@ export class GalleryProcessor {
                         // schedule a final destruction after a longer grace period so
                         // that the markdown post-processor can reattach a new container
                         // without losing the opportunity to recreate the gallery.
-                        try { (gallery as any)._detached = true; } catch {}
+                        try { (gallery as unknown as { _detached?: boolean })._detached = true; } catch (error) { Logger.debug('Ignored error:', error); }
 
                         const GRACE_PERIOD_MS = Math.max(0, options.gracePeriodMs || 30000);
                         if (options.enableLifecycleLogging) {
-                            console.log(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
+                            Logger.debug(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
                         }
 
-                        setTimeout(() => {
+                        window.setTimeout(() => {
                             try {
-                                if ((gallery as any)._detached) {
+                                if ((gallery as unknown as { _detached?: boolean })._detached) {
                                     if (options.enableLifecycleLogging) {
-                                        console.log(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
+                                        Logger.debug(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
                                     }
                                     this.destroyGallery(gallery.id);
                                 }
-                            } catch (e) {
-                                try { this.destroyGallery(gallery.id); } catch {}
+                            } catch {
+                                try { this.destroyGallery(gallery.id); } catch (error) { Logger.debug('Ignored error:', error); }
                             }
                         }, GRACE_PERIOD_MS);
 
-                        try { observer.disconnect(); } catch {}
+                        try { observer.disconnect(); } catch (error) { Logger.debug('Ignored error:', error); }
                         return;
                     }
 
                     // schedule next check
-                    setTimeout(tryCheck, attempts[attemptIndex]);
-                } catch (e) {
+                    window.setTimeout(tryCheck, attempts[attemptIndex]);
+                } catch {
                     // If something unexpected happens, attempt a safe cleanup
-                    try { this.destroyGallery(gallery.id); } catch {}
-                    try { observer.disconnect(); } catch {}
+                    try { this.destroyGallery(gallery.id); } catch (error) { Logger.debug('Ignored error:', error); }
+                    try { observer.disconnect(); } catch (error) { Logger.debug('Ignored error:', error); }
                 }
             };
 
             // Start checks
-            setTimeout(tryCheck, attempts[0]);
+            window.setTimeout(tryCheck, attempts[0]);
         });
 
         // Observe the parent document for changes
@@ -793,22 +796,23 @@ export class GalleryProcessor {
     private handleProcessingError(error: Error, container: HTMLElement, options?: Required<IGalleryProcessingOptions>): void {
         const errorDisplayMode = options?.errorDisplayMode || this.DEFAULT_OPTIONS.errorDisplayMode;
 
-        if (errorDisplayMode === 'hidden') {
-            // Clear container and do not render any error message
-            if ((container as any).empty && typeof (container as any).empty === 'function') {
-                (container as any).empty();
+        const obsContainer = container as unknown as ObsidianDOMExtensions;
+        const emptyContainer = () => {
+            if (obsContainer.empty && typeof obsContainer.empty === 'function') {
+                obsContainer.empty();
             } else {
                 while (container.firstChild) container.removeChild(container.firstChild);
             }
+        };
+
+        if (errorDisplayMode === 'hidden') {
+            // Clear container and do not render any error message
+            emptyContainer();
             return;
         }
 
         if (errorDisplayMode === 'text') {
-            if ((container as any).empty && typeof (container as any).empty === 'function') {
-                (container as any).empty();
-            } else {
-                while (container.firstChild) container.removeChild(container.firstChild);
-            }
+            emptyContainer();
 
             const errorEl = container.ownerDocument.createElement('div');
             errorEl.className = 'gallery-error-text';
@@ -817,11 +821,7 @@ export class GalleryProcessor {
             return;
         }
         // Clear container (support both Obsidian helpers and plain DOM)
-        if ((container as any).empty && typeof (container as any).empty === 'function') {
-            (container as any).empty();
-        } else {
-            while (container.firstChild) container.removeChild(container.firstChild);
-        }
+        emptyContainer();
         
         // Check if it's a configuration error
         if (error.message.includes('Configuration')) {
@@ -844,7 +844,7 @@ export class GalleryProcessor {
     async refreshGallery(galleryId: string): Promise<void> {
         const gallery = this.activeGalleries.get(galleryId);
         if (!gallery) {
-            console.warn('Gallery not found for refresh:', galleryId);
+            Logger.warn('Gallery not found for refresh:', galleryId);
             return;
         }
 
@@ -861,10 +861,10 @@ export class GalleryProcessor {
             // Update gallery
             gallery.update(images);
             
-            console.log(`Gallery refreshed: ${galleryId} with ${images.length} images`);
+            Logger.debug(`Gallery refreshed: ${galleryId} with ${images.length} images`);
             
         } catch (error) {
-            console.error('Error refreshing gallery:', error);
+            Logger.error('Error refreshing gallery:', error);
             ErrorHandler.handlePluginError(error as Error, 'gallery refresh', gallery.container);
         }
     }
@@ -877,7 +877,7 @@ export class GalleryProcessor {
         if (gallery) {
             gallery.destroy();
             this.activeGalleries.delete(galleryId);
-            console.log(`Gallery destroyed: ${galleryId}`);
+            Logger.debug(`Gallery destroyed: ${galleryId}`);
         }
     }
 
@@ -912,7 +912,7 @@ export class GalleryProcessor {
             .map(id => this.refreshGallery(id));
         
         await Promise.allSettled(refreshPromises);
-        console.log('All galleries refreshed');
+        Logger.debug('All galleries refreshed');
     }
 
     /**
@@ -921,7 +921,7 @@ export class GalleryProcessor {
     destroyAllGalleries(): void {
         const galleryIds = Array.from(this.activeGalleries.keys());
         galleryIds.forEach(id => this.destroyGallery(id));
-        console.log(`Destroyed ${galleryIds.length} galleries`);
+        Logger.debug(`Destroyed ${galleryIds.length} galleries`);
     }
 
     /**
@@ -930,7 +930,7 @@ export class GalleryProcessor {
     getStats(): {
         activeGalleries: number;
         totalImages: number;
-        cacheStats: any;
+        cacheStats: unknown;
     } {
         const galleries = this.getAllGalleries();
         const totalImages = galleries.reduce((sum, gallery) => 
@@ -979,6 +979,6 @@ export class GalleryProcessor {
     destroy(): void {
         this.destroyAllGalleries();
         this.contentScanner.destroy?.();
-        console.log('Gallery processor destroyed');
+        Logger.debug('Gallery processor destroyed');
     }
 }

@@ -1,4 +1,13 @@
-import { IConfigError, ILoadError, IImageSource } from '../models/interfaces';
+import { Logger } from "./Logger";
+import { IConfigError, ILoadError, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
+
+interface WindowWithProcess extends Window {
+    process?: {
+        env?: {
+            NODE_ENV?: string;
+        };
+    };
+}
 
 /**
  * Centralized error handling for the gallery plugin
@@ -6,38 +15,39 @@ import { IConfigError, ILoadError, IImageSource } from '../models/interfaces';
  */
 export class ErrorHandler {
     private static instance: ErrorHandler;
-    private errorCallbacks: Map<string, (error: any) => void> = new Map();
+    private errorCallbacks: Map<string, (error: unknown) => void> = new Map();
 
     private constructor() {}
 
     /**
      * Create an element into parent, supporting Obsidian helpers or plain DOM
      */
-    private static createElement(parent: HTMLElement, tag: string | { tag?: string } = 'div', options?: any): HTMLElement {
-        const anyParent = parent as any;
+    private static createElement(parent: HTMLElement, tag: string | { tag?: string } = 'div', options?: string | CreateElementOptions): HTMLElement {
+        const obsParent = parent as unknown as ObsidianDOMExtensions;
 
         // Support Obsidian's createEl/createDiv
-        if (anyParent.createEl && typeof anyParent.createEl === 'function') {
+        if (obsParent.createEl && typeof obsParent.createEl === 'function') {
             const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
-            return anyParent.createEl(tagName, options || {});
+            return obsParent.createEl(tagName, options || {});
         }
 
         // Plain DOM fallback
         const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
-        const el = document.createElement(tagName);
+        const el = activeDocument.createElement(tagName);
         if (options) {
             if (typeof options === 'string') {
                 el.className = options;
             } else {
-                if (options.cls) el.className = options.cls;
-                if (options.text) el.textContent = options.text;
-                if (options.attr) {
-                    for (const k of Object.keys(options.attr)) {
-                        try { el.setAttribute(k, String(options.attr[k])); } catch {}
+                const opts = options;
+                if (opts.cls) el.className = opts.cls;
+                if (opts.text) el.textContent = opts.text;
+                if (opts.attr) {
+                    for (const k of Object.keys(opts.attr)) {
+                        try { el.setAttribute(k, String(opts.attr[k])); } catch (error) { Logger.debug('Ignored error:', error); }
                     }
                 }
-                if (options.href && el instanceof HTMLAnchorElement) {
-                    el.href = options.href;
+                if (opts.href && el.instanceOf(HTMLAnchorElement)) {
+                    el.href = opts.href;
                 }
             }
         }
@@ -59,7 +69,7 @@ export class ErrorHandler {
      * Handle configuration errors
      */
     static handleConfigError(error: IConfigError, container: HTMLElement): void {
-        console.error('Gallery Config Error:', error);
+        Logger.error('Gallery Config Error:', error);
         
         const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-config-error' });
 
@@ -77,14 +87,14 @@ export class ErrorHandler {
         // Add documentation link
         const helpEl = ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-help' });
         ErrorHandler.createElement(helpEl, 'span', { text: 'Need help? Check the ' });
-        const a = ErrorHandler.createElement(helpEl, 'a', { cls: 'gallery-help-link', text: 'documentation', href: '#gallery-plugin-docs' });
+        ErrorHandler.createElement(helpEl, 'a', { cls: 'gallery-help-link', text: 'documentation', href: '#gallery-plugin-docs' });
     }
 
     /**
      * Handle loading errors
      */
     static handleLoadError(error: ILoadError, container: HTMLElement): HTMLElement {
-        console.error('Gallery Load Error:', error);
+        Logger.error('Gallery Load Error:', error);
         
         const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-load-error', attr: { 'data-error-type': error.reason } });
 
@@ -117,7 +127,7 @@ export class ErrorHandler {
      * Handle general plugin errors
      */
     static handlePluginError(error: Error, context: string, container?: HTMLElement): void {
-        console.error(`Gallery Plugin Error (${context}):`, error);
+        Logger.error(`Gallery Plugin Error (${context}):`, error);
         
         if (container) {
             const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-plugin-error' });
@@ -127,7 +137,7 @@ export class ErrorHandler {
             ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-context', text: `Context: ${context}` });
 
             // Debug info in development
-            if (process.env.NODE_ENV === 'development') {
+            if ((window as unknown as WindowWithProcess).process?.env?.NODE_ENV === 'development') {
                 const debugEl = ErrorHandler.createElement(errorEl, 'details', { cls: 'gallery-error-debug' });
                 ErrorHandler.createElement(debugEl, 'summary', { text: 'Debug Information' });
                 ErrorHandler.createElement(debugEl, 'pre', { text: error.stack || error.toString(), cls: 'gallery-error-stack' });
@@ -223,11 +233,11 @@ export class ErrorHandler {
         errorElement.remove();
 
         // Trigger reload after short delay
-        setTimeout(() => {
+        window.setTimeout(() => {
             const event = new CustomEvent('gallery:retry-image', {
                 detail: { source, element: loadingEl }
             });
-            document.dispatchEvent(event);
+            activeDocument.dispatchEvent(event);
         }, 500);
     }
 
@@ -278,20 +288,20 @@ export class ErrorHandler {
     /**
      * Register error callback
      */
-    registerErrorCallback(type: string, callback: (error: any) => void): void {
+    registerErrorCallback(type: string, callback: (error: unknown) => void): void {
         this.errorCallbacks.set(type, callback);
     }
 
     /**
      * Trigger error callback
      */
-    triggerErrorCallback(type: string, error: any): void {
+    triggerErrorCallback(type: string, error: unknown): void {
         const callback = this.errorCallbacks.get(type);
         if (callback) {
             try {
                 callback(error);
             } catch (callbackError) {
-                console.error('Error in error callback:', callbackError);
+                Logger.error('Error in error callback:', callbackError);
             }
         }
     }

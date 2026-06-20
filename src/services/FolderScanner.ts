@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { Vault, TFolder, TFile } from 'obsidian';
 import { IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
@@ -6,6 +7,14 @@ import { ImageSource } from '../models/ImageSource';
  * Folder scanner for discovering images in vault folders
  * Handles recursive scanning with performance optimization
  */
+export interface IFolderStats {
+    totalFiles: number;
+    imageFiles: number;
+    totalSize: number;
+    subdirectories: number;
+    supportedFormats: Map<string, number>;
+}
+
 export class FolderScanner {
     private vault: Vault;
     private readonly SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
@@ -41,7 +50,7 @@ export class FolderScanner {
             return images;
             
         } catch (error) {
-            console.error('Error scanning folder:', folderPath, error);
+            Logger.error('Error scanning folder:', folderPath, error);
             throw new Error(`Failed to scan folder "${folderPath}": ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -52,7 +61,7 @@ export class FolderScanner {
     private async performScan(folderPath: string, recursive: boolean, depth: number = 0): Promise<IImageSource[]> {
         // Prevent infinite recursion
         if (depth > this.MAX_SCAN_DEPTH) {
-            console.warn('Maximum scan depth reached for folder:', folderPath);
+            Logger.warn('Maximum scan depth reached for folder:', folderPath);
             return [];
         }
 
@@ -78,7 +87,7 @@ export class FolderScanner {
                 // Check if it's an image file
                 if (this.isImageFile(child.path)) {
                     const promise = this.createImageSource(child).catch(error => {
-                        console.warn('Failed to process image file:', child.path, error);
+                        Logger.warn('Failed to process image file:', child.path, error);
                         return null;
                     });
                     imagePromises.push(promise);
@@ -86,7 +95,7 @@ export class FolderScanner {
             } else if (child instanceof TFolder && recursive) {
                 // Recursively scan subdirectory
                 const promise = this.performScan(child.path, recursive, depth + 1).catch(error => {
-                    console.warn('Failed to scan subdirectory:', child.path, error);
+                    Logger.warn('Failed to scan subdirectory:', child.path, error);
                     return [];
                 });
                 folderPromises.push(promise);
@@ -142,11 +151,11 @@ export class FolderScanner {
             const stat = await this.vault.adapter.stat(file.path);
             if (stat && stat.size) {
                 if (!imageSource.validateSize(stat.size)) {
-                    console.warn('Image exceeds size limit:', file.path, 'Size:', stat.size);
+                    Logger.warn('Image exceeds size limit:', file.path, 'Size:', stat.size);
                 }
             }
         } catch (error) {
-            console.warn('Could not get file stats for:', file.path, error);
+            Logger.warn('Could not get file stats for:', file.path, error);
         }
         
         return imageSource;
@@ -155,20 +164,14 @@ export class FolderScanner {
     /**
      * Get folder statistics
      */
-    async getFolderStats(folderPath: string, recursive: boolean = true): Promise<{
-        totalFiles: number;
-        imageFiles: number;
-        totalSize: number;
-        subdirectories: number;
-        supportedFormats: Map<string, number>;
-    }> {
+    async getFolderStats(folderPath: string, recursive: boolean = true): Promise<IFolderStats> {
         const folder = this.vault.getAbstractFileByPath(folderPath);
         
         if (!folder || !(folder instanceof TFolder)) {
             throw new Error(`Invalid folder path: ${folderPath}`);
         }
 
-        const stats = {
+        const stats: IFolderStats = {
             totalFiles: 0,
             imageFiles: 0,
             totalSize: 0,
@@ -187,7 +190,7 @@ export class FolderScanner {
     private async collectStats(
         folder: TFolder, 
         recursive: boolean, 
-        stats: any,
+        stats: IFolderStats,
         depth: number = 0
     ): Promise<void> {
         if (depth > this.MAX_SCAN_DEPTH) return;
@@ -210,8 +213,8 @@ export class FolderScanner {
                         if (stat && stat.size) {
                             stats.totalSize += stat.size;
                         }
-                    } catch (error) {
-                        // Ignore stat errors
+                    } catch {
+                        // Skip files with stat errors
                     }
                 }
             } else if (child instanceof TFolder) {
@@ -257,15 +260,18 @@ export class FolderScanner {
                 if (file instanceof TFile && file.stat.mtime > cutoffTime) {
                     recentImages.push(image);
                 }
-            } catch (error) {
+            } catch {
                 // Skip files with stat errors
             }
         }
         
         return recentImages.sort((a, b) => {
-            const fileA = this.vault.getAbstractFileByPath(a.path) as TFile;
-            const fileB = this.vault.getAbstractFileByPath(b.path) as TFile;
-            return fileB.stat.mtime - fileA.stat.mtime;
+            const fileA = this.vault.getAbstractFileByPath(a.path);
+            const fileB = this.vault.getAbstractFileByPath(b.path);
+            if (fileA instanceof TFile && fileB instanceof TFile) {
+                return fileB.stat.mtime - fileA.stat.mtime;
+            }
+            return 0;
         });
     }
 
@@ -299,7 +305,7 @@ export class FolderScanner {
                 imageCount: images.length
             };
             
-        } catch (error) {
+        } catch {
             return { exists: false, isFolder: false, readable: false };
         }
     }

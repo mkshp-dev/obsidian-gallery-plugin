@@ -1,4 +1,5 @@
-import { IGalleryView, IImageSource } from '../models/interfaces';
+import { Logger } from "../utils/Logger";
+import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 
 /**
@@ -12,8 +13,8 @@ export abstract class GalleryView implements IGalleryView {
     protected _isDestroyed: boolean = false;
     protected _observers: IntersectionObserver[] = [];
     // Runtime options (common)
-    protected remoteLoadTimeoutMs: number = 10000;
-    protected allowRemoteImages: boolean = false;
+    public remoteLoadTimeoutMs: number = 10000;
+    public allowRemoteImages: boolean = false;
 
     constructor(type: 'thumbnail' | 'carousel' | 'grid', container: HTMLElement) {
         this._type = type;
@@ -40,9 +41,10 @@ export abstract class GalleryView implements IGalleryView {
      */
     protected initializeContainer(): void {
         // Be DOM-agnostic: support both Obsidian helper methods and plain DOM elements
-        if ((this.container as any).addClass && typeof (this.container as any).addClass === 'function') {
-            (this.container as any).addClass('gallery-view');
-            (this.container as any).addClass(`gallery-${this._type}`);
+        const obsContainer = this.container as unknown as ObsidianDOMExtensions;
+        if (obsContainer.addClass && typeof obsContainer.addClass === 'function') {
+            obsContainer.addClass('gallery-view');
+            obsContainer.addClass(`gallery-${this._type}`);
         } else {
             this.container.classList.add('gallery-view');
             this.container.classList.add(`gallery-${this._type}`);
@@ -55,8 +57,9 @@ export abstract class GalleryView implements IGalleryView {
      */
     protected emptyElement(el?: HTMLElement): void {
         const target = el || this.container;
-        if ((target as any).empty && typeof (target as any).empty === 'function') {
-            (target as any).empty();
+        const obsTarget = target as unknown as ObsidianDOMExtensions;
+        if (obsTarget.empty && typeof obsTarget.empty === 'function') {
+            obsTarget.empty();
             return;
         }
         while (target.firstChild) target.removeChild(target.firstChild);
@@ -67,8 +70,9 @@ export abstract class GalleryView implements IGalleryView {
         const toAdd = classes.filter(c => typeof c === 'string' && c.trim().length > 0);
         if (toAdd.length === 0) return;
 
-        if ((el as any).addClass && typeof (el as any).addClass === 'function') {
-            toAdd.forEach(c => (el as any).addClass(c));
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        if (obsEl.addClass && typeof obsEl.addClass === 'function') {
+            toAdd.forEach(c => obsEl.addClass?.(c));
         } else {
             el.classList.add(...toAdd);
         }
@@ -79,36 +83,41 @@ export abstract class GalleryView implements IGalleryView {
         const toRemove = classes.filter(c => typeof c === 'string' && c.trim().length > 0);
         if (toRemove.length === 0) return;
 
-        if ((el as any).removeClass && typeof (el as any).removeClass === 'function') {
-            toRemove.forEach(c => (el as any).removeClass(c));
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        if (obsEl.removeClass && typeof obsEl.removeClass === 'function') {
+            toRemove.forEach(c => obsEl.removeClass?.(c));
         } else {
             el.classList.remove(...toRemove);
         }
     }
 
-    protected createElement(parent: HTMLElement, tag: string, props?: any): HTMLElement {
+    protected createElement(parent: HTMLElement, tag: string, props?: CreateElementOptions): HTMLElement {
         // If parent provides an external createEl helper (e.g., Obsidian API or test mock),
         // prefer delegating to it — but avoid delegating to a shim we previously attached,
         // which would cause infinite recursion. We mark our shims with __galleryShim.
-        if ((parent as any).createEl && typeof (parent as any).createEl === 'function' && !(parent as any).__galleryShim) {
-            return (parent as any).createEl(tag, props);
+        const obsParent = parent as unknown as ObsidianDOMExtensions;
+        const parentShim = parent as unknown as { __galleryShim?: boolean };
+        if (obsParent.createEl && typeof obsParent.createEl === 'function' && !parentShim.__galleryShim) {
+            return obsParent.createEl(tag, props);
         }
 
-        const el = document.createElement(tag);
+        const el = activeDocument.createElement(tag);
         if (props) {
             if (props.cls) el.className = props.cls;
             if (props.text) el.textContent = props.text;
             if (props.attr && typeof props.attr === 'object') {
-                Object.keys(props.attr).forEach(k => el.setAttribute(k, String(props.attr[k])));
+                const attrObj = props.attr;
+                Object.keys(attrObj).forEach(k => el.setAttribute(k, String(attrObj[k])));
             }
         }
         // attach small helper shims so callers using Obsidian-style helpers won't break
-    (el as any).addClass = (c: string) => el.classList.add(c);
-    (el as any).removeClass = (c: string) => el.classList.remove(c);
-    // mark shim so callers know not to delegate back to it
-    (el as any).__galleryShim = true;
-    (el as any).createEl = (t: string, p?: any) => this.createElement(el, t, p);
-    (el as any).createDiv = (p?: any) => this.createElement(el, 'div', p);
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        obsEl.addClass = (c: string) => el.classList.add(c);
+        obsEl.removeClass = (c: string) => el.classList.remove(c);
+        // mark shim so callers know not to delegate back to it
+        (el as unknown as { __galleryShim: boolean }).__galleryShim = true;
+        obsEl.createEl = (t: string, p?: unknown) => this.createElement(el, t, p as CreateElementOptions);
+        obsEl.createDiv = (p?: unknown) => this.createElement(el, 'div', p as CreateElementOptions);
 
         parent.appendChild(el);
         return el;
@@ -133,7 +142,7 @@ export abstract class GalleryView implements IGalleryView {
      */
     update(images: IImageSource[]): void {
         if (this._isDestroyed) {
-            console.warn('Cannot update destroyed view');
+            Logger.warn('Cannot update destroyed view');
             return;
         }
 
@@ -228,8 +237,8 @@ export abstract class GalleryView implements IGalleryView {
         if (!imageElement) return false;
 
         const rect = imageElement.getBoundingClientRect();
-        const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-        const windowWidth = window.innerWidth || document.documentElement.clientWidth;
+        const windowHeight = window.innerHeight || activeDocument.documentElement.clientHeight;
+        const windowWidth = window.innerWidth || activeDocument.documentElement.clientWidth;
 
         return (
             rect.top < windowHeight &&
@@ -248,7 +257,7 @@ export abstract class GalleryView implements IGalleryView {
         // Avoid using CSS.escape / complex selectors to prevent SelectorSyntaxError in jsdom.
         // Instead, iterate elements with the attribute and compare the attribute value directly.
         try {
-            const nodes = Array.from(this.container.querySelectorAll('[data-image-path]')) as HTMLElement[];
+            const nodes = Array.from(this.container.querySelectorAll('[data-image-path]')) as unknown as HTMLElement[];
             for (const n of nodes) {
                 try {
                     const val = n.getAttribute('data-image-path');
@@ -258,7 +267,7 @@ export abstract class GalleryView implements IGalleryView {
                 }
             }
             return null;
-        } catch (e) {
+        } catch {
             return null;
         }
     }
@@ -307,7 +316,7 @@ export abstract class GalleryView implements IGalleryView {
         // Show actual image
         const img = element.querySelector('img');
         if (img) {
-            img.style.opacity = '1';
+            img.setCssStyles({ opacity: '1' });
         }
     }
 
@@ -324,7 +333,7 @@ export abstract class GalleryView implements IGalleryView {
         if (existingError) existingError.remove();
 
         // Create professional error placeholder
-        const errorPlaceholder = ErrorPlaceholder.createImageLoadError(
+        ErrorPlaceholder.createImageLoadError(
             element,
             image.path,
             () => this.retryImageLoad(image)
@@ -365,7 +374,7 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Trigger image-related event
      */
-    protected triggerImageEvent(eventType: string, data: any): void {
+    protected triggerImageEvent(eventType: string, data: unknown): void {
         const event = new CustomEvent(eventType, { detail: data });
         this.container.dispatchEvent(event);
     }
@@ -386,7 +395,7 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Get view-specific configuration
      */
-    protected getViewConfig(): any {
+    protected getViewConfig(): unknown {
         return {};
     }
 

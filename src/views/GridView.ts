@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
 import { IImageSource } from '../models/interfaces';
 import { LazyLoader } from '../utils/LazyLoader';
@@ -14,7 +15,7 @@ export class GridView extends GalleryView {
 
   setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean } = {}): void {
     // Apply base options
-    super.setOptions(options as any);
+    super.setOptions(options);
     // If loader exists, propagate timeout change
     if (this.loader && typeof options.remoteLoadTimeoutMs === 'number') {
       this.loader.updateOptions({ timeoutMs: options.remoteLoadTimeoutMs });
@@ -34,7 +35,7 @@ export class GridView extends GalleryView {
    */
   protected initializeContainer(): void {
     this.safeAddClass(this.container, 'gallery-view');
-    try { this.container.setAttribute('data-view-type', this._type); } catch {}
+    try { this.container.setAttribute('data-view-type', this._type); } catch (error) { Logger.debug('Ignored error:', error); }
   }
 
   render(): void {
@@ -44,13 +45,11 @@ export class GridView extends GalleryView {
 
     this.gridContainer = this.createElement(this.container, 'div', { cls: 'gallery-grid' });
 
-    const imagesData: Array<{ src: string; alt?: string }> = [];
-
     this._images.forEach((img, idx) => {
-  const wrapper = this.createElement(this.gridContainer!, 'div', { cls: 'gallery-grid-item', attr: { 'data-image-path': img.path } });
+      const wrapper = this.createElement(this.gridContainer!, 'div', { cls: 'gallery-grid-item', attr: { 'data-image-path': img.path } });
 
-  // Create img element; LazyLoader will set src when observing
-  const el = this.createElement(wrapper, 'img', { cls: 'gallery-grid-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;
+      // Create img element; LazyLoader will set src when observing
+      const el = this.createElement(wrapper, 'img', { cls: 'gallery-grid-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;
 
       // External images respect allowRemoteImages; if blocked, mark error state
       if (img.type === 'external' && !this.allowRemoteImages) {
@@ -79,7 +78,7 @@ export class GridView extends GalleryView {
     });
 
     // Observe all images we just created
-    const imgs = Array.from(this.gridContainer!.querySelectorAll('img')) as HTMLImageElement[];
+    const imgs = Array.from(this.gridContainer.querySelectorAll('img'));
     imgs.forEach((imgEl) => {
       const src = (imgEl.dataset && (imgEl.dataset.src || imgEl.getAttribute('data-src'))) || (imgEl.getAttribute('src') || '');
       if (src) this.loader!.observe(imgEl, src);
@@ -102,7 +101,7 @@ export class GridView extends GalleryView {
    * Reload image in a specific element (used by retry)
    */
   protected reloadImage(element: HTMLElement, image: IImageSource): void {
-    const imgEl = element.querySelector('img') as HTMLImageElement | null;
+    const imgEl = element.querySelector('img');
     if (!imgEl) return;
 
     if (image.type === 'external' && !this.allowRemoteImages) {
@@ -113,17 +112,17 @@ export class GridView extends GalleryView {
 
     // Use a temporary image to honor timeout
     const temp = new Image();
-    let timeoutHandle: any = null;
+    let timeoutHandle: number | undefined = undefined;
 
     const onLoad = () => {
-      clearTimeout(timeoutHandle);
-      try { imgEl.src = temp.src; } catch {}
+      window.clearTimeout(timeoutHandle);
+      try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); }
       this.handleImageLoad(image);
       cleanup();
     };
 
     const onError = (err?: Error) => {
-      clearTimeout(timeoutHandle);
+      window.clearTimeout(timeoutHandle);
       this.handleImageError(image, err || new Error('Failed to load'));
       cleanup();
     };
@@ -133,7 +132,7 @@ export class GridView extends GalleryView {
     temp.onload = onLoad;
     temp.onerror = () => onError(new Error('Failed to load'));
 
-    timeoutHandle = setTimeout(() => onError(new Error('Image loading timed out')), this.remoteLoadTimeoutMs ?? 10000);
+    timeoutHandle = window.setTimeout(() => onError(new Error('Image loading timed out')), this.remoteLoadTimeoutMs ?? 10000);
     try { temp.src = image.getDisplayUrl(); } catch (e) { onError(e as Error); }
   }
 
@@ -148,7 +147,7 @@ export class GridView extends GalleryView {
 
     // Fallback to DOM inspection if model states are not yet set
     if (total === 0 && this.gridContainer) {
-      const imgs = Array.from(this.gridContainer.querySelectorAll('img')) as HTMLImageElement[];
+      const imgs = Array.from(this.gridContainer.querySelectorAll('img'));
       total = imgs.length;
       loaded = imgs.filter(i => i.complete && i.naturalWidth > 0).length;
       error = imgs.filter(i => i.complete && i.naturalWidth === 0).length;

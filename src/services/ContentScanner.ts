@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { Vault, TFile, TFolder } from 'obsidian';
 import { IContentScanner, IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
@@ -95,7 +96,7 @@ export class ContentScanner implements IContentScanner {
             return images;
             
         } catch (error) {
-            console.error('Error scanning path:', path, error);
+            Logger.error('Error scanning path:', path, error);
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to scan path "${path}": ${errorMessage}`);
         }
@@ -205,7 +206,7 @@ export class ContentScanner implements IContentScanner {
             return uniqueImages;
             
         } catch (error) {
-            console.error('Error extracting links from file:', file.path, error);
+            Logger.error('Error extracting links from file:', file.path, error);
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to extract links from "${file.path}": ${errorMessage}`);
         }
@@ -258,7 +259,7 @@ export class ContentScanner implements IContentScanner {
                 }
             }
         } catch (error) {
-            console.error('Error validating image source:', source.path, error);
+            Logger.error('Error validating image source:', source.path, error);
             return false;
         }
     }

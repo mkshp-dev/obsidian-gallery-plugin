@@ -174,9 +174,9 @@ export class ErrorPlaceholder {
             
             try {
               this.options.retryAction();
-            } catch (error) {
+            } catch {
               // Reset button state if retry fails immediately
-              setTimeout(() => {
+              window.setTimeout(() => {
                 retryButton.textContent = 'Try Again';
                 retryButton.disabled = false;
               }, 1000);
@@ -206,7 +206,7 @@ export class ErrorPlaceholder {
    */
   show(): void {
     if (this.placeholderElement) {
-      this.placeholderElement.style.display = '';
+      this.placeholderElement.setCssStyles({ display: '' });
       this.placeholderElement.addClass('gallery-error-visible');
     }
   }

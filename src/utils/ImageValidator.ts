@@ -126,7 +126,7 @@ export class ImageValidator {
         metadata?: {
             extension: string;
             estimatedFormat: string;
-            sizeValidation: any;
+            sizeValidation: ReturnType<typeof ImageValidator.validateFileSize> | null;
         };
     }> {
         const errors: string[] = [];
@@ -217,7 +217,7 @@ export class ImageValidator {
                 message: hasImageExtension ? undefined : 'URL does not appear to be an image file'
             };
             
-        } catch (error) {
+        } catch {
             return {
                 isValid: false,
                 isExternal: false,

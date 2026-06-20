@@ -1,9 +1,16 @@
-import { Plugin, PluginSettingTab, Setting, App } from 'obsidian';
+import { Logger } from "./src/utils/Logger";
+import { Plugin, PluginSettingTab, Setting, App, MarkdownPostProcessorContext } from 'obsidian';
 import { ContentScanner } from './src/services/ContentScanner';
 import { ViewFactory } from './src/views/ViewFactory';
 import { GalleryProcessor } from './src/processors/GalleryProcessor';
 import { VaultWatcher } from './src/utils/VaultWatcher';
 import { LazyLoader } from './src/utils/LazyLoader';
+
+interface AppWithCommands extends App {
+    commands: {
+        executeCommandById(id: string): boolean;
+    };
+}
 
 /**
  * Plugin settings
@@ -118,6 +125,7 @@ export default class GalleryPlugin extends Plugin {
     private _onOpenSettingsRequested: ((e?: Event) => void) | null = null;
     
     async onload() {
+        Logger.setDebugEnabled(true);
 
         await this.loadSettings();
 
@@ -164,16 +172,16 @@ export default class GalleryPlugin extends Plugin {
         // Listen for requests from views/processors to open Settings
         this._onOpenSettingsRequested = () => {
             try {
-                (this.app as any).commands.executeCommandById('app:open-settings');
+                (this.app as unknown as AppWithCommands).commands.executeCommandById('app:open-settings');
             } catch (e) {
                 console.warn('Failed to open settings via command', e);
             }
         };
-        document.addEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
+        activeDocument.addEventListener('gallery-open-settings', this._onOpenSettingsRequested);
     }
 
     async loadSettings() {
-        const data = await this.loadData();
+        const data = (await this.loadData()) as Partial<GalleryPluginSettings> | null;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, data || {});
     }
 
@@ -215,8 +223,10 @@ export default class GalleryPlugin extends Plugin {
 
         // Remove document listener
         try {
-            document.removeEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
-        } catch {}
+            activeDocument.removeEventListener('gallery-open-settings', this._onOpenSettingsRequested as EventListener);
+        } catch (error) {
+            console.debug('Error removing document listener:', error);
+        }
     }
 
     /**
@@ -238,7 +248,7 @@ export default class GalleryPlugin extends Plugin {
     private async processGalleryProfessional(
         source: string, 
         el: HTMLElement, 
-        ctx: any
+        ctx: MarkdownPostProcessorContext
     ): Promise<void> {
         if (!this.galleryProcessor) {
             if (this.settings.errorDisplayMode === 'hidden') {

@@ -1,3 +1,5 @@
+import { Logger } from "../../utils/Logger";
+import { ObsidianDOMExtensions } from '../../models/interfaces';
 /**
  * LoadingSpinner component for gallery loading states
  * Provides different loading indicators for various use cases
@@ -71,7 +73,7 @@ export class LoadingSpinner {
 
     // Add text if provided
     if (this.options.text) {
-      this.textElement = this.createDiv(this.spinnerElement!, 'gallery-loading-text');
+      this.textElement = this.createDiv(this.spinnerElement, 'gallery-loading-text');
       this.textElement.textContent = this.options.text;
       // Accessibility: announce loading text to assistive tech
       this.textElement.setAttribute('role', 'status');
@@ -91,13 +93,13 @@ export class LoadingSpinner {
   const spinnerIcon = this.createDiv(this.spinnerElement!, 'gallery-spinner-icon');
     
     // Create SVG spinner using standard DOM API
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const svg = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', this.getSizePixels().toString());
     svg.setAttribute('height', this.getSizePixels().toString());
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('class', 'gallery-spinner-rotating');
 
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    const circle = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
     circle.setAttribute('cx', '12');
     circle.setAttribute('cy', '12');
     circle.setAttribute('r', '10');
@@ -201,7 +203,7 @@ export class LoadingSpinner {
    */
   show(): void {
     if (this.spinnerElement) {
-      this.spinnerElement.style.display = '';
+      this.spinnerElement.setCssStyles({ display: '' });
       this.addClass(this.spinnerElement, 'gallery-loading-visible');
     }
   }
@@ -215,9 +217,9 @@ export class LoadingSpinner {
       this.addClass(this.spinnerElement, 'gallery-loading-hidden');
       
       // Remove after animation
-      setTimeout(() => {
+      window.setTimeout(() => {
         if (this.spinnerElement) {
-          this.spinnerElement.style.display = 'none';
+          this.spinnerElement.setCssStyles({ display: 'none' });
         }
       }, 300);
     }
@@ -228,18 +230,18 @@ export class LoadingSpinner {
    */
   private createDiv(parent: HTMLElement, arg?: string | { cls?: string }): HTMLElement {
     if (!parent) {
-      return document.createElement('div');
+      return activeDocument.createElement('div');
     }
 
     // If parent provides createDiv, use it
-    const anyParent = parent as any;
-    if (anyParent.createDiv && typeof anyParent.createDiv === 'function') {
-      if (typeof arg === 'string') return anyParent.createDiv(arg);
-      return anyParent.createDiv(arg || {});
+    const obsParent = parent as unknown as ObsidianDOMExtensions;
+    if (obsParent.createDiv && typeof obsParent.createDiv === 'function') {
+      if (typeof arg === 'string') return obsParent.createDiv(arg);
+      return obsParent.createDiv(arg || {});
     }
 
     // Fallback to standard DOM
-    const el = document.createElement('div');
+    const el = activeDocument.createElement('div');
     if (typeof arg === 'string') el.className = arg;
     else if (arg && arg.cls) el.className = arg.cls;
     parent.appendChild(el);
@@ -248,18 +250,18 @@ export class LoadingSpinner {
 
   private addClass(el: HTMLElement, cls: string) {
     try {
-      const anyEl = el as any;
-      if (anyEl.addClass && typeof anyEl.addClass === 'function') anyEl.addClass(cls);
+      const obsEl = el as unknown as ObsidianDOMExtensions;
+      if (obsEl.addClass && typeof obsEl.addClass === 'function') obsEl.addClass(cls);
       else el.classList.add(cls);
-    } catch {}
+    } catch (error) { Logger.debug('Ignored error:', error); }
   }
 
   private removeClass(el: HTMLElement, cls: string) {
     try {
-      const anyEl = el as any;
-      if (anyEl.removeClass && typeof anyEl.removeClass === 'function') anyEl.removeClass(cls);
+      const obsEl = el as unknown as ObsidianDOMExtensions;
+      if (obsEl.removeClass && typeof obsEl.removeClass === 'function') obsEl.removeClass(cls);
       else el.classList.remove(cls);
-    } catch {}
+    } catch (error) { Logger.debug('Ignored error:', error); }
   }
 
   /**

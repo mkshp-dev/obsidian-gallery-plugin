@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
 import { IImageSource } from '../models/interfaces';
 
@@ -27,7 +28,7 @@ export class CarouselView extends GalleryView {
         this.containerEl = this.createElement(this.container, 'div', { cls: 'gallery-carousel' });
 
         // Viewport and track
-        this.viewport = this.createElement(this.containerEl!, 'div', { cls: 'gallery-carousel-viewport' });
+        this.viewport = this.createElement(this.containerEl, 'div', { cls: 'gallery-carousel-viewport' });
         this.trackEl = this.createElement(this.viewport, 'div', { cls: 'gallery-carousel-container' });
 
         // Render items
@@ -43,8 +44,8 @@ export class CarouselView extends GalleryView {
             item.addEventListener('click', () => this.expandImage(img));
         });
         // Prev/Next controls (visual)
-        const prev = this.createElement(this.containerEl!, 'button', { cls: 'gallery-carousel-nav prev', text: '‹' });
-        const next = this.createElement(this.containerEl!, 'button', { cls: 'gallery-carousel-nav next', text: '›' });
+        const prev = this.createElement(this.containerEl, 'button', { cls: 'gallery-carousel-nav prev', text: '‹' });
+        const next = this.createElement(this.containerEl, 'button', { cls: 'gallery-carousel-nav next', text: '›' });
         prev.setAttribute('aria-label', 'Previous image');
         next.setAttribute('aria-label', 'Next image');
 
@@ -52,14 +53,17 @@ export class CarouselView extends GalleryView {
         next.addEventListener('click', () => this.next());
 
         // Indicators
-        const indicators = this.createElement(this.containerEl!, 'div', { cls: 'gallery-carousel-indicators' });
+        const indicators = this.createElement(this.containerEl, 'div', { cls: 'gallery-carousel-indicators' });
         this._images.forEach((_, idx) => {
             const dot = this.createElement(indicators, 'button', { cls: 'gallery-carousel-indicator' });
             dot.setAttribute('aria-label', `Go to image ${idx + 1}`);
             dot.addEventListener('click', () => this.goTo(idx));
             // dot may have addClass shim from createElement — only add if non-empty
             if (idx === this.currentIndex) {
-                (dot as any).addClass?.('active');
+                const obsDot = dot as unknown as { addClass?(cls: string): void };
+            if (obsDot.addClass) {
+                obsDot.addClass('active');
+            }
             }
         });
 
@@ -73,7 +77,7 @@ export class CarouselView extends GalleryView {
         this.containerEl.setAttribute('tabindex', '0');
 
         // Touch support - basic swipe
-        this.addTouchSupport(this.viewport!);
+        this.addTouchSupport(this.viewport);
     }
 
     update(images: IImageSource[]): void {
@@ -103,7 +107,7 @@ export class CarouselView extends GalleryView {
 
         this.currentIndex = index;
         const width = this.viewport.clientWidth;
-        (this.trackEl.style as any).transform = `translateX(-${index * width}px)`;
+        if (this.trackEl) { this.trackEl.style.transform = `translateX(-${index * width}px)`; }
 
         // Update indicators
         const indicators = this.containerEl?.querySelectorAll('.gallery-carousel-indicator') || [];
@@ -167,19 +171,19 @@ export class CarouselView extends GalleryView {
         // External images: use a temporary Image to implement timeout and
         // avoid attaching src directly until successfully loaded.
         const temp = new Image();
-        let timeoutHandle: any = null;
+        let timeoutHandle: number | undefined = undefined;
 
         const onLoad = () => {
-            clearTimeout(timeoutHandle);
+            window.clearTimeout(timeoutHandle);
             try {
                 imgEl.src = temp.src;
-            } catch {}
+            } catch (error) { Logger.debug('Ignored error:', error); }
             this.handleImageLoad(image);
             cleanup();
         };
 
         const onError = (err?: Error) => {
-            clearTimeout(timeoutHandle);
+            window.clearTimeout(timeoutHandle);
             this.handleImageError(image, err || new Error('Failed to load'));
             cleanup();
         };
@@ -193,7 +197,7 @@ export class CarouselView extends GalleryView {
         temp.onerror = () => onError(new Error('Failed to load'));
 
         // Timeout
-        timeoutHandle = setTimeout(() => {
+        timeoutHandle = window.setTimeout(() => {
             onError(new Error('Image loading timed out'));
         }, this.remoteLoadTimeoutMs ?? 10000);
 
@@ -209,12 +213,12 @@ export class CarouselView extends GalleryView {
      * Expand image into a modal/lightbox. Similar behavior to ThumbnailView.
      */
     public expandImage(image: IImageSource): void {
-        const active = document.activeElement;
-        if (active && active instanceof HTMLElement) {
+        const active = activeDocument.activeElement;
+        if (active && active.instanceOf(HTMLElement)) {
             this.lastFocusedElement = active;
         }
 
-        const doc = this.container.ownerDocument || document;
+        const doc = this.container.ownerDocument || activeDocument;
         const modal = doc.createElement('div');
         modal.className = 'gallery-modal';
         modal.setAttribute('role', 'dialog');
@@ -230,20 +234,20 @@ export class CarouselView extends GalleryView {
         const closeOnEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 this.closeModal(modal);
-                doc.removeEventListener('keydown', closeOnEscape as any);
-                doc.removeEventListener('focus', keepFocus as any, true);
-                doc.removeEventListener('keydown', modalKeyHandler as any);
+                doc.removeEventListener('keydown', closeOnEscape);
+                doc.removeEventListener('focus', keepFocus, true);
+                doc.removeEventListener('keydown', modalKeyHandler);
             }
         };
-        modal.addEventListener('keydown', closeOnEscape as any);
+        modal.addEventListener('keydown', closeOnEscape);
 
         const keepFocus = (e: Event) => {
             if (!modal.contains(doc.activeElement)) {
-                const btn = modal.querySelector('.gallery-modal-close') as HTMLElement | null;
+                const btn = modal.querySelector('.gallery-modal-close') as unknown as HTMLElement | null;
                 if (btn) btn.focus();
             }
         };
-        doc.addEventListener('focus', keepFocus as any, true);
+        doc.addEventListener('focus', keepFocus, true);
 
         const modalKeyHandler = (e: KeyboardEvent) => {
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -253,14 +257,14 @@ export class CarouselView extends GalleryView {
                 const nextIndex = e.key === 'ArrowRight' ? currentIndex + 1 : currentIndex - 1;
                 if (nextIndex >= 0 && nextIndex < this._images.length) {
                     const nextImage = this._images[nextIndex];
-                    const imgEl = modal.querySelector('.gallery-modal-image img') as HTMLImageElement | null;
-                    const titleEl = modal.querySelector('.gallery-modal-info h3') as HTMLElement | null;
+                    const imgEl = modal.querySelector('.gallery-modal-image img') as unknown as HTMLImageElement | null;
+                    const titleEl = modal.querySelector('.gallery-modal-info h3') as unknown as HTMLElement | null;
                     if (imgEl && nextImage) {
                         // load via temp to respect timeout
                         const temp = new Image();
-                        const timeout = setTimeout(() => { temp.onload = null; temp.onerror = null; imgEl.alt = 'Failed to load'; }, this.remoteLoadTimeoutMs ?? 10000);
-                        temp.onload = () => { clearTimeout(timeout); try { imgEl.src = temp.src; } catch {} };
-                        temp.onerror = () => { clearTimeout(timeout); imgEl.alt = 'Failed to load'; };
+                        const timeout = window.setTimeout(() => { temp.onload = null; temp.onerror = null; imgEl.alt = 'Failed to load'; }, this.remoteLoadTimeoutMs ?? 10000);
+                        temp.onload = () => { window.clearTimeout(timeout); try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); } };
+                        temp.onerror = () => { window.clearTimeout(timeout); imgEl.alt = 'Failed to load'; };
                         try { temp.src = nextImage.getDisplayUrl(); } catch { imgEl.alt = 'Failed to load'; }
                     }
                     if (titleEl && nextImage) titleEl.textContent = nextImage.displayName || '';
@@ -268,14 +272,14 @@ export class CarouselView extends GalleryView {
                 }
             }
         };
-        modal.addEventListener('keydown', modalKeyHandler as any);
+        modal.addEventListener('keydown', modalKeyHandler);
 
-        (modal as any).__cleanup = () => {
+        (modal as unknown as { __cleanup?: () => void }).__cleanup = () => {
             try {
-                modal.removeEventListener('keydown', closeOnEscape as any);
-                doc.removeEventListener('focus', keepFocus as any, true);
-                modal.removeEventListener('keydown', modalKeyHandler as any);
-            } catch {}
+                modal.removeEventListener('keydown', closeOnEscape);
+                doc.removeEventListener('focus', keepFocus, true);
+                modal.removeEventListener('keydown', modalKeyHandler);
+            } catch (error) { Logger.debug('Ignored error:', error); }
         };
 
     const content = this.createElement(modal, 'div', { cls: 'gallery-modal-content' });
@@ -285,11 +289,11 @@ export class CarouselView extends GalleryView {
     closeBtn.setAttribute('role', 'button');
 
         modal.setAttribute('tabindex', '-1');
-        setTimeout(() => { try { modal.focus(); } catch {} try { closeBtn.focus(); } catch {} }, 0);
+        window.setTimeout(() => { try { modal.focus(); } catch (error) { Logger.debug('Ignored error:', error); } try { closeBtn.focus(); } catch (error) { Logger.debug('Ignored error:', error); } }, 0);
 
-        const prevBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav prev', text: '\u2039' }) as HTMLElement;
+        const prevBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav prev', text: '\u2039' });
         prevBtn.setAttribute('aria-label', 'Previous image'); prevBtn.addEventListener('click', () => navigate(-1));
-        const nextBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav next', text: '\u203A' }) as HTMLElement;
+        const nextBtn = this.createElement(content, 'button', { cls: 'gallery-modal-nav next', text: '\u203A' });
         nextBtn.setAttribute('aria-label', 'Next image'); nextBtn.addEventListener('click', () => navigate(1));
 
     const info = this.createElement(content, 'div', { cls: 'gallery-modal-info' });
@@ -305,13 +309,13 @@ export class CarouselView extends GalleryView {
                 return;
             }
             const temp = new Image();
-            let timeoutHandle: any = null;
-            const onLoad = () => { clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch {} cleanup(); };
-            const onError = () => { clearTimeout(timeoutHandle); imgEl.alt = 'Failed to load'; cleanup(); };
+            let timeoutHandle: number | undefined = undefined;
+            const onLoad = () => { window.clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch { Logger.debug('Ignored image src error'); } cleanup(); };
+            const onError = () => { window.clearTimeout(timeoutHandle); imgEl.alt = 'Failed to load'; cleanup(); };
             const cleanup = () => { temp.onload = null; temp.onerror = null; };
             temp.onload = onLoad; temp.onerror = onError;
-            timeoutHandle = setTimeout(() => onError(), this.remoteLoadTimeoutMs ?? 10000);
-            try { temp.src = srcImage.getDisplayUrl(); } catch (e) { onError(); }
+            timeoutHandle = window.setTimeout(() => onError(), this.remoteLoadTimeoutMs ?? 10000);
+            try { temp.src = srcImage.getDisplayUrl(); } catch { onError(); }
         };
 
         loadModalImage(img as HTMLImageElement, image);
@@ -322,14 +326,14 @@ export class CarouselView extends GalleryView {
             const nextIndex = currentIndex + delta;
             if (nextIndex < 0 || nextIndex >= this._images.length) return;
             const nextImage = this._images[nextIndex];
-            const modalImg = modal.querySelector('.gallery-modal-image img') as HTMLImageElement | null;
-            const titleEl = modal.querySelector('.gallery-modal-info h3') as HTMLElement | null;
+            const modalImg = modal.querySelector('.gallery-modal-image img') as unknown as HTMLImageElement | null;
+            const titleEl = modal.querySelector('.gallery-modal-info h3') as unknown as HTMLElement | null;
             if (modalImg && nextImage) { loadModalImage(modalImg, nextImage); modalImg.alt = nextImage.displayName || ''; }
             if (titleEl && nextImage) titleEl.textContent = nextImage.displayName || '';
             currentImage = nextImage;
         };
 
-        try { doc.body.appendChild(modal); } catch (appendErr) { try { document.body.appendChild(modal); } catch {} }
+        try { doc.body.appendChild(modal); } catch { try { activeDocument.body.appendChild(modal); } catch { Logger.debug('Could not append modal to document'); } }
     }
 
     /**
@@ -338,22 +342,23 @@ export class CarouselView extends GalleryView {
     private closeModal(modal: HTMLElement): void {
         try {
             // add class if shim exists
-            if ((modal as any).addClass && typeof (modal as any).addClass === 'function') {
-                (modal as any).addClass('gallery-modal-closing');
+            const obsModal = modal as unknown as { addClass?(cls: string): void };
+            if (obsModal.addClass && typeof obsModal.addClass === 'function') {
+                obsModal.addClass('gallery-modal-closing');
             } else {
                 modal.classList.add('gallery-modal-closing');
             }
-        } catch {}
+        } catch (error) { Logger.debug('Ignored error:', error); }
 
         try {
-            const cleanup = (modal as any).__cleanup;
+            const cleanup = (modal as unknown as { __cleanup?: () => void }).__cleanup;
             if (cleanup && typeof cleanup === 'function') cleanup();
-        } catch {}
+        } catch (error) { Logger.debug('Ignored error:', error); }
 
-        setTimeout(() => {
-            try { modal.remove(); } catch {}
+        window.setTimeout(() => {
+            try { modal.remove(); } catch (error) { Logger.debug('Ignored error:', error); }
             if (this.lastFocusedElement) {
-                try { this.lastFocusedElement.focus(); } catch {}
+                try { this.lastFocusedElement.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
                 this.lastFocusedElement = null;
             }
         }, 200);
@@ -370,7 +375,7 @@ export class CarouselView extends GalleryView {
 
         // Fallback: if model doesn't report states yet, infer from DOM
         if (total === 0 && this.trackEl) {
-            const imgs = Array.from(this.trackEl.querySelectorAll('img')) as HTMLImageElement[];
+            const imgs = Array.from(this.trackEl.querySelectorAll('img'));
             total = imgs.length;
             loaded = imgs.filter(i => i.complete && i.naturalWidth > 0).length;
             error = imgs.filter(i => i.complete && i.naturalWidth === 0).length;

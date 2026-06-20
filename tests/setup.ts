@@ -43,3 +43,17 @@ try {
 } catch (e) {
   // ignore if environment doesn't allow mutation
 }
+
+global.activeDocument = global.document;
+
+// Mock instanceOf helper for Node and UIEvent cross-window checks in JSDOM tests
+if (typeof Node !== 'undefined' && !Node.prototype.instanceOf) {
+  Node.prototype.instanceOf = function (type: any) {
+    return this instanceof type;
+  };
+}
+if (typeof UIEvent !== 'undefined' && !UIEvent.prototype.instanceOf) {
+  UIEvent.prototype.instanceOf = function (type: any) {
+    return this instanceof type;
+  };
+}

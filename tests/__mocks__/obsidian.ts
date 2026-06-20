@@ -33,3 +33,35 @@ export function parseYaml(yaml: string) {
 export function stringifyYaml(obj: any) {
   return Object.entries(obj).map(([k, v]) => `${k}: ${v}`).join('\n');
 }
+
+export async function requestUrl(request: any) {
+  const url = typeof request === 'string' ? request : request.url;
+  const options = typeof request === 'string' ? {} : request;
+  
+  // Use global fetch
+  const response = await fetch(url, {
+    method: options.method || 'GET',
+    headers: options.headers || {},
+    body: options.body
+  });
+  
+  // Extract headers
+  const headers: Record<string, string> = {};
+  if (response.headers && typeof response.headers.forEach === 'function') {
+    response.headers.forEach((val: string, key: string) => {
+      headers[key] = val;
+    });
+  } else if (response.headers) {
+    for (const [key, val] of Object.entries(response.headers)) {
+      headers[key] = String(val);
+    }
+  }
+  
+  return {
+    status: response.status,
+    headers: headers,
+    text: async () => response.text(),
+    json: async () => response.json(),
+    arrayBuffer: async () => response.arrayBuffer()
+  };
+}

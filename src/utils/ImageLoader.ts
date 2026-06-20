@@ -2,6 +2,7 @@
  * Image loading utility with timeout and error handling
  * Provides robust image loading for gallery components
  */
+import { requestUrl } from 'obsidian';
 
 export interface IImageLoadResult {
   success: boolean;
@@ -38,7 +39,7 @@ export class ImageLoader {
       let isResolved = false;
 
       // Timeout handler
-      const timeoutId = setTimeout(() => {
+      const timeoutId = window.setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
           resolve({
@@ -53,7 +54,7 @@ export class ImageLoader {
       img.onload = () => {
         if (!isResolved) {
           isResolved = true;
-          clearTimeout(timeoutId);
+          window.clearTimeout(timeoutId);
           resolve({
             success: true,
             element: img,
@@ -66,7 +67,7 @@ export class ImageLoader {
       img.onerror = () => {
         if (!isResolved) {
           isResolved = true;
-          clearTimeout(timeoutId);
+          window.clearTimeout(timeoutId);
           resolve({
             success: false,
             error: 'Failed to load image',
@@ -79,7 +80,7 @@ export class ImageLoader {
       img.onabort = () => {
         if (!isResolved) {
           isResolved = true;
-          clearTimeout(timeoutId);
+          window.clearTimeout(timeoutId);
           resolve({
             success: false,
             error: 'Image loading was aborted',
@@ -148,24 +149,28 @@ export class ImageLoader {
    */
   static async validateImageUrl(url: string, timeoutMs: number = 5000): Promise<boolean> {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await Promise.race([
+        requestUrl({
+          url,
+          method: 'HEAD',
+          throw: false
+        }),
+        new Promise<never>((_, reject) =>
+          window.setTimeout(() => reject(new Error('timeout')), timeoutMs)
+        )
+      ]);
 
-      const response = await fetch(url, {
-        method: 'HEAD',
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         return false;
       }
 
-      const contentType = response.headers.get('Content-Type');
+      const contentTypeKey = Object.keys(response.headers).find(
+        key => key.toLowerCase() === 'content-type'
+      );
+      const contentType = contentTypeKey ? response.headers[contentTypeKey] : null;
       return contentType ? contentType.startsWith('image/') : false;
 
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -177,7 +182,7 @@ export class ImageLoader {
     const img = new Image();
     
     // Create a simple placeholder using data URL
-    const canvas = document.createElement('canvas');
+    const canvas = activeDocument.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     
@@ -212,7 +217,7 @@ export class ImageLoader {
   static createErrorPlaceholder(width: number = 200, height: number = 200, errorMessage: string = 'Failed to load'): HTMLImageElement {
     const img = new Image();
     
-    const canvas = document.createElement('canvas');
+    const canvas = activeDocument.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     

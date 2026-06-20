@@ -1,0 +1,154 @@
+name: Jules Dispatch
+
+on:
+  schedule:
+    # Every hour at minute 15
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  dispatch:
+    name: Dispatch next Jules issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Find active or queued Jules issue
+        id: queue
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Active issues stall the queue:
+          # - status:in-progress
+          # - status:review
+          # - status:blocked
+          active_json="$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --label jules \
+            --json number,title,labels,createdAt)"
+
+          active_count="$(echo "$active_json" | jq '[.[] | select(any(.labels[]; .name == "status:in-progress" or .name == "status:review" or .name == "status:blocked"))] | length')"
+
+          if [ "$active_count" -gt 0 ]; then
+            active_issue="$(echo "$active_json" | jq -r '[.[] | select(any(.labels[]; .name == "status:in-progress" or .name == "status:review" or .name == "status:blocked"))] | sort_by(.number) | .[0].number')"
+            echo "has_active=true" >> "$GITHUB_OUTPUT"
+            echo "active_issue=$active_issue" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # No active issue; pick the oldest queued issue
+          todo_json="$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --label jules \
+            --label status:todo \
+            --json number,title,createdAt \
+            --limit 100)"
+
+          todo_count="$(echo "$todo_json" | jq 'length')"
+
+          if [ "$todo_count" -eq 0 ]; then
+            echo "has_active=false" >> "$GITHUB_OUTPUT"
+            echo "has_todo=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          issue_number="$(echo "$todo_json" | jq -r 'sort_by(.createdAt) | .[0].number')"
+
+          echo "has_active=false" >> "$GITHUB_OUTPUT"
+          echo "has_todo=true" >> "$GITHUB_OUTPUT"
+          echo "issue_number=$issue_number" >> "$GITHUB_OUTPUT"
+
+      - name: Stop because another Jules issue is already active
+        if: steps.queue.outputs.has_active == 'true'
+        run: |
+          echo "Another Jules issue is already active (#${{ steps.queue.outputs.active_issue }}). Exiting."
+
+      - name: Stop because there is no queued Jules issue
+        if: steps.queue.outputs.has_active != 'true' && steps.queue.outputs.has_todo != 'true'
+        run: |
+          echo "No open Jules issue with status:todo found. Exiting."
+
+      - name: Mark issue as in-progress
+        if: steps.queue.outputs.has_active != 'true' && steps.queue.outputs.has_todo == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ISSUE_NUMBER="${{ steps.queue.outputs.issue_number }}"
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --remove-label "status:todo" \
+            --add-label "status:in-progress"
+
+      - name: Fetch issue body for prompt context
+        if: steps.queue.outputs.has_active != 'true' && steps.queue.outputs.has_todo == 'true'
+        id: issue
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ISSUE_NUMBER="${{ steps.queue.outputs.issue_number }}"
+
+          gh issue view "$ISSUE_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --json title,body,url \
+            > issue.json
+
+          {
+            echo "issue_title<<EOF"
+            jq -r '.title' issue.json
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "issue_body<<EOF"
+            jq -r '.body' issue.json
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "issue_url=$(jq -r '.url' issue.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Invoke Jules for selected issue
+        if: steps.queue.outputs.has_active != 'true' && steps.queue.outputs.has_todo == 'true'
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: Dev
+          prompt: |
+            Work GitHub issue #${{ steps.queue.outputs.issue_number }} in the repository `${{ github.repository }}`.
+
+            Follow the repository AGENTS.md exactly.
+
+            Important repository-specific rules:
+            - Treat issue #${{ steps.queue.outputs.issue_number }} as the only task.
+            - Work from the `Dev` branch and open a PR targeting `Dev`.
+            - Do not change issue labels or queue state.
+            - Implement only the issue scope.
+            - Run the required verification commands before opening a PR:
+              - npm ci
+              - npm run lint
+              - npm run build
+              - npm test
+            - If the issue is completed, add exactly one bullet under `CHANGELOG.md` → `## In-progress`.
+            - Open a PR and add a concise comment on the issue summarizing the result.
+            - If blocked, leave a structured blocked comment on the issue.
+
+            Issue title:
+            ${{ steps.issue.outputs.issue_title }}
+
+            Issue URL:
+            ${{ steps.issue.outputs.issue_url }}
+
+            Issue body:
+            ${{ steps.issue.outputs.issue_body }}

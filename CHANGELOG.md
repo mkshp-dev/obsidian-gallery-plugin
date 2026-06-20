@@ -2,6 +2,7 @@
 
 ## In-progress
 - Optimize gallery rendering performance and improve array deduplication.
+- Fix syntax and indentation issues in the jules-dispatch GitHub Actions workflow.
 
 ## 1.0.9 - 2026-06-20
 

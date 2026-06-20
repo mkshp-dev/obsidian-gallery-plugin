@@ -1,7 +1,8 @@
+import { Logger } from './utils/Logger';
 import { IGalleryInstance, IGalleryConfig, IImageSource, IGalleryView } from './interfaces';
 
 /**
- * Represents a rendered gallery within a markdown document
+ * Represents a rendered gallery within a markdown activeDocument
  * Manages the lifecycle and state of a single gallery instance
  */
 export class GalleryInstance implements IGalleryInstance {
@@ -123,7 +124,7 @@ export class GalleryInstance implements IGalleryInstance {
      */
     update(images: IImageSource[]): void {
         if (this._isDestroyed) {
-            console.warn('Cannot update destroyed gallery instance');
+            Logger.warn('Cannot update destroyed gallery instance');
             return;
         }
 
@@ -138,7 +139,7 @@ export class GalleryInstance implements IGalleryInstance {
         try {
             this.view.update(this._images);
         } catch (error) {
-            console.error('Error updating gallery view:', error);
+            Logger.error('Error updating gallery view:', error);
             this.showError('Failed to update gallery view');
         }
 
@@ -198,7 +199,7 @@ export class GalleryInstance implements IGalleryInstance {
             return anyParent.createEl(tag, options || {});
         }
 
-        const el = document.createElement(tag);
+        const el = activeDocument.createElement(tag);
         if (options) {
             if (options.cls) el.className = options.cls;
             if (options.text) el.textContent = options.text;
@@ -248,7 +249,7 @@ export class GalleryInstance implements IGalleryInstance {
             this.view.render();
             this.updateCounters();
         } catch (error) {
-            console.error('Error refreshing gallery:', error);
+            Logger.error('Error refreshing gallery:', error);
             this.showError('Failed to refresh gallery');
         }
     }
@@ -261,7 +262,7 @@ export class GalleryInstance implements IGalleryInstance {
         
         // Check if image already exists
         if (this._images.some(img => img.path === image.path)) {
-            console.warn('Image already exists in gallery:', image.path);
+            Logger.warn('Image already exists in gallery:', image.path);
             return;
         }
         
@@ -332,7 +333,7 @@ export class GalleryInstance implements IGalleryInstance {
         try {
             this.view.destroy();
         } catch (error) {
-            console.error('Error destroying gallery view:', error);
+            Logger.error('Error destroying gallery view:', error);
         }
         
     // Clear container (support plain DOM)

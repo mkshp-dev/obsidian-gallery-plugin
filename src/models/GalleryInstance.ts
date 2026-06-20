@@ -178,7 +178,7 @@ export class GalleryInstance implements IGalleryInstance {
      */
     private showError(message: string): void {
         this.emptyElement(this.container);
-        const err = this.createElement(this.container, 'div', { cls: 'gallery-error', text: message });
+        this.createElement(this.container, 'div', { cls: 'gallery-error', text: message });
         return;
     }
 

@@ -234,7 +234,6 @@ export class LazyLoader {
    * Force load all observed images
    */
   async loadAll(): Promise<ILazyLoadResult[]> {
-    const results: ILazyLoadResult[] = [];
     const promises: Promise<ILazyLoadResult>[] = [];
 
     for (const [img] of this.loadingElements) {
@@ -362,7 +361,7 @@ export class LazyLoader {
       ctx.fillText('Loading...', width / 2, height / 2);
 
       return canvas.toDataURL();
-    } catch (e) {
+    } catch {
       // In constrained environments (like jsdom in CI), canvas APIs may not be available.
       // Return a minimal transparent PNG data URI as a safe fallback.
       return FALLBACK_DATA_URI;

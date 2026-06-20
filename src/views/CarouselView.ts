@@ -310,12 +310,12 @@ export class CarouselView extends GalleryView {
             }
             const temp = new Image();
             let timeoutHandle: number | undefined = undefined;
-            const onLoad = () => { window.clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); } cleanup(); };
+            const onLoad = () => { window.clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch { Logger.debug('Ignored image src error'); } cleanup(); };
             const onError = () => { window.clearTimeout(timeoutHandle); imgEl.alt = 'Failed to load'; cleanup(); };
             const cleanup = () => { temp.onload = null; temp.onerror = null; };
             temp.onload = onLoad; temp.onerror = onError;
             timeoutHandle = window.setTimeout(() => onError(), this.remoteLoadTimeoutMs ?? 10000);
-            try { temp.src = srcImage.getDisplayUrl(); } catch (e) { onError(); }
+            try { temp.src = srcImage.getDisplayUrl(); } catch { onError(); }
         };
 
         loadModalImage(img as HTMLImageElement, image);
@@ -333,7 +333,7 @@ export class CarouselView extends GalleryView {
             currentImage = nextImage;
         };
 
-        try { doc.body.appendChild(modal); } catch (appendErr) { try { activeDocument.body.appendChild(modal); } catch (error) { Logger.debug('Ignored error:', error); } }
+        try { doc.body.appendChild(modal); } catch { try { activeDocument.body.appendChild(modal); } catch { Logger.debug('Could not append modal to document'); } }
     }
 
     /**

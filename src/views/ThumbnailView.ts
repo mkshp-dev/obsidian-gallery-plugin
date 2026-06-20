@@ -180,22 +180,25 @@ export class ThumbnailView extends GalleryView {
             
             // Create new image element for loading
             const img = new Image();
+            // Set timeout for external URLs (use view-provided timeout when available)
+            let timeoutHandle: number | undefined = undefined;
+
             img.onload = () => {
+                window.clearTimeout(timeoutHandle);
                 this.onImageLoaded(image, container, img);
             };
-            
+
             img.onerror = () => {
+                window.clearTimeout(timeoutHandle);
                 this.onImageError(image, container, new Error('Failed to load image'));
             };
 
             // Block external images when remote loading is disabled
-                if (image.type === 'external' && !this.allowRemoteImages) {
+            if (image.type === 'external' && !this.allowRemoteImages) {
                 this.onImageError(image, container, new Error('External images are blocked by settings'));
             } else {
-                // Set timeout for external URLs (use view-provided timeout when available)
-                let timeoutHandle: number | undefined = undefined;
                 if (image.type === 'external') {
-                        const timeoutMs = this.remoteLoadTimeoutMs ?? 10000;
+                    const timeoutMs = this.remoteLoadTimeoutMs ?? 10000;
                     timeoutHandle = window.setTimeout(() => {
                         if (image.loadState === 'loading') {
                             img.onload = null;
@@ -436,7 +439,7 @@ export class ThumbnailView extends GalleryView {
                     onError();
                 }, this.remoteLoadTimeoutMs ?? 10000);
 
-            try { temp.src = srcImage.getDisplayUrl(); } catch (e) { onError(); }
+            try { temp.src = srcImage.getDisplayUrl(); } catch { onError(); }
         };
 
         loadModalImage(img as HTMLImageElement, image);

@@ -72,7 +72,7 @@ export class ParameterParser {
             // If YAML parsing fails, try simple key-value parsing on the normalized content
             try {
                 parsedData = this.parseSimpleFormat(normalizedContent);
-            } catch (simpleError) {
+            } catch {
                 throw this.createConfigError(
                     'yaml-syntax',
                     `Invalid YAML syntax: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`,

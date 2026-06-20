@@ -213,8 +213,8 @@ export class FolderScanner {
                         if (stat && stat.size) {
                             stats.totalSize += stat.size;
                         }
-                    } catch (error) {
-                        // Ignore stat errors
+                    } catch {
+                        // Skip files with stat errors
                     }
                 }
             } else if (child instanceof TFolder) {
@@ -260,7 +260,7 @@ export class FolderScanner {
                 if (file instanceof TFile && file.stat.mtime > cutoffTime) {
                     recentImages.push(image);
                 }
-            } catch (error) {
+            } catch {
                 // Skip files with stat errors
             }
         }
@@ -305,7 +305,7 @@ export class FolderScanner {
                 imageCount: images.length
             };
             
-        } catch (error) {
+        } catch {
             return { exists: false, isFolder: false, readable: false };
         }
     }

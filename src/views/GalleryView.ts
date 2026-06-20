@@ -267,7 +267,7 @@ export abstract class GalleryView implements IGalleryView {
                 }
             }
             return null;
-        } catch (e) {
+        } catch {
             return null;
         }
     }
@@ -333,7 +333,7 @@ export abstract class GalleryView implements IGalleryView {
         if (existingError) existingError.remove();
 
         // Create professional error placeholder
-        const errorPlaceholder = ErrorPlaceholder.createImageLoadError(
+        ErrorPlaceholder.createImageLoadError(
             element,
             image.path,
             () => this.retryImageLoad(image)

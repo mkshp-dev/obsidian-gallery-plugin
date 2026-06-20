@@ -87,7 +87,7 @@ export class ErrorHandler {
         // Add documentation link
         const helpEl = ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-help' });
         ErrorHandler.createElement(helpEl, 'span', { text: 'Need help? Check the ' });
-        const a = ErrorHandler.createElement(helpEl, 'a', { cls: 'gallery-help-link', text: 'documentation', href: '#gallery-plugin-docs' });
+        ErrorHandler.createElement(helpEl, 'a', { cls: 'gallery-help-link', text: 'documentation', href: '#gallery-plugin-docs' });
     }
 
     /**

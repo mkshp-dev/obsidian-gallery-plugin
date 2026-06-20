@@ -170,7 +170,7 @@ export class ImageLoader {
       const contentType = contentTypeKey ? response.headers[contentTypeKey] : null;
       return contentType ? contentType.startsWith('image/') : false;
 
-    } catch (error) {
+    } catch {
       return false;
     }
   }

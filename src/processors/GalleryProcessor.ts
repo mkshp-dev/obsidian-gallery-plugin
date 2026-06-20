@@ -1,14 +1,12 @@
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext } from 'obsidian';
 import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ObsidianDOMExtensions } from '../models/interfaces';
-import { GalleryConfig } from '../models/GalleryConfig';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
-import { ErrorManager } from '../views/components/ErrorPlaceholder';
 import { EmptyState } from '../views/components/EmptyState';
 import { ImageValidator } from '../utils/ImageValidator';
 import { FileSizeValidator } from '../utils/FileSizeValidator';
@@ -90,7 +88,6 @@ export class GalleryProcessor {
         };
 
         let loadingManager: LoadingManager | null = null;
-        let errorManager: ErrorManager | null = null;
 
         try {
             // Clear previous content (use safe clear for environments where `empty()` helper is unavailable)
@@ -104,7 +101,6 @@ export class GalleryProcessor {
             // Initialize managers
             if (opts.showLoadingFeedback) {
                 loadingManager = new LoadingManager(el);
-                errorManager = new ErrorManager(el);
             }
 
             // Step 1: Parse and validate configuration
@@ -132,7 +128,7 @@ export class GalleryProcessor {
                     // Render an explanatory empty state to guide the user rather than throwing
                     try {
                         this.showProfessionalEmptyState(el, config, result);
-                    } catch (e) {
+                    } catch {
                         // Fallback to throwing if rendering fails
                         throw new Error(msg);
                     }
@@ -259,7 +255,7 @@ export class GalleryProcessor {
                         if (!images.find(img => img.path === external.path)) {
                             images.push(external);
                         }
-                    } catch (err) {
+                    } catch {
                         // Ignore invalid URL entries but record error
                         result.errors.push(`Invalid URL in urls list: ${url}`);
                     }
@@ -352,7 +348,7 @@ export class GalleryProcessor {
                                 validationErrors.push(`External URL does not appear to be an image: ${image.path}`);
                                 continue;
                             }
-                        } catch (e) {
+                        } catch {
                             validationErrors.push(`Failed to validate external URL: ${image.path}`);
                             continue;
                         }
@@ -405,7 +401,7 @@ export class GalleryProcessor {
                     Logger.debug(`GalleryProcessor: found existing gallery for path ${config.path} (id=${existing.id}), destroying before creating new instance.`);
                     this.destroyGallery(existing.id);
                 }
-            } catch (e) {
+            } catch {
                 // swallow errors to avoid breaking rendering
             }
 
@@ -763,7 +759,7 @@ export class GalleryProcessor {
                                     }
                                     this.destroyGallery(gallery.id);
                                 }
-                            } catch (e) {
+                            } catch {
                                 try { this.destroyGallery(gallery.id); } catch (error) { Logger.debug('Ignored error:', error); }
                             }
                         }, GRACE_PERIOD_MS);
@@ -774,7 +770,7 @@ export class GalleryProcessor {
 
                     // schedule next check
                     window.setTimeout(tryCheck, attempts[attemptIndex]);
-                } catch (e) {
+                } catch {
                     // If something unexpected happens, attempt a safe cleanup
                     try { this.destroyGallery(gallery.id); } catch (error) { Logger.debug('Ignored error:', error); }
                     try { observer.disconnect(); } catch (error) { Logger.debug('Ignored error:', error); }

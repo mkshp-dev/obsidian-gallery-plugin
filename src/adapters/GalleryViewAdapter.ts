@@ -4,7 +4,7 @@
  */
 
 import { ThumbnailView } from '../views/ThumbnailView';
-import { IImageSource, IGalleryConfig } from '../models/interfaces';
+import { IImageSource } from '../models/interfaces';
 import { LazyLoader } from '../utils/LazyLoader';
 import { ErrorManager } from '../views/components/ErrorPlaceholder';
 

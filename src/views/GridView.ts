@@ -45,13 +45,11 @@ export class GridView extends GalleryView {
 
     this.gridContainer = this.createElement(this.container, 'div', { cls: 'gallery-grid' });
 
-    const imagesData: Array<{ src: string; alt?: string }> = [];
-
     this._images.forEach((img, idx) => {
-  const wrapper = this.createElement(this.gridContainer!, 'div', { cls: 'gallery-grid-item', attr: { 'data-image-path': img.path } });
+      const wrapper = this.createElement(this.gridContainer!, 'div', { cls: 'gallery-grid-item', attr: { 'data-image-path': img.path } });
 
-  // Create img element; LazyLoader will set src when observing
-  const el = this.createElement(wrapper, 'img', { cls: 'gallery-grid-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;
+      // Create img element; LazyLoader will set src when observing
+      const el = this.createElement(wrapper, 'img', { cls: 'gallery-grid-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;
 
       // External images respect allowRemoteImages; if blocked, mark error state
       if (img.type === 'external' && !this.allowRemoteImages) {

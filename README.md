@@ -236,6 +236,25 @@ MIT License — see [LICENSE](./LICENSE) for details.
 - Built for the [Obsidian](https://obsidian.md) community
 
 ## Support
+If this project helps your workflow, consider supporting its development with a ☕
+
+<a href="https://www.buymeacoffee.com/mkshp" target="_blank">
+  <img
+    src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=mkshp&button_colour=5F7FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00"
+    alt="Buy me a coffee"
+    height="45"
+  />
+</a>
+
+<br/>
+
+<a href="https://github.com/sponsors/mkshp-dev" target="_blank">
+  <img
+    src="https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github-sponsors&style=flat-square"
+    alt="Sponsor mkshp-dev on GitHub"
+    height="32"
+  />
+</a>
 
 - **Bug reports**: [GitHub Issues](../../issues)
 - **Feature requests**: [GitHub Discussions](../../discussions)

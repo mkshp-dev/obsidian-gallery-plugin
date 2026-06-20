@@ -2,7 +2,7 @@ name: Jules Task
 description: Structured task for Google Jules
 title: "[Jules] "
 labels:
-  - jules
+  - jules-queue
   - status:todo
 body:
   - type: markdown

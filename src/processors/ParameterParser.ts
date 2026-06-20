@@ -2,6 +2,19 @@ import { parseYaml, stringifyYaml } from 'obsidian';
 import { IGalleryConfig, IConfigError } from '../models/interfaces';
 import { GalleryConfig } from '../models/GalleryConfig';
 
+class ConfigError extends Error implements IConfigError {
+    readonly type = 'config' as const;
+    field: string;
+    suggestion?: string;
+
+    constructor(field: string, message: string, suggestion?: string) {
+        super(message);
+        this.field = field;
+        this.suggestion = suggestion;
+        Object.setPrototypeOf(this, ConfigError.prototype);
+    }
+}
+
 /**
  * YAML parameter parser for gallery code blocks
  * Handles parsing and validation of gallery configuration
@@ -183,13 +196,8 @@ export class ParameterParser {
     /**
      * Create structured configuration error
      */
-    private static createConfigError(field: string, message: string, suggestion?: string): IConfigError {
-        return {
-            type: 'config',
-            field,
-            message,
-            suggestion
-        };
+    private static createConfigError(field: string, message: string, suggestion?: string): ConfigError {
+        return new ConfigError(field, message, suggestion);
     }
 
     /**

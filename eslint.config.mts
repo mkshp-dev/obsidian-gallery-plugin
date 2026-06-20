@@ -54,7 +54,7 @@ export default tseslint.config(
 			"@typescript-eslint/no-redundant-type-constituents": "off",
 			"@typescript-eslint/no-unnecessary-type-assertion": "off",
 			"@typescript-eslint/no-unused-vars": "off",
-			"@typescript-eslint/no-deprecated": "off",
+			// "@typescript-eslint/no-deprecated": "off",
 			"@typescript-eslint/await-thenable": "off",
 			//"@typescript-eslint/no-unused-expressions": "off",
 			// "@typescript-eslint/only-throw-error": "off",

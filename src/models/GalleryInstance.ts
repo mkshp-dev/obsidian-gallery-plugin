@@ -39,7 +39,7 @@ export class GalleryInstance implements IGalleryInstance {
      * Generate unique identifier for this gallery instance
      */
     private generateId(): string {
-        return `gallery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        return `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
 
     /**

@@ -18,8 +18,12 @@ jobs:
   dispatch:
     name: Dispatch next Jules issue
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Find active or queued Jules issue
         id: queue
         shell: bash
@@ -78,18 +82,23 @@ jobs:
         run: |
           echo "No open Jules issue with status:todo found. Exiting."
 
-      - name: Mark issue as in-progress
+      - name: Read Jules instructions
         if: steps.queue.outputs.has_active != 'true' && steps.queue.outputs.has_todo == 'true'
+        id: jules_instructions
         shell: bash
         run: |
           set -euo pipefail
 
-          ISSUE_NUMBER="${{ steps.queue.outputs.issue_number }}"
+          if [ ! -f .github/jules.md ]; then
+            echo "Missing .github/jules.md" >&2
+            exit 1
+          fi
 
-          gh issue edit "$ISSUE_NUMBER" \
-            --repo "${{ github.repository }}" \
-            --remove-label "status:todo" \
-            --add-label "status:in-progress"
+          {
+            echo "instructions<<EOF"
+            cat .github/jules.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Fetch issue body for prompt context
         if: steps.queue.outputs.has_active != 'true' && steps.queue.outputs.has_todo == 'true'
@@ -113,7 +122,7 @@ jobs:
 
           {
             echo "issue_body<<EOF"
-            jq -r '.body' issue.json
+            jq -r '.body // ""' issue.json
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -128,21 +137,11 @@ jobs:
           prompt: |
             Work GitHub issue #${{ steps.queue.outputs.issue_number }} in the repository `${{ github.repository }}`.
 
-            Follow the repository AGENTS.md exactly.
+            Follow the Jules instructions below exactly.
 
-            Important repository-specific rules:
-            - Treat issue #${{ steps.queue.outputs.issue_number }} as the only task.
-            - Work from the `Dev` branch and open a PR targeting `Dev`.
-            - Do not change issue labels or queue state.
-            - Implement only the issue scope.
-            - Run the required verification commands before opening a PR:
-              - npm ci
-              - npm run lint
-              - npm run build
-              - npm test
-            - If the issue is completed, add exactly one bullet under `CHANGELOG.md` → `## In-progress`.
-            - Open a PR and add a concise comment on the issue summarizing the result.
-            - If blocked, leave a structured blocked comment on the issue.
+            --- BEGIN JULES INSTRUCTIONS ---
+            ${{ steps.jules_instructions.outputs.instructions }}
+            --- END JULES INSTRUCTIONS ---
 
             Issue title:
             ${{ steps.issue.outputs.issue_title }}
@@ -152,3 +151,16 @@ jobs:
 
             Issue body:
             ${{ steps.issue.outputs.issue_body }}
+
+      - name: Mark issue as in-progress
+        if: steps.queue.outputs.has_active != 'true' && steps.queue.outputs.has_todo == 'true' && success()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ISSUE_NUMBER="${{ steps.queue.outputs.issue_number }}"
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --remove-label "status:todo" \
+            --add-label "status:in-progress"

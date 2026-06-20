@@ -1,5 +1,5 @@
 import { Logger } from "./Logger";
-import { requestUrl } from 'obsidian';
+import { requestUrl, Vault } from 'obsidian';
 /**
  * File size validation utility for gallery images
  * Prevents loading of files that exceed size limits
@@ -18,7 +18,7 @@ export class FileSizeValidator {
   /**
    * Validate file size for local files
    */
-  static async validateLocalFile(filePath: string, vault: any): Promise<IFileSizeValidationResult> {
+  static async validateLocalFile(filePath: string, vault: Vault): Promise<IFileSizeValidationResult> {
     try {
       const file = vault.getAbstractFileByPath(filePath);
       

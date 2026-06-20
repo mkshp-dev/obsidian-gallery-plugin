@@ -64,7 +64,7 @@ export class ParameterParser {
             normalizedContent = lines.join('\n');
         }
 
-        let parsedData: any;
+        let parsedData: unknown;
         try {
             // Try parsing normalized YAML
             parsedData = parseYaml(normalizedContent);
@@ -98,11 +98,11 @@ export class ParameterParser {
         }
 
         // Validate configuration keys
-        this.validateKeys(parsedData);
+        this.validateKeys(parsedData as Record<string, unknown>);
 
         // Create and validate GalleryConfig
         try {
-            return GalleryConfig.fromYaml(parsedData);
+            return GalleryConfig.fromYaml(parsedData as Record<string, unknown>);
         } catch (error) {
             throw this.createConfigError('validation', error instanceof Error ? error.message : String(error),
                 'Check the parameter documentation for valid values');
@@ -112,8 +112,8 @@ export class ParameterParser {
     /**
      * Parse simple key=value format as fallback
      */
-    private static parseSimpleFormat(content: string): any {
-        const result: any = {};
+    private static parseSimpleFormat(content: string): unknown {
+        const result: Record<string, unknown> = {};
         const lines = content.trim().split('\n');
 
         for (const line of lines) {
@@ -143,7 +143,7 @@ export class ParameterParser {
     /**
      * Parse individual value with type conversion
      */
-    private static parseValue(value: string): any {
+    private static parseValue(value: string): unknown {
         // Remove quotes if present
         const unquoted = value.replace(/^["']|["']$/g, '');
         
@@ -161,7 +161,7 @@ export class ParameterParser {
     /**
      * Validate configuration keys
      */
-    private static validateKeys(config: any): void {
+    private static validateKeys(config: Record<string, unknown>): void {
         const providedKeys = Object.keys(config);
         const invalidKeys = providedKeys.filter(key => !this.ALLOWED_KEYS.includes(key));
         
@@ -179,9 +179,14 @@ export class ParameterParser {
         }
 
         // Validate view type if provided
-        if (config.view && !this.VIEW_TYPES.includes(config.view)) {
+        const view = config.view;
+        if (view && typeof view === 'string' && !this.VIEW_TYPES.includes(view)) {
             throw this.createConfigError('invalid_view',
-                `Invalid view type: ${config.view}`,
+                `Invalid view type: ${view}`,
+                `Valid view types are: ${this.VIEW_TYPES.join(', ')}`);
+        } else if (view && typeof view !== 'string') {
+            throw this.createConfigError('invalid_view',
+                'Invalid view type: must be a string',
                 `Valid view types are: ${this.VIEW_TYPES.join(', ')}`);
         }
 
@@ -207,7 +212,7 @@ export class ParameterParser {
         const errors: IConfigError[] = [];
 
         // Path validation
-        if ((!config.path || config.path.trim() === '') && !(config as any).urls) {
+        if ((!config.path || config.path.trim() === '') && !config.urls) {
             errors.push(this.createConfigError('path_or_urls', 'Path cannot be empty unless urls are provided'));
         } else if (config.path && config.path.includes('..')) {
             errors.push(this.createConfigError('path', 

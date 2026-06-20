@@ -1,4 +1,5 @@
 import { Logger } from "../../utils/Logger";
+import { ObsidianDOMExtensions } from '../../models/interfaces';
 /**
  * LoadingSpinner component for gallery loading states
  * Provides different loading indicators for various use cases
@@ -233,10 +234,10 @@ export class LoadingSpinner {
     }
 
     // If parent provides createDiv, use it
-    const anyParent = parent as any;
-    if (anyParent.createDiv && typeof anyParent.createDiv === 'function') {
-      if (typeof arg === 'string') return anyParent.createDiv(arg);
-      return anyParent.createDiv(arg || {});
+    const obsParent = parent as unknown as ObsidianDOMExtensions;
+    if (obsParent.createDiv && typeof obsParent.createDiv === 'function') {
+      if (typeof arg === 'string') return obsParent.createDiv(arg);
+      return obsParent.createDiv(arg || {});
     }
 
     // Fallback to standard DOM
@@ -249,16 +250,16 @@ export class LoadingSpinner {
 
   private addClass(el: HTMLElement, cls: string) {
     try {
-      const anyEl = el as any;
-      if (anyEl.addClass && typeof anyEl.addClass === 'function') anyEl.addClass(cls);
+      const obsEl = el as unknown as ObsidianDOMExtensions;
+      if (obsEl.addClass && typeof obsEl.addClass === 'function') obsEl.addClass(cls);
       else el.classList.add(cls);
     } catch (error) { Logger.debug('Ignored error:', error); }
   }
 
   private removeClass(el: HTMLElement, cls: string) {
     try {
-      const anyEl = el as any;
-      if (anyEl.removeClass && typeof anyEl.removeClass === 'function') anyEl.removeClass(cls);
+      const obsEl = el as unknown as ObsidianDOMExtensions;
+      if (obsEl.removeClass && typeof obsEl.removeClass === 'function') obsEl.removeClass(cls);
       else el.classList.remove(cls);
     } catch (error) { Logger.debug('Ignored error:', error); }
   }

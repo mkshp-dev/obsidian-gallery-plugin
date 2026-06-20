@@ -7,6 +7,14 @@ import { ImageSource } from '../models/ImageSource';
  * Folder scanner for discovering images in vault folders
  * Handles recursive scanning with performance optimization
  */
+export interface IFolderStats {
+    totalFiles: number;
+    imageFiles: number;
+    totalSize: number;
+    subdirectories: number;
+    supportedFormats: Map<string, number>;
+}
+
 export class FolderScanner {
     private vault: Vault;
     private readonly SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
@@ -156,20 +164,14 @@ export class FolderScanner {
     /**
      * Get folder statistics
      */
-    async getFolderStats(folderPath: string, recursive: boolean = true): Promise<{
-        totalFiles: number;
-        imageFiles: number;
-        totalSize: number;
-        subdirectories: number;
-        supportedFormats: Map<string, number>;
-    }> {
+    async getFolderStats(folderPath: string, recursive: boolean = true): Promise<IFolderStats> {
         const folder = this.vault.getAbstractFileByPath(folderPath);
         
         if (!folder || !(folder instanceof TFolder)) {
             throw new Error(`Invalid folder path: ${folderPath}`);
         }
 
-        const stats = {
+        const stats: IFolderStats = {
             totalFiles: 0,
             imageFiles: 0,
             totalSize: 0,
@@ -188,7 +190,7 @@ export class FolderScanner {
     private async collectStats(
         folder: TFolder, 
         recursive: boolean, 
-        stats: any,
+        stats: IFolderStats,
         depth: number = 0
     ): Promise<void> {
         if (depth > this.MAX_SCAN_DEPTH) return;

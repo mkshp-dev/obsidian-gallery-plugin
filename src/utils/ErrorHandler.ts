@@ -1,5 +1,13 @@
 import { Logger } from "./Logger";
-import { IConfigError, ILoadError, IImageSource } from '../models/interfaces';
+import { IConfigError, ILoadError, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
+
+interface WindowWithProcess extends Window {
+    process?: {
+        env?: {
+            NODE_ENV?: string;
+        };
+    };
+}
 
 /**
  * Centralized error handling for the gallery plugin
@@ -7,20 +15,20 @@ import { IConfigError, ILoadError, IImageSource } from '../models/interfaces';
  */
 export class ErrorHandler {
     private static instance: ErrorHandler;
-    private errorCallbacks: Map<string, (error: any) => void> = new Map();
+    private errorCallbacks: Map<string, (error: unknown) => void> = new Map();
 
     private constructor() {}
 
     /**
      * Create an element into parent, supporting Obsidian helpers or plain DOM
      */
-    private static createElement(parent: HTMLElement, tag: string | { tag?: string } = 'div', options?: any): HTMLElement {
-        const anyParent = parent as any;
+    private static createElement(parent: HTMLElement, tag: string | { tag?: string } = 'div', options?: string | CreateElementOptions): HTMLElement {
+        const obsParent = parent as unknown as ObsidianDOMExtensions;
 
         // Support Obsidian's createEl/createDiv
-        if (anyParent.createEl && typeof anyParent.createEl === 'function') {
+        if (obsParent.createEl && typeof obsParent.createEl === 'function') {
             const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
-            return anyParent.createEl(tagName, options || {});
+            return obsParent.createEl(tagName, options || {});
         }
 
         // Plain DOM fallback
@@ -30,15 +38,16 @@ export class ErrorHandler {
             if (typeof options === 'string') {
                 el.className = options;
             } else {
-                if (options.cls) el.className = options.cls;
-                if (options.text) el.textContent = options.text;
-                if (options.attr) {
-                    for (const k of Object.keys(options.attr)) {
-                        try { el.setAttribute(k, String(options.attr[k])); } catch (error) { Logger.debug('Ignored error:', error); }
+                const opts = options as CreateElementOptions;
+                if (opts.cls) el.className = opts.cls;
+                if (opts.text) el.textContent = opts.text;
+                if (opts.attr) {
+                    for (const k of Object.keys(opts.attr)) {
+                        try { el.setAttribute(k, String(opts.attr[k])); } catch (error) { Logger.debug('Ignored error:', error); }
                     }
                 }
-                if (options.href && el.instanceOf(HTMLAnchorElement)) {
-                    el.href = options.href;
+                if (opts.href && el.instanceOf(HTMLAnchorElement)) {
+                    el.href = opts.href;
                 }
             }
         }
@@ -128,7 +137,7 @@ export class ErrorHandler {
             ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-context', text: `Context: ${context}` });
 
             // Debug info in development
-            if ((window as any).process?.env?.NODE_ENV === 'development') {
+            if ((window as unknown as WindowWithProcess).process?.env?.NODE_ENV === 'development') {
                 const debugEl = ErrorHandler.createElement(errorEl, 'details', { cls: 'gallery-error-debug' });
                 ErrorHandler.createElement(debugEl, 'summary', { text: 'Debug Information' });
                 ErrorHandler.createElement(debugEl, 'pre', { text: error.stack || error.toString(), cls: 'gallery-error-stack' });
@@ -279,14 +288,14 @@ export class ErrorHandler {
     /**
      * Register error callback
      */
-    registerErrorCallback(type: string, callback: (error: any) => void): void {
+    registerErrorCallback(type: string, callback: (error: unknown) => void): void {
         this.errorCallbacks.set(type, callback);
     }
 
     /**
      * Trigger error callback
      */
-    triggerErrorCallback(type: string, error: any): void {
+    triggerErrorCallback(type: string, error: unknown): void {
         const callback = this.errorCallbacks.get(type);
         if (callback) {
             try {

@@ -193,7 +193,7 @@ export class ThumbnailView extends GalleryView {
                 this.onImageError(image, container, new Error('External images are blocked by settings'));
             } else {
                 // Set timeout for external URLs (use view-provided timeout when available)
-                let timeoutHandle: any = null;
+                let timeoutHandle: number | undefined = undefined;
                 if (image.type === 'external') {
                         const timeoutMs = this.remoteLoadTimeoutMs ?? 10000;
                     timeoutHandle = window.setTimeout(() => {
@@ -279,13 +279,13 @@ export class ThumbnailView extends GalleryView {
         const closeOnEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 this.closeModal(modal);
-                doc.removeEventListener('keydown', closeOnEscape as any);
-                doc.removeEventListener('focus', keepFocus as any, true);
-                doc.removeEventListener('keydown', modalKeyHandler as any);
+                doc.removeEventListener('keydown', closeOnEscape);
+                doc.removeEventListener('focus', keepFocus, true);
+                doc.removeEventListener('keydown', modalKeyHandler);
             }
     };
     // Attach close handler to the modal (avoid document-level handler to prevent double firing)
-    modal.addEventListener('keydown', closeOnEscape as any);
+    modal.addEventListener('keydown', closeOnEscape);
 
         // Keep focus inside modal (simple trap)
         const keepFocus = (e: Event) => {
@@ -295,7 +295,7 @@ export class ThumbnailView extends GalleryView {
                 if (btn) btn.focus();
             }
         };
-        doc.addEventListener('focus', keepFocus as any, true);
+        doc.addEventListener('focus', keepFocus, true);
 
     // Modal keyboard handler for navigation (Left/Right) and Escape handled above
         const modalKeyHandler = (e: KeyboardEvent) => {
@@ -321,23 +321,25 @@ export class ThumbnailView extends GalleryView {
             }
         };
     // Attach keydown handler to the modal only to avoid duplicate handling
-    modal.addEventListener('keydown', modalKeyHandler as any);
+    modal.addEventListener('keydown', modalKeyHandler);
 
         // Attach cleanup function to modal for safe removal
         const cleanup = () => {
             try {
-                modal.removeEventListener('keydown', closeOnEscape as any);
-                doc.removeEventListener('focus', keepFocus as any, true);
-                modal.removeEventListener('keydown', modalKeyHandler as any);
+                modal.removeEventListener('keydown', closeOnEscape);
+                doc.removeEventListener('focus', keepFocus, true);
+                modal.removeEventListener('keydown', modalKeyHandler);
             } catch (error) { Logger.debug('Ignored error:', error); }
         };
-        (modal as any).__cleanup = cleanup;
+        (modal as unknown as { __cleanup?: () => void }).__cleanup = cleanup;
 
+        const obsModal = modal as unknown as { createEl(tag: string, o?: unknown): HTMLElement; addClass?(cls: string): void; };
         // Create modal content
-        const content = (modal as any).createEl('div', { cls: 'gallery-modal-content' });
+        const content = obsModal.createEl('div', { cls: 'gallery-modal-content' });
+        const obsContent = content as unknown as { createEl(tag: string, o?: unknown): HTMLElement; };
 
         // Close button
-        const closeBtn = (content as any).createEl('button', {
+        const closeBtn = obsContent.createEl('button', {
             cls: 'gallery-modal-close',
             text: '×'
         });
@@ -357,17 +359,17 @@ export class ThumbnailView extends GalleryView {
         }, 0);
 
         // Create Prev/Next buttons for modal navigation (mouse-friendly)
-        const prevBtn = (content as any).createEl('button', {
+        const prevBtn = obsContent.createEl('button', {
             cls: 'gallery-modal-nav prev',
             text: '\u2039' // single left-pointing angle quotation mark
-        }) as HTMLElement;
+        });
         prevBtn.setAttribute('aria-label', 'Previous image');
         prevBtn.addEventListener('click', () => navigate(-1));
 
-        const nextBtn = (content as any).createEl('button', {
+        const nextBtn = obsContent.createEl('button', {
             cls: 'gallery-modal-nav next',
             text: '\u203A' // single right-pointing angle quotation mark
-        }) as HTMLElement;
+        });
         nextBtn.setAttribute('aria-label', 'Next image');
         nextBtn.addEventListener('click', () => navigate(1));
 
@@ -386,8 +388,9 @@ export class ThumbnailView extends GalleryView {
         }
 
         // Image container
-        const imgContainer = (content as any).createEl('div', { cls: 'gallery-modal-image' });
-        const img = (imgContainer as any).createEl('img', {
+        const imgContainer = obsContent.createEl('div', { cls: 'gallery-modal-image' });
+        const obsImgContainer = imgContainer as unknown as { createEl(tag: string, o?: unknown): HTMLElement; };
+        const img = obsImgContainer.createEl('img', {
             attr: {
                 'alt': image.displayName
             }
@@ -395,7 +398,7 @@ export class ThumbnailView extends GalleryView {
 
         // Load modal image respecting remote settings and timeout
         const loadModalImage = (imgEl: HTMLImageElement, srcImage: IImageSource) => {
-            if (srcImage.type === 'external' && !(this as any).allowRemoteImages) {
+            if (srcImage.type === 'external' && !this.allowRemoteImages) {
                 imgEl.alt = 'External image blocked';
                 // Optionally show a placeholder class
                 imgEl.classList.add('gallery-external-blocked');
@@ -403,13 +406,14 @@ export class ThumbnailView extends GalleryView {
             }
 
             const temp = new Image();
-            let timeoutHandle: any = null;
+            let timeoutHandle: number | undefined = undefined;
 
             const onLoad = () => {
                 window.clearTimeout(timeoutHandle);
                 try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); }
-                if ((modal as any).addClass) {
-                    (modal as any).addClass('gallery-modal-loaded');
+                const obsModal = modal as unknown as { addClass?(cls: string): void };
+                if (obsModal.addClass) {
+                    obsModal.addClass('gallery-modal-loaded');
                 }
                 cleanup();
             };
@@ -470,12 +474,13 @@ export class ThumbnailView extends GalleryView {
      * Close modal
      */
     private closeModal(modal: HTMLElement): void {
-        if ((modal as any).addClass) {
-            (modal as any).addClass('gallery-modal-closing');
+        const obsModal = modal as unknown as { addClass?(cls: string): void };
+        if (obsModal.addClass) {
+            obsModal.addClass('gallery-modal-closing');
         }
         // Call modal-specific cleanup if present
         try {
-            const cleanup = (modal as any).__cleanup as (() => void) | undefined;
+            const cleanup = (modal as unknown as { __cleanup?: () => void }).__cleanup as (() => void) | undefined;
             if (cleanup) cleanup();
         } catch (error) { Logger.debug('Ignored error:', error); }
 

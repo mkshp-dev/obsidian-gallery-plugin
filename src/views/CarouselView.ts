@@ -60,7 +60,10 @@ export class CarouselView extends GalleryView {
             dot.addEventListener('click', () => this.goTo(idx));
             // dot may have addClass shim from createElement — only add if non-empty
             if (idx === this.currentIndex) {
-                (dot as any).addClass?.('active');
+                const obsDot = dot as unknown as { addClass?(cls: string): void };
+            if (obsDot.addClass) {
+                obsDot.addClass('active');
+            }
             }
         });
 
@@ -104,7 +107,7 @@ export class CarouselView extends GalleryView {
 
         this.currentIndex = index;
         const width = this.viewport.clientWidth;
-        (this.trackEl.style as any).transform = `translateX(-${index * width}px)`;
+        if (this.trackEl) { this.trackEl.style.transform = `translateX(-${index * width}px)`; }
 
         // Update indicators
         const indicators = this.containerEl?.querySelectorAll('.gallery-carousel-indicator') || [];
@@ -168,7 +171,7 @@ export class CarouselView extends GalleryView {
         // External images: use a temporary Image to implement timeout and
         // avoid attaching src directly until successfully loaded.
         const temp = new Image();
-        let timeoutHandle: any = null;
+        let timeoutHandle: number | undefined = undefined;
 
         const onLoad = () => {
             window.clearTimeout(timeoutHandle);
@@ -231,12 +234,12 @@ export class CarouselView extends GalleryView {
         const closeOnEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 this.closeModal(modal);
-                doc.removeEventListener('keydown', closeOnEscape as any);
-                doc.removeEventListener('focus', keepFocus as any, true);
-                doc.removeEventListener('keydown', modalKeyHandler as any);
+                doc.removeEventListener('keydown', closeOnEscape);
+                doc.removeEventListener('focus', keepFocus, true);
+                doc.removeEventListener('keydown', modalKeyHandler);
             }
         };
-        modal.addEventListener('keydown', closeOnEscape as any);
+        modal.addEventListener('keydown', closeOnEscape);
 
         const keepFocus = (e: Event) => {
             if (!modal.contains(doc.activeElement)) {
@@ -244,7 +247,7 @@ export class CarouselView extends GalleryView {
                 if (btn) btn.focus();
             }
         };
-        doc.addEventListener('focus', keepFocus as any, true);
+        doc.addEventListener('focus', keepFocus, true);
 
         const modalKeyHandler = (e: KeyboardEvent) => {
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -269,13 +272,13 @@ export class CarouselView extends GalleryView {
                 }
             }
         };
-        modal.addEventListener('keydown', modalKeyHandler as any);
+        modal.addEventListener('keydown', modalKeyHandler);
 
-        (modal as any).__cleanup = () => {
+        (modal as unknown as { __cleanup?: () => void }).__cleanup = () => {
             try {
-                modal.removeEventListener('keydown', closeOnEscape as any);
-                doc.removeEventListener('focus', keepFocus as any, true);
-                modal.removeEventListener('keydown', modalKeyHandler as any);
+                modal.removeEventListener('keydown', closeOnEscape);
+                doc.removeEventListener('focus', keepFocus, true);
+                modal.removeEventListener('keydown', modalKeyHandler);
             } catch (error) { Logger.debug('Ignored error:', error); }
         };
 
@@ -306,7 +309,7 @@ export class CarouselView extends GalleryView {
                 return;
             }
             const temp = new Image();
-            let timeoutHandle: any = null;
+            let timeoutHandle: number | undefined = undefined;
             const onLoad = () => { window.clearTimeout(timeoutHandle); try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); } cleanup(); };
             const onError = () => { window.clearTimeout(timeoutHandle); imgEl.alt = 'Failed to load'; cleanup(); };
             const cleanup = () => { temp.onload = null; temp.onerror = null; };
@@ -339,15 +342,16 @@ export class CarouselView extends GalleryView {
     private closeModal(modal: HTMLElement): void {
         try {
             // add class if shim exists
-            if ((modal as any).addClass && typeof (modal as any).addClass === 'function') {
-                (modal as any).addClass('gallery-modal-closing');
+            const obsModal = modal as unknown as { addClass?(cls: string): void };
+            if (obsModal.addClass && typeof obsModal.addClass === 'function') {
+                obsModal.addClass('gallery-modal-closing');
             } else {
                 modal.classList.add('gallery-modal-closing');
             }
         } catch (error) { Logger.debug('Ignored error:', error); }
 
         try {
-            const cleanup = (modal as any).__cleanup;
+            const cleanup = (modal as unknown as { __cleanup?: () => void }).__cleanup;
             if (cleanup && typeof cleanup === 'function') cleanup();
         } catch (error) { Logger.debug('Ignored error:', error); }
 

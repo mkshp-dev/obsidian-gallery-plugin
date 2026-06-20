@@ -16,7 +16,7 @@ export class ConfigValidator {
         const errors: IConfigError[] = [];
         
         // Validate path only if no external urls provided
-        if (!Array.isArray((config as any).urls) || (config as any).urls.length === 0) {
+        if (!Array.isArray(config.urls) || config.urls.length === 0) {
             errors.push(...this.validatePath(config.path));
         }
         

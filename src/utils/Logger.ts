@@ -21,7 +21,7 @@ export class Logger {
     /**
      * Log a debug message if debug logging is enabled.
      */
-    static debug(message?: any, ...optionalParams: any[]) {
+    static debug(message?: unknown, ...optionalParams: unknown[]) {
         if (this._debugEnabled) {
             console.debug(message, ...optionalParams);
         }
@@ -30,14 +30,14 @@ export class Logger {
     /**
      * Log an error message.
      */
-    static error(message?: any, ...optionalParams: any[]) {
+    static error(message?: unknown, ...optionalParams: unknown[]) {
         console.error(message, ...optionalParams);
     }
 
     /**
      * Log a warning message.
      */
-    static warn(message?: any, ...optionalParams: any[]) {
+    static warn(message?: unknown, ...optionalParams: unknown[]) {
         console.warn(message, ...optionalParams);
     }
 }

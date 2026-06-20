@@ -126,7 +126,7 @@ export class ImageValidator {
         metadata?: {
             extension: string;
             estimatedFormat: string;
-            sizeValidation: any;
+            sizeValidation: ReturnType<typeof ImageValidator.validateFileSize> | null;
         };
     }> {
         const errors: string[] = [];

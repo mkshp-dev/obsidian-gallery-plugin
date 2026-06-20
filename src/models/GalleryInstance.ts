@@ -185,7 +185,7 @@ export class GalleryInstance implements IGalleryInstance {
     /**
      * Trigger gallery event
      */
-    private triggerEvent(eventType: string, data: any): void {
+    private triggerEvent(eventType: string, data: unknown): void {
         const event = new CustomEvent(eventType, { detail: data });
         this.container.dispatchEvent(event);
     }
@@ -193,10 +193,17 @@ export class GalleryInstance implements IGalleryInstance {
     /**
      * Helper to create an element into a parent supporting Obsidian helpers or plain DOM
      */
-    private createElement(parent: HTMLElement, tag: string = 'div', options?: any): HTMLElement {
-        const anyParent = parent as any;
-        if (anyParent.createEl && typeof anyParent.createEl === 'function') {
-            return anyParent.createEl(tag, options || {});
+    private createElement(parent: HTMLElement, tag: string = 'div', options?: { cls?: string; text?: string; attr?: Record<string, unknown> }): HTMLElement {
+        interface ObsidianDOMExtensions {
+            createEl?: (tag: string, o?: unknown) => HTMLElement;
+            addClass?: (cls: string) => void;
+            removeClass?: (cls: string) => void;
+            empty?: () => void;
+        }
+
+        const obsParent = parent as unknown as ObsidianDOMExtensions;
+        if (obsParent.createEl && typeof obsParent.createEl === 'function') {
+            return obsParent.createEl(tag, options || {});
         }
 
         const el = activeDocument.createElement(tag);
@@ -214,27 +221,48 @@ export class GalleryInstance implements IGalleryInstance {
     }
 
     private addClass(el: HTMLElement, cls: string) {
-        const anyEl = el as any;
-        if (anyEl.addClass && typeof anyEl.addClass === 'function') {
-            anyEl.addClass(cls);
+        interface ObsidianDOMExtensions {
+            createEl?: (tag: string, o?: unknown) => HTMLElement;
+            addClass?: (cls: string) => void;
+            removeClass?: (cls: string) => void;
+            empty?: () => void;
+        }
+
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        if (obsEl.addClass && typeof obsEl.addClass === 'function') {
+            obsEl.addClass(cls);
             return;
         }
         try { el.classList.add(cls); } catch (error) { Logger.debug('Ignored error:', error); }
     }
 
     private removeClass(el: HTMLElement, cls: string) {
-        const anyEl = el as any;
-        if (anyEl.removeClass && typeof anyEl.removeClass === 'function') {
-            anyEl.removeClass(cls);
+        interface ObsidianDOMExtensions {
+            createEl?: (tag: string, o?: unknown) => HTMLElement;
+            addClass?: (cls: string) => void;
+            removeClass?: (cls: string) => void;
+            empty?: () => void;
+        }
+
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        if (obsEl.removeClass && typeof obsEl.removeClass === 'function') {
+            obsEl.removeClass(cls);
             return;
         }
         try { el.classList.remove(cls); } catch (error) { Logger.debug('Ignored error:', error); }
     }
 
     private emptyElement(el: HTMLElement) {
-        const anyEl = el as any;
-        if (anyEl.empty && typeof anyEl.empty === 'function') {
-            try { anyEl.empty(); return; } catch (error) { Logger.debug('Ignored error:', error); }
+        interface ObsidianDOMExtensions {
+            createEl?: (tag: string, o?: unknown) => HTMLElement;
+            addClass?: (cls: string) => void;
+            removeClass?: (cls: string) => void;
+            empty?: () => void;
+        }
+
+        const obsEl = el as unknown as ObsidianDOMExtensions;
+        if (obsEl.empty && typeof obsEl.empty === 'function') {
+            try { obsEl.empty(); return; } catch (error) { Logger.debug('Ignored error:', error); }
         }
         while (el.firstChild) el.removeChild(el.firstChild);
     }

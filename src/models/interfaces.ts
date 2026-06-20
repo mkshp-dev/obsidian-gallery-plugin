@@ -15,6 +15,12 @@ export interface IGalleryConfig {
   
   /** Optional list of external image URLs */
   urls?: string[];
+
+  /** Optional image limit */
+  limit?: number;
+
+  /** Optional sorting criteria */
+  sort?: string;
 }
 
 export interface IImageSource {
@@ -97,6 +103,23 @@ export interface IGalleryView {
   
   /** Check if image is in viewport (for lazy loading) */
   isImageVisible(image: IImageSource): boolean;
+
+  /** Optional runtime settings API */
+  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean }): void;
+
+  /** Optional runtime property for remote load timeout */
+  remoteLoadTimeoutMs?: number;
+
+  /** Optional runtime property for allowing remote images */
+  allowRemoteImages?: boolean;
+
+  /** Optional method to retrieve view status/stats */
+  getStats?(): {
+    totalImages: number;
+    loadedImages: number;
+    pendingImages?: number;
+    errorImages: number;
+  };
 }
 
 export interface IContentScanner {
@@ -107,7 +130,7 @@ export interface IContentScanner {
   isImageFile(path: string): boolean;
   
   /** Extract image links from markdown file */
-  extractLinksFromFile(file: any): Promise<IImageSource[]>; // any for TFile from Obsidian
+  extractLinksFromFile(file: unknown): Promise<IImageSource[]>; // any for TFile from Obsidian
   
   /** Validate image source accessibility */
   validateImageSource(source: IImageSource): Promise<boolean>;
@@ -187,4 +210,25 @@ export interface IViewFactory {
   
   /** Register a new view type */
   registerViewType(type: string, viewClass: new (container: HTMLElement) => IGalleryView): void;
+}
+
+/**
+ * Obsidian DOM extensions added at runtime
+ */
+export interface ObsidianDOMExtensions {
+  createEl(tag: string, o?: unknown): HTMLElement;
+  createDiv(o?: string | { cls?: string }): HTMLElement;
+  addClass(cls: string): void;
+  removeClass(cls: string): void;
+  empty(): void;
+}
+
+/**
+ * Options for custom createElement helper
+ */
+export interface CreateElementOptions {
+  cls?: string;
+  text?: string;
+  attr?: Record<string, string | number | boolean | null | undefined>;
+  href?: string;
 }

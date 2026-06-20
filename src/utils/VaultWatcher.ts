@@ -239,7 +239,7 @@ export class VaultWatcher {
   /**
    * Log message if logging is enabled
    */
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.options.enableLogging) {
       if (data) {
         Logger.debug(`[VaultWatcher] ${message}`, data);

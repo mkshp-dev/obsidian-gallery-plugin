@@ -12,7 +12,7 @@ export class GalleryConfig implements IGalleryConfig {
 
     constructor(config: Partial<IGalleryConfig> & { urls?: string[] }) {
         // Path may be optional if urls are provided
-        if ((!config.path || typeof config.path !== 'string' || config.path.trim() === '') && !(config as any).urls) {
+        if ((!config.path || typeof config.path !== 'string' || config.path.trim() === '') && !config.urls) {
             throw new Error('Gallery path is required unless remote urls are provided');
         }
 
@@ -20,9 +20,9 @@ export class GalleryConfig implements IGalleryConfig {
         this.path = config.path && typeof config.path === 'string' ? this.sanitizePath(config.path.trim()) : '';
         
         // Set defaults for optional parameters
-    this.view = config.view || 'thumbnail';
-    this.recursive = config.recursive !== undefined ? config.recursive : true;
-    this.urls = (config as any).urls;
+        this.view = config.view || 'thumbnail';
+        this.recursive = config.recursive !== undefined ? config.recursive : true;
+        this.urls = config.urls;
 
         // Validate view type
         if (!['thumbnail', 'carousel', 'grid'].includes(this.view)) {
@@ -49,17 +49,18 @@ export class GalleryConfig implements IGalleryConfig {
     /**
      * Create GalleryConfig from raw YAML data
      */
-    static fromYaml(yamlData: any): GalleryConfig {
+    static fromYaml(yamlData: unknown): GalleryConfig {
         if (typeof yamlData !== 'object' || yamlData === null) {
             throw new Error('Gallery configuration must be an object');
         }
 
+        const data = yamlData as Record<string, unknown>;
         return new GalleryConfig({
-            path: yamlData.path,
-            view: yamlData.view,
-            recursive: yamlData.recursive,
-            urls: yamlData.urls
-        } as any);
+            path: typeof data.path === 'string' ? data.path : undefined,
+            view: typeof data.view === 'string' ? data.view as 'thumbnail' | 'carousel' | 'grid' : undefined,
+            recursive: typeof data.recursive === 'boolean' ? data.recursive : undefined,
+            urls: Array.isArray(data.urls) ? (data.urls as unknown[]) : undefined
+        } as Partial<IGalleryConfig> & { urls?: string[] });
     }
 
     /**

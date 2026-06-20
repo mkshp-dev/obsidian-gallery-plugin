@@ -15,7 +15,7 @@ export class GridView extends GalleryView {
 
   setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean } = {}): void {
     // Apply base options
-    super.setOptions(options as any);
+    super.setOptions(options);
     // If loader exists, propagate timeout change
     if (this.loader && typeof options.remoteLoadTimeoutMs === 'number') {
       this.loader.updateOptions({ timeoutMs: options.remoteLoadTimeoutMs });
@@ -114,7 +114,7 @@ export class GridView extends GalleryView {
 
     // Use a temporary image to honor timeout
     const temp = new Image();
-    let timeoutHandle: any = null;
+    let timeoutHandle: number | undefined = undefined;
 
     const onLoad = () => {
       window.clearTimeout(timeoutHandle);

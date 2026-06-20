@@ -20,14 +20,14 @@ export class ViewFactory implements IViewFactory {
      * Register default view types
      */
     private registerDefaultViews(): void {
-    // Register ThumbnailView
-    this.viewTypes.set('thumbnail', ThumbnailView);
-        
-    // Register CarouselView (real implementation)
-    this.viewTypes.set('carousel', CarouselView as any);
-        
-    // Register real GridView implementation
-    this.viewTypes.set('grid', GridView as any);
+        // Register ThumbnailView
+        this.viewTypes.set('thumbnail', ThumbnailView);
+            
+        // Register CarouselView (real implementation)
+        this.viewTypes.set('carousel', CarouselView as new (container: HTMLElement) => IGalleryView);
+            
+        // Register real GridView implementation
+        this.viewTypes.set('grid', GridView as new (container: HTMLElement) => IGalleryView);
     }
 
     /**
@@ -153,7 +153,7 @@ export class ViewFactory implements IViewFactory {
         description: string; 
         features: string[] 
     } | null {
-        const viewTypeInfo: Record<string, any> = {
+        const viewTypeInfo: Record<string, { name: string; description: string; features: string[] }> = {
             thumbnail: {
                 name: 'Thumbnail Grid',
                 description: 'Displays images in a responsive grid layout with thumbnail previews',
@@ -177,13 +177,17 @@ export class ViewFactory implements IViewFactory {
     /**
      * Create view with configuration
      */
-    createViewWithConfig(type: string, container: HTMLElement, config: any = {}): IGalleryView {
+    createViewWithConfig(type: string, container: HTMLElement, config: unknown = {}): IGalleryView {
         const view = this.createView(type, container);
         
+        interface ConfigurableView {
+            configure(config: unknown): void;
+        }
+
         // Apply configuration if view supports it
-        if ('configure' in view && typeof (view as any).configure === 'function') {
+        if ('configure' in view && typeof (view as unknown as ConfigurableView).configure === 'function') {
             try {
-                (view as any).configure(config);
+                (view as unknown as ConfigurableView).configure(config);
             } catch (error) {
                 Logger.warn(`Error applying configuration to ${type} view:`, error);
             }

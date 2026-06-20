@@ -199,22 +199,6 @@ obsidian-gallery-plugin/
 - Consider organizing large collections into subfolders
 - Modal loads full-resolution images on demand
 
-## Roadmap
-
-### Current (v1.0.0)
-- ✅ Basic thumbnail galleries
-- ✅ Modal image viewer
-- ✅ Folder and file support
-- ✅ Responsive design
-
-### Future Enhancements
-- 🔄 Carousel view mode
-- 🔄 Grid layout options
-- ✅ External URL support (opt-in, timeouts)
-- 🔄 Image filtering and sorting
-- 🔄 Batch operations
-- 🔄 Settings panel
-
 Contributions are welcome! Please feel free to:
 
 - Share usage examples and feedback

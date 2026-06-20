@@ -128,7 +128,7 @@ export class ErrorHandler {
             ErrorHandler.createElement(errorEl, 'div', { cls: 'gallery-error-context', text: `Context: ${context}` });
 
             // Debug info in development
-            if (process.env.NODE_ENV === 'development') {
+            if ((window as any).process?.env?.NODE_ENV === 'development') {
                 const debugEl = ErrorHandler.createElement(errorEl, 'details', { cls: 'gallery-error-debug' });
                 ErrorHandler.createElement(debugEl, 'summary', { text: 'Debug Information' });
                 ErrorHandler.createElement(debugEl, 'pre', { text: error.stack || error.toString(), cls: 'gallery-error-stack' });

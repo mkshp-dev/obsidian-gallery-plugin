@@ -60,7 +60,7 @@ jobs:
             --json number,state,labels \
             > issue.json
 
-          is_jules="$(jq -r 'any(.labels[]; .name == "jules")' issue.json)"
+          is_jules="$(jq -r 'any(.labels[]; .name == "jules-queue")' issue.json)"
           issue_state="$(jq -r '.state' issue.json)"
 
           echo "is_jules=$is_jules" >> "$GITHUB_OUTPUT"
@@ -151,7 +151,7 @@ jobs:
             --json number,state,labels \
             > issue.json
 
-          is_jules="$(jq -r 'any(.labels[]; .name == "jules")' issue.json)"
+          is_jules="$(jq -r 'any(.labels[]; .name == "jules-queue")' issue.json)"
           has_in_progress="$(jq -r 'any(.labels[]; .name == "status:in-progress")' issue.json)"
 
           echo "is_jules=$is_jules" >> "$GITHUB_OUTPUT"

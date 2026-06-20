@@ -37,7 +37,7 @@ jobs:
           active_json="$(gh issue list \
             --repo "${{ github.repository }}" \
             --state open \
-            --label jules \
+            --label jules-queue \
             --json number,title,labels,createdAt)"
 
           active_count="$(echo "$active_json" | jq '[.[] | select(any(.labels[]; .name == "status:in-progress" or .name == "status:review" or .name == "status:blocked"))] | length')"
@@ -53,7 +53,7 @@ jobs:
           todo_json="$(gh issue list \
             --repo "${{ github.repository }}" \
             --state open \
-            --label jules \
+            --label jules-queue \
             --label status:todo \
             --json number,title,createdAt \
             --limit 100)"

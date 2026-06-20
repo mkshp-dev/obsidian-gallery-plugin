@@ -2,116 +2,112 @@ name: Jules Task
 description: Structured task for Google Jules
 title: "[Jules] "
 labels:
+  - jules
+  - status:todo
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for issues intended for Google Jules.
 
-* jules
+        ```
+        Jules will be invoked on a single issue and should:
+        - implement only the scope described here
+        - run verification commands
+        - update `CHANGELOG.md` under `## In-progress`
+        - open a PR targeting `Dev`
+        ```
 
-* status:todo
-  body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be achieved?
+      placeholder: |
+        Describe the desired end result in plain language.
+        Example: Add a setting to disable lightbox captions in gallery view.
+    validations:
+      required: true
 
-* type: markdown
-  attributes:
-  value: |
-  Use this template for issues intended for Google Jules.
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What should Jules change, and what should it avoid touching?
+      placeholder: |
+        Include concrete boundaries. For example:
 
-  ```
-  Jules will be invoked on a single issue and should:
-  - implement only the scope described here
-  - run verification commands
-  - update `CHANGELOG.md` under `## In-progress`
-  - open a PR targeting `Dev`
-  ```
+        ```
+        - Update the gallery rendering logic in src/gallery/...
+        - Add a plugin setting and settings UI if needed
+        - Do not change release workflows, versioning, or unrelated views
+        - Do not refactor unrelated gallery code
+        ```
+    validations:
+      required: true
 
-* type: textarea
-  id: goal
-  attributes:
-  label: Goal
-  description: What should be achieved?
-  placeholder: |
-  Describe the desired end result in plain language.
-  Example: Add a setting to disable lightbox captions in gallery view.
-  validations:
-  required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checklist Jules must satisfy before the task is considered complete
+      value: |
+        - [ ] The requested behavior is implemented
+        - [ ] Existing behavior outside the issue scope remains unchanged
+        - [ ] `npm run lint` passes
+        - [ ] `npm run build` passes
+        - [ ] `npm test` passes
+        - [ ] `CHANGELOG.md` updated under `## In-progress`
+    validations:
+      required: true
 
-* type: textarea
-  id: scope
-  attributes:
-  label: Scope
-  description: What should Jules change, and what should it avoid touching?
-  placeholder: |
-  Include concrete boundaries. For example:
+  - type: textarea
+    id: changelog
+    attributes:
+      label: Changelog entry
+      description: One user-facing bullet that Jules should add under `CHANGELOG.md` → `## In-progress`
+      placeholder: |
+        Add support for ...
+    validations:
+      required: true
 
-  ```
-  - Update the gallery rendering logic in src/gallery/...
-  - Add a plugin setting and settings UI if needed
-  - Do not change release workflows, versioning, or unrelated views
-  - Do not refactor unrelated gallery code
-  ```
+  - type: textarea
+    id: implementation_notes
+    attributes:
+      label: Implementation notes / file hints
+      description: Relevant files, architecture notes, UI behavior details, or implementation hints
+      placeholder: |
+        Examples:
+        - Relevant files: src/main.ts, src/settings.ts, src/gallery/GridView.ts
+        - Reuse the existing setting registration pattern
+        - Preserve current mobile behavior
+        - The issue is probably caused by ...
+    validations:
+      required: false
 
-  validations:
-  required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Explicitly out of scope
+      description: Optional but recommended — what should Jules avoid changing even if it looks related?
+      placeholder: |
+        Examples:
+        - Do not change masonry layout behavior
+        - Do not modify release workflows
+        - Do not rename existing settings keys
+        - Do not alter image metadata parsing
+    validations:
+      required: false
 
-* type: textarea
-  id: acceptance
-  attributes:
-  label: Acceptance criteria
-  description: Checklist Jules must satisfy before the task is considered complete
-  value: |
-  - [ ] The requested behavior is implemented
-  - [ ] Existing behavior outside the issue scope remains unchanged
-  - [ ] `npm run lint` passes
-  - [ ] `npm run build` passes
-  - [ ] `npm test` passes
-  - [ ] `CHANGELOG.md` updated under `## In-progress`
-  validations:
-  required: true
-
-* type: textarea
-  id: changelog
-  attributes:
-  label: Changelog entry
-  description: One user-facing bullet that Jules should add under `CHANGELOG.md` → `## In-progress`
-  placeholder: |
-  Add support for ...
-  validations:
-  required: true
-
-* type: textarea
-  id: implementation_notes
-  attributes:
-  label: Implementation notes / file hints
-  description: Relevant files, architecture notes, UI behavior details, or implementation hints
-  placeholder: |
-  Examples:
-  - Relevant files: src/main.ts, src/settings.ts, src/gallery/GridView.ts
-  - Reuse the existing setting registration pattern
-  - Preserve current mobile behavior
-  - The issue is probably caused by ...
-  validations:
-  required: false
-
-* type: textarea
-  id: out_of_scope
-  attributes:
-  label: Explicitly out of scope
-  description: Optional but recommended — what should Jules avoid changing even if it looks related?
-  placeholder: |
-  Examples:
-  - Do not change masonry layout behavior
-  - Do not modify release workflows
-  - Do not rename existing settings keys
-  - Do not alter image metadata parsing
-  validations:
-  required: false
-
-* type: textarea
-  id: testing_notes
-  attributes:
-  label: Manual testing notes
-  description: Optional steps or scenarios Jules should keep in mind while implementing/testing
-  placeholder: |
-  Example scenarios:
-  - Test with both single-image and multi-image galleries
-  - Test in reading view and live preview
-  - Test when some images fail to load
-  validations:
-  required: false
+  - type: textarea
+    id: testing_notes
+    attributes:
+      label: Manual testing notes
+      description: Optional steps or scenarios Jules should keep in mind while implementing/testing
+      placeholder: |
+        Example scenarios:
+        - Test with both single-image and multi-image galleries
+        - Test in reading view and live preview
+        - Test when some images fail to load
+    validations:
+      required: false

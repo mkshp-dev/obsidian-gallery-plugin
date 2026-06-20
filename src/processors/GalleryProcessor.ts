@@ -710,7 +710,7 @@ export class GalleryProcessor {
             let sawRemoval = false;
             mutations.forEach((mutation) => {
                 mutation.removedNodes.forEach((node) => {
-                    if (node === gallery.container || (node instanceof Element && node.contains(gallery.container))) {
+                    if (node === gallery.container || (node.instanceOf(Element) && node.contains(gallery.container))) {
                         sawRemoval = true;
                     }
                 });

@@ -211,7 +211,7 @@ export class CarouselView extends GalleryView {
      */
     public expandImage(image: IImageSource): void {
         const active = activeDocument.activeElement;
-        if (active && active instanceof HTMLElement) {
+        if (active && active.instanceOf(HTMLElement)) {
             this.lastFocusedElement = active;
         }
 

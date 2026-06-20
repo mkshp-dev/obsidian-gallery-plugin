@@ -63,7 +63,7 @@ export default tseslint.config(
 			// "obsidianmd/prefer-active-doc": "off",
 			//"obsidianmd/prefer-window-timers": "off",
 			// "obsidianmd/rule-custom-message": "off",
-			"obsidianmd/prefer-instanceof": "off",
+			// "obsidianmd/prefer-instanceof": "off",
 			"obsidianmd/no-tfile-tfolder-cast": "off"
 		}
 	}

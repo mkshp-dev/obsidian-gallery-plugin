@@ -252,7 +252,7 @@ export class ThumbnailView extends GalleryView {
     private expandImage(image: IImageSource): void {
         // Save the element that had focus so we can restore it later
         const active = activeDocument.activeElement;
-        if (active && active instanceof HTMLElement) {
+        if (active && active.instanceOf(HTMLElement)) {
             this.lastFocusedElement = active;
         }
 

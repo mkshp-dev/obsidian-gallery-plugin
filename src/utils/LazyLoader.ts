@@ -376,7 +376,7 @@ export class LazyLoader {
     const failedImages = activeDocument.querySelectorAll(`.${this.options.errorClass}`);
     
     failedImages.forEach(img => {
-      if (img instanceof HTMLImageElement) {
+      if (img.instanceOf(HTMLImageElement)) {
         const originalSrc = img.dataset.src;
         if (originalSrc) {
           img.classList.remove(this.options.errorClass);

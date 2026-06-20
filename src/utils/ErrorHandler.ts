@@ -37,7 +37,7 @@ export class ErrorHandler {
                         try { el.setAttribute(k, String(options.attr[k])); } catch (error) { Logger.debug('Ignored error:', error); }
                     }
                 }
-                if (options.href && el instanceof HTMLAnchorElement) {
+                if (options.href && el.instanceOf(HTMLAnchorElement)) {
                     el.href = options.href;
                 }
             }

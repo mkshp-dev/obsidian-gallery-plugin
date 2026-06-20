@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Added attestation for release assets
 - Optimize gallery rendering performance and improve array deduplication.
 - Fix syntax and indentation issues in the jules-dispatch GitHub Actions workflow.
 

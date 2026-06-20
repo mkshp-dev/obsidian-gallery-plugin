@@ -1,4 +1,3 @@
-import { Logger } from './Logger';
 import { IConfigError, ILoadError, IImageSource } from '../models/interfaces';
 
 /**
@@ -25,7 +24,7 @@ export class ErrorHandler {
 
         // Plain DOM fallback
         const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
-        const el = activeDocument.createElement(tagName);
+        const el = document.createElement(tagName);
         if (options) {
             if (typeof options === 'string') {
                 el.className = options;
@@ -37,8 +36,8 @@ export class ErrorHandler {
                         try { el.setAttribute(k, String(options.attr[k])); } catch {}
                     }
                 }
-                if (options.href && el.instanceOf(HTMLAnchorElement)) {
-                    (el as HTMLAnchorElement).href = options.href;
+                if (options.href && el instanceof HTMLAnchorElement) {
+                    el.href = options.href;
                 }
             }
         }
@@ -60,7 +59,7 @@ export class ErrorHandler {
      * Handle configuration errors
      */
     static handleConfigError(error: IConfigError, container: HTMLElement): void {
-        Logger.error('Gallery Config Error:', error);
+        console.error('Gallery Config Error:', error);
         
         const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-config-error' });
 
@@ -85,7 +84,7 @@ export class ErrorHandler {
      * Handle loading errors
      */
     static handleLoadError(error: ILoadError, container: HTMLElement): HTMLElement {
-        Logger.error('Gallery Load Error:', error);
+        console.error('Gallery Load Error:', error);
         
         const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-load-error', attr: { 'data-error-type': error.reason } });
 
@@ -118,7 +117,7 @@ export class ErrorHandler {
      * Handle general plugin errors
      */
     static handlePluginError(error: Error, context: string, container?: HTMLElement): void {
-        Logger.error(`Gallery Plugin Error (${context}):`, error);
+        console.error(`Gallery Plugin Error (${context}):`, error);
         
         if (container) {
             const errorEl = ErrorHandler.createElement(container, 'div', { cls: 'gallery-error gallery-plugin-error' });
@@ -228,7 +227,7 @@ export class ErrorHandler {
             const event = new CustomEvent('gallery:retry-image', {
                 detail: { source, element: loadingEl }
             });
-            activeDocument.dispatchEvent(event);
+            document.dispatchEvent(event);
         }, 500);
     }
 
@@ -292,7 +291,7 @@ export class ErrorHandler {
             try {
                 callback(error);
             } catch (callbackError) {
-                Logger.error('Error in error callback:', callbackError);
+                console.error('Error in error callback:', callbackError);
             }
         }
     }

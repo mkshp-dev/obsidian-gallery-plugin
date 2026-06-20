@@ -1,4 +1,3 @@
-import { Logger } from './Logger';
 /**
  * Lazy loading utility using Intersection Observer API
  * Optimizes gallery performance by loading images only when needed
@@ -53,7 +52,7 @@ export class LazyLoader {
    */
   private initializeObserver(): void {
     if (!('IntersectionObserver' in window)) {
-      Logger.warn('IntersectionObserver not supported, falling back to immediate loading');
+      console.warn('IntersectionObserver not supported, falling back to immediate loading');
       return;
     }
 
@@ -157,7 +156,7 @@ export class LazyLoader {
         const newRetryCount = retryCount + 1;
         this.loadingElements.set(img, { src, retryCount: newRetryCount });
         
-        Logger.debug(`Retrying image load (${newRetryCount}/${this.options.retryAttempts}):`, src);
+        console.log(`Retrying image load (${newRetryCount}/${this.options.retryAttempts}):`, src);
         
         // Retry after delay
         setTimeout(() => {
@@ -336,7 +335,7 @@ export class LazyLoader {
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
 
     try {
-      const canvas = activeDocument.createElement('canvas');
+      const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
 
@@ -373,11 +372,11 @@ export class LazyLoader {
    * Retry failed images
    */
   retryFailed(): void {
-    const failedImages = activeDocument.querySelectorAll(`.${this.options.errorClass}`);
+    const failedImages = document.querySelectorAll(`.${this.options.errorClass}`);
     
     failedImages.forEach(img => {
-      if (img.instanceOf(HTMLImageElement)) {
-        const originalSrc = (img as HTMLImageElement).dataset.src;
+      if (img instanceof HTMLImageElement) {
+        const originalSrc = img.dataset.src;
         if (originalSrc) {
           img.classList.remove(this.options.errorClass);
           this.observe(img, originalSrc);
@@ -407,7 +406,7 @@ export class LazyLoader {
     const loader = new LazyLoader(options);
     
     images.forEach(({ src, alt }, index) => {
-      const img = activeDocument.createElement('img');
+      const img = document.createElement('img');
       img.alt = alt || `Gallery image ${index + 1}`;
       img.dataset.src = src;
       

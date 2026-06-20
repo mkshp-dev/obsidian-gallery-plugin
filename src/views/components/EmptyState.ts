@@ -1,4 +1,3 @@
-import { Logger } from '../utils/Logger';
 /**
  * EmptyState component for displaying empty gallery states
  * Provides user-friendly messages when no images are found
@@ -225,7 +224,7 @@ export class EmptyState {
         try {
           actionConfig.action();
         } catch (error) {
-          Logger.error('Error executing empty state action:', error);
+          console.error('Error executing empty state action:', error);
         }
       });
     });

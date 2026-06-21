@@ -92,4 +92,60 @@ describe('ImmichShareSourceResolver', () => {
         expect(result.images).toHaveLength(0);
         expect(result.errors[0]).toMatch(/Immich share not found or inaccessible/);
     });
+
+    it('should authenticate with password if provided', async () => {
+        (requestUrl as jest.Mock)
+            .mockResolvedValueOnce({
+                status: 201,
+                headers: {
+                    'set-cookie': [
+                        'other_cookie=xyz; Path=/;',
+                        'immich_shared_link_token=authenticatedToken; Path=/;'
+                    ]
+                },
+                json: {}
+            })
+            .mockResolvedValueOnce({
+                status: 200,
+                json: {
+                    assets: [
+                        { id: '999', originalFileName: 'private.jpg' }
+                    ]
+                }
+            });
+
+        const source: IImmichShareSourceConfig = {
+            type: 'immich-share',
+            url: 'https://immich.example.com/share/locked123',
+            password: 'secretPassword'
+        };
+        const result = await resolver.resolve(source, {});
+
+        expect(requestUrl).toHaveBeenNthCalledWith(1, {
+            url: 'https://immich.example.com/api/shared-links/login?key=locked123',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                password: 'secretPassword'
+            })
+        });
+
+        expect(requestUrl).toHaveBeenNthCalledWith(2, {
+            url: 'https://immich.example.com/api/shared-links/me?key=locked123',
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'x-immich-share-key': 'locked123',
+                'Cookie': 'immich_shared_link_token=authenticatedToken'
+            }
+        });
+
+        expect(result.errors).toHaveLength(0);
+        expect(result.images).toHaveLength(1);
+        expect(result.images[0].path).toBe('https://immich.example.com/api/assets/999/original?key=locked123');
+        expect(result.images[0].displayName).toBe('private.jpg');
+    });
 });

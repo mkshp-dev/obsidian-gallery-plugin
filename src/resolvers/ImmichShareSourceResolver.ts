@@ -9,13 +9,16 @@ interface ImmichAsset {
     [key: string]: unknown;
 }
 
+interface ImmichAlbum {
+    id?: string;
+    assets?: ImmichAsset[];
+    [key: string]: unknown;
+}
+
 interface ImmichShareResponse {
     assets?: ImmichAsset[];
     asset?: ImmichAsset;
-    album?: {
-        assets?: ImmichAsset[];
-        [key: string]: unknown;
-    };
+    album?: ImmichAlbum;
     [key: string]: unknown;
 }
 
@@ -46,6 +49,47 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
             const basePath = shareMatch[1]; // could be empty string
             const shareKey = shareMatch[2];
 
+            let activeCookie: string | undefined;
+
+            // Password authentication if password is provided
+            if (source.password) {
+                const loginUrl = `${urlObj.origin}${basePath}/api/shared-links/login?key=${shareKey}`;
+                try {
+                    const loginRes = await requestUrl({
+                        url: loginUrl,
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            password: source.password
+                        })
+                    });
+                    if (loginRes.status === 200 || loginRes.status === 201) {
+                        const setCookieHeader = loginRes.headers['set-cookie'] || loginRes.headers['Set-Cookie'];
+                        if (setCookieHeader) {
+                            const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+                            for (const cookieStr of cookies) {
+                                if (typeof cookieStr === 'string') {
+                                    const match = cookieStr.match(/immich_shared_link_token=([^;]+)/);
+                                    if (match) {
+                                        activeCookie = `immich_shared_link_token=${match[1]}`;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        errors.push(`Password authentication failed for Immich share (HTTP ${loginRes.status})`);
+                        return { images, errors };
+                    }
+                } catch (err) {
+                    errors.push(`Failed to authenticate password for Immich share: ${err instanceof Error ? err.message : String(err)}`);
+                    return { images, errors };
+                }
+            }
+
             // In Immich API, to get shared link details, we can use `/api/shared-links/me` with `x-immich-share-key` header
             // This returns the shared link details including assets. We also append the key as a query parameter
             // to ensure the backend controller maps and retrieves the correct assets.
@@ -53,13 +97,17 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
             let response: RequestUrlResponse;
             try {
+                const requestHeaders: Record<string, string> = {
+                    'Accept': 'application/json',
+                    'x-immich-share-key': shareKey
+                };
+                if (activeCookie) {
+                    requestHeaders['Cookie'] = activeCookie;
+                }
                 response = await requestUrl({
                     url: apiUrl,
                     method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'x-immich-share-key': shareKey
-                    }
+                    headers: requestHeaders
                 });
             } catch (err) {
                 const status = typeof err === 'object' && err !== null && 'status' in err
@@ -98,20 +146,24 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
             }
 
             if (assets.length === 0) {
-                if (data.album && typeof data.album === 'object' && (data.album as any).id) {
-                    const albumId = (data.album as any).id;
+                if (data.album && typeof data.album === 'object' && typeof data.album.id === 'string') {
+                    const albumId = data.album.id;
                     const albumInfoUrl = `${urlObj.origin}${basePath}/api/albums/${String(albumId)}?key=${shareKey}`;
                     try {
+                        const requestHeaders: Record<string, string> = {
+                            'Accept': 'application/json',
+                            'x-immich-share-key': shareKey
+                        };
+                        if (activeCookie) {
+                            requestHeaders['Cookie'] = activeCookie;
+                        }
                         const albumRes = await requestUrl({
                             url: albumInfoUrl,
                             method: 'GET',
-                            headers: {
-                                'Accept': 'application/json',
-                                'x-immich-share-key': shareKey
-                            }
+                            headers: requestHeaders
                         });
                         if (albumRes.status === 200) {
-                            const albumData = albumRes.json;
+                            const albumData = albumRes.json as ImmichAlbum;
                             if (albumData && typeof albumData === 'object' && Array.isArray(albumData.assets) && albumData.assets.length > 0) {
                                 assets = albumData.assets;
                             }
@@ -125,18 +177,22 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                 if (assets.length === 0) {
                     const genericAssetsUrl = `${urlObj.origin}${basePath}/api/assets?key=${shareKey}`;
                     try {
+                        const requestHeaders: Record<string, string> = {
+                            'Accept': 'application/json',
+                            'x-immich-share-key': shareKey
+                        };
+                        if (activeCookie) {
+                            requestHeaders['Cookie'] = activeCookie;
+                        }
                         const genericRes = await requestUrl({
                             url: genericAssetsUrl,
                             method: 'GET',
-                            headers: {
-                                'Accept': 'application/json',
-                                'x-immich-share-key': shareKey
-                            }
+                            headers: requestHeaders
                         });
                         if (genericRes.status === 200) {
-                            const genericData = genericRes.json;
+                            const genericData = genericRes.json as unknown;
                             if (Array.isArray(genericData) && genericData.length > 0) {
-                                assets = genericData;
+                                assets = genericData as ImmichAsset[];
                             }
                         }
                     } catch {

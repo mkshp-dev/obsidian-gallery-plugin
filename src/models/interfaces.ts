@@ -17,6 +17,7 @@ export interface IExternalSourceConfig {
 export interface IImmichShareSourceConfig {
   type: 'immich-share';
   url: string;
+  password?: string;
 }
 
 export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig;

@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Reworked Gallery View codeblock syntax to support a new `sources` + `view` schema while keeping existing gallery blocks backward compatible.
 
 ## 1.0.10 - 2026-06-21
 

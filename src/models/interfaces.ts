@@ -3,18 +3,39 @@
  * Based on contracts defined in contracts/interfaces.md
  */
 
+export interface ILocalSourceConfig {
+  type: 'local';
+  path: string;
+  recursive?: boolean;
+}
+
+export interface IExternalSourceConfig {
+  type: 'external';
+  urls: string[];
+}
+
+export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig;
+
+export interface IViewConfig {
+  type: 'thumbnail' | 'carousel' | 'grid';
+  [key: string]: unknown;
+}
+
 export interface IGalleryConfig {
   /** Target folder or file path */
   path: string;
   
   /** Display view type */
-  view?: 'thumbnail' | 'carousel' | 'grid';
+  view?: 'thumbnail' | 'carousel' | 'grid' | IViewConfig;
   
   /** Include subdirectories (default: true) */
   recursive?: boolean;
   
   /** Optional list of external image URLs */
   urls?: string[];
+
+  /** Sources to fetch images from */
+  sources?: ISourceConfig[];
 
   /** Optional image limit */
   limit?: number;

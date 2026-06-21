@@ -1,4 +1,4 @@
-import { IGalleryConfig } from './interfaces';
+import { IGalleryConfig, ISourceConfig, IViewConfig } from './interfaces';
 
 /**
  * Gallery configuration parsed from code block parameters
@@ -6,27 +6,57 @@ import { IGalleryConfig } from './interfaces';
  */
 export class GalleryConfig implements IGalleryConfig {
     public readonly path: string;
-    public readonly view: 'thumbnail' | 'carousel' | 'grid';
+    public readonly view: IViewConfig;
     public readonly recursive: boolean;
     public readonly urls?: string[];
+    public readonly sources: ISourceConfig[];
 
-    constructor(config: Partial<IGalleryConfig> & { urls?: string[] }) {
-        // Path may be optional if urls are provided
-        if ((!config.path || typeof config.path !== 'string' || config.path.trim() === '') && !config.urls) {
-            throw new Error('Gallery path is required unless remote urls are provided');
+    constructor(config: Partial<IGalleryConfig> & { urls?: string[], sources?: ISourceConfig[] }) {
+        this.sources = config.sources || [];
+
+        if (config.path && typeof config.path === 'string' && config.path.trim() !== '') {
+            this.sources.push({
+                type: 'local',
+                path: this.sanitizePath(config.path.trim()),
+                recursive: config.recursive !== undefined ? config.recursive : true
+            });
         }
 
-        // Sanitize and validate path if present
+        if (config.urls && config.urls.length > 0) {
+            this.sources.push({
+                type: 'external',
+                urls: config.urls
+            });
+        }
+
+        if (this.sources.length === 0) {
+            throw new Error('Gallery sources are required (either in sources array, or via path/urls)');
+        }
+
+        // Set up the view object
+        let viewType: string = 'thumbnail';
+        if (config.view) {
+            if (typeof config.view === 'string') {
+                viewType = config.view;
+                this.view = { type: viewType as 'thumbnail' | 'carousel' | 'grid' };
+            } else if (typeof config.view === 'object' && config.view !== null) {
+                this.view = config.view;
+                viewType = this.view.type || 'thumbnail';
+            } else {
+                this.view = { type: 'thumbnail' };
+            }
+        } else {
+            this.view = { type: 'thumbnail' };
+        }
+
+        // Set properties for backward compatibility
         this.path = config.path && typeof config.path === 'string' ? this.sanitizePath(config.path.trim()) : '';
-        
-        // Set defaults for optional parameters
-        this.view = config.view || 'thumbnail';
         this.recursive = config.recursive !== undefined ? config.recursive : true;
         this.urls = config.urls;
 
         // Validate view type
-        if (!['thumbnail', 'carousel', 'grid'].includes(this.view)) {
-            throw new Error(`Invalid view type: ${this.view}. Must be one of: thumbnail, carousel, grid`);
+        if (!['thumbnail', 'carousel', 'grid'].includes(viewType)) {
+            throw new Error(`Invalid view type: ${viewType}. Must be one of: thumbnail, carousel, grid`);
         }
     }
 
@@ -55,12 +85,22 @@ export class GalleryConfig implements IGalleryConfig {
         }
 
         const data = yamlData as Record<string, unknown>;
+        let viewType: IViewConfig | undefined;
+        if (data.view) {
+            if (typeof data.view === 'string' && ['thumbnail', 'carousel', 'grid'].includes(data.view)) {
+                viewType = { type: data.view as 'thumbnail' | 'carousel' | 'grid' };
+            } else if (typeof data.view === 'object' && data.view !== null) {
+                viewType = data.view as IViewConfig;
+            }
+        }
+
         return new GalleryConfig({
             path: typeof data.path === 'string' ? data.path : undefined,
-            view: typeof data.view === 'string' ? data.view as 'thumbnail' | 'carousel' | 'grid' : undefined,
+            view: viewType,
             recursive: typeof data.recursive === 'boolean' ? data.recursive : undefined,
-            urls: Array.isArray(data.urls) ? (data.urls as unknown[]) : undefined
-        } as Partial<IGalleryConfig> & { urls?: string[] });
+            urls: Array.isArray(data.urls) ? (data.urls as string[]) : undefined,
+            sources: Array.isArray(data.sources) ? (data.sources as ISourceConfig[]) : undefined
+        });
     }
 
     /**
@@ -68,9 +108,8 @@ export class GalleryConfig implements IGalleryConfig {
      */
     isValid(): boolean {
         try {
-            return this.path.length > 0 && 
-                   ['thumbnail', 'carousel', 'grid'].includes(this.view) &&
-                   typeof this.recursive === 'boolean';
+            return this.sources.length > 0 &&
+                   ['thumbnail', 'carousel', 'grid'].includes(this.view.type);
         } catch {
             return false;
         }
@@ -83,7 +122,9 @@ export class GalleryConfig implements IGalleryConfig {
         return {
             path: this.path,
             view: this.view,
-            recursive: this.recursive
+            recursive: this.recursive,
+            urls: this.urls,
+            sources: this.sources
         };
     }
 

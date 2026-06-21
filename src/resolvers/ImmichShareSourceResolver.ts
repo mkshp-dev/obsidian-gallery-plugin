@@ -12,6 +12,10 @@ interface ImmichAsset {
 interface ImmichShareResponse {
     assets?: ImmichAsset[];
     asset?: ImmichAsset;
+    album?: {
+        assets?: ImmichAsset[];
+        [key: string]: unknown;
+    };
     [key: string]: unknown;
 }
 
@@ -42,9 +46,10 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
             const basePath = shareMatch[1]; // could be empty string
             const shareKey = shareMatch[2];
 
-            // In Immich API, to get shared link details, we can use `/api/shared-link/me` with `x-immich-share-key` header
-            // This returns the shared link details including assets.
-            const apiUrl = `${urlObj.origin}${basePath}/api/shared-link/me`;
+            // In Immich API, to get shared link details, we can use `/api/shared-links/me` with `x-immich-share-key` header
+            // This returns the shared link details including assets. We also append the key as a query parameter
+            // to ensure the backend controller maps and retrieves the correct assets.
+            const apiUrl = `${urlObj.origin}${basePath}/api/shared-links/me?key=${shareKey}`;
 
             let response: RequestUrlResponse;
             try {
@@ -75,10 +80,15 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
             const data = response.json as ImmichShareResponse;
 
-            // The response for /api/shared-link/me typically contains the share info.
+            // The response for /api/shared-links/me typically contains the share info.
             // If it's an album share, the assets are in data.assets or similar.
             // Some Immich versions return the assets directly, or under a nested property.
             let assets: ImmichAsset[] = Array.isArray(data.assets) ? data.assets : [];
+
+            // Fallback for album shares where assets are nested inside the album object
+            if (assets.length === 0 && data.album && typeof data.album === 'object' && Array.isArray(data.album.assets)) {
+                assets = data.album.assets;
+            }
 
             // Fallback for single asset shares or different structure where assets are at the root
             if (assets.length === 0 && Array.isArray(data)) {
@@ -88,18 +98,66 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
             }
 
             if (assets.length === 0) {
+                if (data.album && typeof data.album === 'object' && (data.album as any).id) {
+                    const albumId = (data.album as any).id;
+                    const albumInfoUrl = `${urlObj.origin}${basePath}/api/albums/${String(albumId)}?key=${shareKey}`;
+                    try {
+                        const albumRes = await requestUrl({
+                            url: albumInfoUrl,
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json',
+                                'x-immich-share-key': shareKey
+                            }
+                        });
+                        if (albumRes.status === 200) {
+                            const albumData = albumRes.json;
+                            if (albumData && typeof albumData === 'object' && Array.isArray(albumData.assets) && albumData.assets.length > 0) {
+                                assets = albumData.assets;
+                            }
+                        }
+                    } catch {
+                        // ignore probe errors
+                    }
+                }
+
+                // If still empty, try GET /api/assets
+                if (assets.length === 0) {
+                    const genericAssetsUrl = `${urlObj.origin}${basePath}/api/assets?key=${shareKey}`;
+                    try {
+                        const genericRes = await requestUrl({
+                            url: genericAssetsUrl,
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json',
+                                'x-immich-share-key': shareKey
+                            }
+                        });
+                        if (genericRes.status === 200) {
+                            const genericData = genericRes.json;
+                            if (Array.isArray(genericData) && genericData.length > 0) {
+                                assets = genericData;
+                            }
+                        }
+                    } catch {
+                        // ignore probe errors
+                    }
+                }
+            }
+
+            if (assets.length === 0) {
                 // If it's empty, it resolves correctly but with no images.
                 return { images, errors };
             }
 
             for (const asset of assets) {
                 if (!asset || typeof asset !== 'object' || !asset.id) continue;
-                // Immich has /api/asset/thumbnail/{id} or /api/asset/file/{id}
+                // Immich has /api/assets/{id}/thumbnail or /api/assets/{id}/original
                 // With share link, we include the key in the URL.
                 // We'll use the original file download URL with the key. Or thumbnail.
                 // For gallery, viewing the full image or high res preview is best.
-                // In Immich, /api/asset/file/{id}?isThumb=false&key={shareKey}
-                const imageUrl = `${urlObj.origin}${basePath}/api/asset/file/${String(asset.id)}?key=${shareKey}`;
+                // In Immich, /api/assets/{id}/original?key={shareKey}
+                const imageUrl = `${urlObj.origin}${basePath}/api/assets/${String(asset.id)}/original?key=${shareKey}`;
                 try {
                     const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
                     const imgSource = ImageSource.fromUrl(imageUrl, originalFileName);

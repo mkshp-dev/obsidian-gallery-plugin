@@ -1,3 +1,4 @@
+import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext } from 'obsidian';
 import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceConfig, ObsidianDOMExtensions } from '../models/interfaces';
@@ -11,7 +12,6 @@ import { EmptyState } from '../views/components/EmptyState';
 import { ImageValidator } from '../utils/ImageValidator';
 import { FileSizeValidator } from '../utils/FileSizeValidator';
 import { ImageLoader } from '../utils/ImageLoader';
-import { ImageSource } from '../models/ImageSource';
 
 export interface IGalleryProcessingOptions {
   errorDisplayMode?: 'full' | 'text' | 'hidden';
@@ -47,6 +47,7 @@ export class GalleryProcessor {
     private imageValidator: ImageValidator;
     private fileSizeValidator: FileSizeValidator;
     private activeGalleries: Map<string, GalleryInstance> = new Map();
+    private resolverRegistry: SourceResolverRegistry;
 
     private readonly DEFAULT_OPTIONS: Required<IGalleryProcessingOptions> = {
         errorDisplayMode: 'full',
@@ -65,6 +66,7 @@ export class GalleryProcessor {
         this.viewFactory = viewFactory;
         this.imageValidator = new ImageValidator();
         this.fileSizeValidator = new FileSizeValidator();
+        this.resolverRegistry = new SourceResolverRegistry(contentScanner);
     }
 
     /**
@@ -237,32 +239,16 @@ export class GalleryProcessor {
 
             if (config.sources) {
                 for (const source of config.sources) {
-                    if (source.type === 'local' && source.path.trim() !== '') {
-                        const scanned = await Promise.race([
-                            this.contentScanner.scanPath(source.path, source.recursive),
-                            new Promise<never>((_, reject) =>
-                                window.setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
-                            )
-                        ]);
-                        if (scanned) {
-                            for (const img of scanned) {
-                                if (!images.find(existing => existing.path === img.path)) {
-                                    images.push(img);
-                                }
-                            }
-                        }
-                    } else if (source.type === 'external' && source.urls && Array.isArray(source.urls)) {
-                        for (const url of source.urls) {
-                            try {
-                                const external = ImageSource.fromUrl(url);
-                                // Avoid duplicates by path
-                                if (!images.find(img => img.path === external.path)) {
-                                    images.push(external);
-                                }
-                            } catch {
-                                // Ignore invalid URL entries but record error
-                                result.errors.push(`Invalid URL in external source urls list: ${url}`);
-                            }
+                    const resolveContext = { timeoutMs: options.timeoutMs };
+                    const { images: resolvedImages, errors: resolveErrors } = await this.resolverRegistry.resolveSource(source, resolveContext);
+
+                    if (resolveErrors.length > 0) {
+                        result.errors.push(...resolveErrors);
+                    }
+
+                    for (const img of resolvedImages) {
+                        if (!images.find(existing => existing.path === img.path)) {
+                            images.push(img);
                         }
                     }
                 }

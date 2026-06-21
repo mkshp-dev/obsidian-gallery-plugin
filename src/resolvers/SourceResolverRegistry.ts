@@ -2,6 +2,7 @@ import { ISourceConfig, IImageSource, IContentScanner } from '../models/interfac
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { LocalSourceResolver } from './LocalSourceResolver';
 import { ExternalSourceResolver } from './ExternalSourceResolver';
+import { ImmichShareSourceResolver } from './ImmichShareSourceResolver';
 
 export class SourceResolverRegistry {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -10,6 +11,7 @@ export class SourceResolverRegistry {
     constructor(contentScanner: IContentScanner) {
         this.registerResolver(new LocalSourceResolver(contentScanner));
         this.registerResolver(new ExternalSourceResolver());
+        this.registerResolver(new ImmichShareSourceResolver());
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

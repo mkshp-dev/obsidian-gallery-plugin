@@ -30,6 +30,13 @@ The plugin utilizes a structured nested configuration schema (v2). Legacy top-le
 | `type` | string | — | **Required**. Must be `external`. |
 | `urls` | list of strings | — | **Required**. List of remote image URLs to load (requires enabling remote images in settings). |
 
+#### Immich Share Source (`type: immich-share`)
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `type` | string | — | **Required**. Must be `immich-share`. |
+| `url` | string | — | **Required**. The public Immich share link URL. |
+| `password` | string | — | **Optional**. The password required to access the shared link, if password protection is enabled. |
+
 ---
 
 ## Backward Compatibility (v1 Schema)

@@ -20,6 +20,21 @@ view:
 ```
 ```
 
+### Password-Protected Links
+
+If your Immich shared link is protected by a password, you can specify the password using the optional `password` field:
+
+```yaml
+```obsidian-gallery
+sources:
+  - type: immich-share
+    url: https://photos.example.com/share/abc1234
+    password: "your-album-password"
+view:
+  type: grid
+```
+```
+
 ## Features
 
 - Works seamlessly with all gallery views (`thumbnail`, `grid`, `carousel`).
@@ -43,5 +58,6 @@ view:
 ## Troubleshooting
 
 - **Invalid URL:** Make sure the URL points to a valid Immich share link (typically containing `/share/`).
+- **Password Required / 401 Unauthorized:** If the shared album requires a password and you haven't provided it, or if the password provided is incorrect, you will see a password authentication failure error. Make sure to specify the correct password in the `password` field of your source configuration.
 - **Share not found:** The share may have been deleted, expired, or you might not have network access to the Immich server.
 - **Empty share:** If the album is empty, the gallery will render normally but without any images.

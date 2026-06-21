@@ -9,16 +9,22 @@ Remote images are disabled by default to protect your privacy. To use them, foll
 1. Open **Settings → Image Gallery**.
 2. Enable **Allow remote images**.
 
-Then add a `urls` list to your code block:
+Then add external sources to your code block:
 
 ````markdown
 ```obs-gallery
-view: thumbnail
-urls:
-  - https://example.com/photos/cover.jpg
-  - https://cdn.example.org/gallery/img123.webp
+sources:
+  - type: external
+    urls:
+      - https://example.com/photos/cover.jpg
+      - https://cdn.example.org/gallery/img123.webp
+view:
+  type: thumbnail
 ```
 ````
+
+> [!NOTE]
+> The legacy syntax using a root-level `urls:` key is still supported for backward compatibility, but the v2 `sources` array format is preferred.
 
 ## Notes
 

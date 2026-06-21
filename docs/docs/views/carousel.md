@@ -10,7 +10,10 @@ A horizontally scrolling view with previous/next navigation controls.
 
 ````markdown
 ```obs-gallery
-path: Images/Screenshots
-view: carousel
+sources:
+  - type: local
+    path: Images/Screenshots
+view:
+  type: carousel
 ```
 ````

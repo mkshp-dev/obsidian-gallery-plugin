@@ -30,10 +30,16 @@ Create galleries in your notes using code blocks:
 
 ````markdown
 ```obs-gallery
-path: Images/Screenshots
-view: thumbnail
+sources:
+  - type: local
+    path: Images/Screenshots
+view:
+  type: thumbnail
 ```
 ````
+
+> [!NOTE]
+> The plugin fully supports the legacy v1 syntax (e.g., `path: Images/Screenshots`) for backward compatibility, but the v2 nested `sources` schema is preferred.
 
 ## Usage examples
 
@@ -41,8 +47,11 @@ view: thumbnail
 Display all images from a folder:
 ````markdown
 ```obs-gallery
-path: Photos/Vacation2024
-view: thumbnail
+sources:
+  - type: local
+    path: Photos/Vacation2024
+view:
+  type: thumbnail
 ```
 ````
 
@@ -52,8 +61,11 @@ view: thumbnail
 Horizontal scrolling carousel with controls:
 ````markdown
 ```obs-gallery
-path: Images/Screenshots
-view: carousel
+sources:
+  - type: local
+    path: Images/Screenshots
+view:
+  type: carousel
 ```
 ````
 
@@ -63,54 +75,72 @@ view: carousel
 Pinterest-style layout with variable heights:
 ````markdown
 ```obs-gallery
-path: Projects/WebDev
-view: grid
-recursive: true
+sources:
+  - type: local
+    path: Projects/WebDev
+    recursive: true
+view:
+  type: grid
 ```
 ````
 
 ![Grid View](docs/docs/views/Grid.png)
 
-### With External Images (Beta)
+### With External Images
 Include remote images (requires enabling in settings):
 ````markdown
 ```obs-gallery
-urls:
-  - https://picsum.photos/800/600?random=1
-  - https://picsum.photos/800/600?random=2
-  - https://picsum.photos/800/600?random=3
-  - https://picsum.photos/800/600?random=4
-view: grid
+sources:
+  - type: external
+    urls:
+      - https://picsum.photos/800/600?random=1
+      - https://picsum.photos/800/600?random=2
+      - https://picsum.photos/800/600?random=3
+      - https://picsum.photos/800/600?random=4
+view:
+  type: grid
 ```
 ````
 
 ![External URLs](docs/docs/views/External-linksOnly.png)
 
-## Configuration options
+## Configuration options (v2 Schema)
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `path` | Folder or file path (required when not using `urls`) | — |
-| `view` | Display style: `thumbnail`, `carousel`, `grid` | `thumbnail` |
-| `urls` | Optional list of remote image URLs (opt-in) | — |
-| `recursive` | Include images in subfolders | `false` |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `sources` | list of objects | **Required** (unless using legacy `path` or `urls`). A list of local or remote image sources to display. |
+| `view` | object or string | **Optional** (defaults to `{ type: 'thumbnail' }`). Can be a string (e.g., `thumbnail`) or an object containing a `type` property (`thumbnail`, `carousel`, or `grid`). |
+
+### Source Object Fields
+
+#### Local Source (`type: local`)
+* `type`: Must be `local`.
+* `path`: Vault-relative path to folder or file.
+* `recursive` (optional): Include subfolders (default: `true`).
+
+#### External Source (`type: external`)
+* `type`: Must be `external`.
+* `urls`: List of remote image URLs.
 
 ## Remote images (opt-in)
 
-You can reference externally hosted images using the `urls:` YAML list in your `obs-gallery` code block. Remote images are disabled by default to preserve privacy. The plugin exposes these related settings in the Gallery Plugin settings panel:
+You can reference externally hosted images using the `sources` YAML list in your `obs-gallery` code block. Remote images are disabled by default to preserve privacy. The plugin exposes these related settings in the Gallery Plugin settings panel:
 
 - `Allow remote images` (boolean) — enable loading images from external URLs.
 - `Remote load timeout (ms)` — how long the plugin waits for remote images before giving up.
 - `Validate remote content type` (optional) — when enabled the plugin will perform a lightweight HEAD request to verify the remote resource's Content-Type header looks like an image (e.g., `image/jpeg`) before attempting to load it. This can reduce accidental attempts to load non-image resources, at the cost of one extra small network request per URL.
 
-Example `urls:` usage:
+Example external sources usage:
 
 ````markdown
 ```obs-gallery
-view: thumbnail
-urls:
-  - https://example.com/photos/cover.jpg
-  - https://cdn.example.org/gallery/img123.webp
+sources:
+  - type: external
+    urls:
+      - https://example.com/photos/cover.jpg
+      - https://cdn.example.org/gallery/img123.webp
+view:
+  type: thumbnail
 ```
 ````
 

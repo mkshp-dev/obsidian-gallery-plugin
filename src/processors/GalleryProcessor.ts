@@ -1,6 +1,6 @@
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext } from 'obsidian';
-import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ObsidianDOMExtensions } from '../models/interfaces';
+import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceConfig, ObsidianDOMExtensions } from '../models/interfaces';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { ConfigValidator } from '../utils/ConfigValidator';
@@ -233,31 +233,37 @@ export class GalleryProcessor {
         }
 
         try {
-            // If a path is provided, scan the vault; otherwise start with empty list
             let images: IImageSource[] = [];
 
-            if (config.path && config.path.trim() !== '') {
-                const scanned = await Promise.race([
-                    this.contentScanner.scanPath(config.path, config.recursive),
-                    new Promise<never>((_, reject) => 
-                        window.setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
-                    )
-                ]);
-                images = scanned || [];
-            }
-
-            // Include any external URLs provided in the config (merge, avoid duplicates)
-            if (config.urls && Array.isArray(config.urls) && config.urls.length > 0) {
-                for (const url of config.urls) {
-                    try {
-                        const external = ImageSource.fromUrl(url);
-                        // Avoid duplicates by path
-                        if (!images.find(img => img.path === external.path)) {
-                            images.push(external);
+            if (config.sources) {
+                for (const source of config.sources) {
+                    if (source.type === 'local' && source.path.trim() !== '') {
+                        const scanned = await Promise.race([
+                            this.contentScanner.scanPath(source.path, source.recursive),
+                            new Promise<never>((_, reject) =>
+                                window.setTimeout(() => reject(new Error('Scanning timeout')), options.timeoutMs)
+                            )
+                        ]);
+                        if (scanned) {
+                            for (const img of scanned) {
+                                if (!images.find(existing => existing.path === img.path)) {
+                                    images.push(img);
+                                }
+                            }
                         }
-                    } catch {
-                        // Ignore invalid URL entries but record error
-                        result.errors.push(`Invalid URL in urls list: ${url}`);
+                    } else if (source.type === 'external' && source.urls && Array.isArray(source.urls)) {
+                        for (const url of source.urls) {
+                            try {
+                                const external = ImageSource.fromUrl(url);
+                                // Avoid duplicates by path
+                                if (!images.find(img => img.path === external.path)) {
+                                    images.push(external);
+                                }
+                            } catch {
+                                // Ignore invalid URL entries but record error
+                                result.errors.push(`Invalid URL in external source urls list: ${url}`);
+                            }
+                        }
                     }
                 }
             }
@@ -406,7 +412,15 @@ export class GalleryProcessor {
             }
 
             // Create view
-            const view = this.viewFactory.createView(config.view || 'thumbnail', container);
+            let viewType = 'thumbnail';
+            if (config.view) {
+                if (typeof config.view === 'string') {
+                    viewType = config.view;
+                } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
+                    viewType = (config.view as { type: string }).type;
+                }
+            }
+            const view = this.viewFactory.createView(viewType, container);
             
             // Create gallery instance
             const galleryInstance = new GalleryInstance(config, container, view, images);
@@ -538,7 +552,15 @@ export class GalleryProcessor {
             }
 
             // Create view
-            const view = this.viewFactory.createView(config.view || 'thumbnail', container);
+            let viewType = 'thumbnail';
+            if (config.view) {
+                if (typeof config.view === 'string') {
+                    viewType = config.view;
+                } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
+                    viewType = (config.view as { type: string }).type;
+                }
+            }
+            const view = this.viewFactory.createView(viewType, container);
             
             // Create gallery instance
             const gallery = new GalleryInstance(config, container, view, images);
@@ -667,35 +689,56 @@ export class GalleryProcessor {
      * Serialize config back to string format for re-processing
      */
     private serializeConfig(config: IGalleryConfig): string {
-        const lines: string[] = [];
-        
-        lines.push(`path: ${config.path}`);
-        
-        if (config.view && config.view !== 'thumbnail') {
-            lines.push(`view: ${config.view}`);
+        const out: Record<string, unknown> = {};
+        if (config.sources && config.sources.length > 0) {
+            out.sources = config.sources;
+        } else {
+            if (config.path) out.path = config.path;
+            if (config.urls) out.urls = config.urls;
+            if (config.recursive !== undefined) out.recursive = config.recursive;
         }
-        
-        if (config.recursive !== undefined && !config.recursive) {
-            lines.push(`recursive: false`);
-        }
-        
-        // Add any additional config properties that exist
-        if (config.limit && config.limit > 0) {
-            lines.push(`limit: ${config.limit}`);
-        }
-        
-        if (config.sort && config.sort !== 'name') {
-            lines.push(`sort: ${config.sort}`);
-        }
+        out.view = config.view;
+        if (config.limit) out.limit = config.limit;
+        if (config.sort) out.sort = config.sort;
 
-        if (config.urls && Array.isArray(config.urls) && config.urls.length > 0) {
-            // Serialize urls as YAML list
-            lines.push('urls:');
-            for (const u of config.urls) {
-                lines.push(`  - ${u}`);
+        // Basic yaml serializer for fallback
+        const lines: string[] = [];
+        if (out.sources) {
+            lines.push('sources:');
+            for (const src of out.sources as ISourceConfig[]) {
+                lines.push(`  - type: ${src.type}`);
+                if (src.type === 'local' && src.path) lines.push(`    path: ${src.path}`);
+                if (src.type === 'local' && src.recursive !== undefined) lines.push(`    recursive: ${(src.recursive) ? 'true' : 'false'}`);
+                if (src.type === 'external' && src.urls && Array.isArray(src.urls)) {
+                    lines.push('    urls:');
+                    for (const u of src.urls) lines.push(`      - ${u}`);
+                }
+            }
+        } else {
+            if (out.path) lines.push(`path: ${out.path as string}`);
+            if (out.recursive !== undefined) lines.push(`recursive: ${(out.recursive as boolean) ? 'true' : 'false'}`);
+            if (out.urls && Array.isArray(out.urls)) {
+                lines.push('urls:');
+                for (const u of out.urls) lines.push(`  - ${u as string}`);
             }
         }
-        
+
+        if (out.view) {
+            if (typeof out.view === 'string') {
+                lines.push(`view: ${out.view}`);
+            } else if (typeof out.view === 'object' && out.view !== null) {
+                lines.push('view:');
+                const v = out.view as Record<string, unknown>;
+                if (v.type) lines.push(`  type: ${v.type as string}`);
+                for (const k of Object.keys(v)) {
+                    if (k !== 'type') lines.push(`  ${k}: ${v[k] as string | number | boolean}`);
+                }
+            }
+        }
+
+        if (out.limit) lines.push(`limit: ${out.limit as number}`);
+        if (out.sort) lines.push(`sort: ${out.sort as string}`);
+
         return lines.join('\n');
     }
 

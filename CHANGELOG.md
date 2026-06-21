@@ -1,11 +1,16 @@
 # Changelog
 
 ## In-progress
+- Reworked Gallery View codeblock syntax to support a new `sources` + `view` schema while keeping existing gallery blocks backward compatible.
+
+## 1.0.10 - 2026-06-21
+
 - Removed Roadmap from README
 - Added Support section to README
 - Optimize gallery rendering performance and improve array deduplication.
 - Fix syntax and indentation issues in the jules-dispatch GitHub Actions workflow.
 - Added attestation for release assets
+
 
 ## 1.0.9 - 2026-06-20
 

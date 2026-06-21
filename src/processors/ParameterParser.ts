@@ -20,7 +20,7 @@ class ConfigError extends Error implements IConfigError {
  * Handles parsing and validation of gallery configuration
  */
 export class ParameterParser {
-    private static readonly ALLOWED_KEYS = ['path', 'view', 'recursive', 'urls'];
+    private static readonly ALLOWED_KEYS = ['path', 'view', 'recursive', 'urls', 'sources'];
     private static readonly VIEW_TYPES = ['thumbnail', 'carousel', 'grid'];
 
     /**
@@ -171,23 +171,27 @@ export class ParameterParser {
                 `Valid keys are: ${this.ALLOWED_KEYS.join(', ')}`);
         }
 
-        // Validate required keys: either path or urls must be provided
-        if (!config.path && !config.urls) {
+        // Validate required keys: either path, urls, or sources must be provided
+        if (!config.path && !config.urls && (!config.sources || !Array.isArray(config.sources) || config.sources.length === 0)) {
             throw this.createConfigError('missing_path_or_urls', 
-                'Either "path" or "urls" must be provided',
+                'Either "path", "urls", or "sources" must be provided',
                 'Add "path: your/folder/path" or a list of remote "urls:" to the configuration');
         }
 
         // Validate view type if provided
         const view = config.view;
-        if (view && typeof view === 'string' && !this.VIEW_TYPES.includes(view)) {
-            throw this.createConfigError('invalid_view',
-                `Invalid view type: ${view}`,
-                `Valid view types are: ${this.VIEW_TYPES.join(', ')}`);
-        } else if (view && typeof view !== 'string') {
-            throw this.createConfigError('invalid_view',
-                'Invalid view type: must be a string',
-                `Valid view types are: ${this.VIEW_TYPES.join(', ')}`);
+        if (view) {
+            let viewType = '';
+            if (typeof view === 'string') {
+                viewType = view;
+            } else if (typeof view === 'object' && view !== null && 'type' in view) {
+                viewType = (view as { type: string }).type;
+            }
+            if (viewType && !this.VIEW_TYPES.includes(viewType)) {
+                throw this.createConfigError('invalid_view',
+                    `View type must be a string (Use one of: ${this.VIEW_TYPES.join(', ')})`,
+                    `Valid view types are: ${this.VIEW_TYPES.join(', ')}`);
+            }
         }
 
         // Validate recursive parameter
@@ -212,18 +216,26 @@ export class ParameterParser {
         const errors: IConfigError[] = [];
 
         // Path validation
-        if ((!config.path || config.path.trim() === '') && !config.urls) {
-            errors.push(this.createConfigError('path_or_urls', 'Path cannot be empty unless urls are provided'));
+        if ((!config.path || config.path.trim() === '') && !config.urls && (!config.sources || config.sources.length === 0)) {
+            errors.push(this.createConfigError('path_or_urls', 'Path cannot be empty unless urls or sources are provided'));
         } else if (config.path && config.path.includes('..')) {
             errors.push(this.createConfigError('path', 
                 'Path cannot contain directory traversal (..)'));
         }
 
         // View validation
-        if (config.view && !this.VIEW_TYPES.includes(config.view)) {
-            errors.push(this.createConfigError('view', 
-                `Invalid view type: ${config.view}`,
-                `Valid types: ${this.VIEW_TYPES.join(', ')}`));
+        if (config.view) {
+            let viewType = '';
+            if (typeof config.view === 'string') {
+                viewType = config.view;
+            } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
+                viewType = (config.view as { type: string }).type;
+            }
+            if (viewType && !this.VIEW_TYPES.includes(viewType)) {
+                errors.push(this.createConfigError('view',
+                    `View type must be a string (Use one of: ${this.VIEW_TYPES.join(', ')})`,
+                    `Valid types: ${this.VIEW_TYPES.join(', ')}`));
+            }
         }
 
         // Recursive validation
@@ -302,10 +314,15 @@ recursive: true`;
      * Format configuration as YAML string
      */
     static formatAsYaml(config: IGalleryConfig): string {
-        return stringifyYaml({
-            path: config.path,
-            view: config.view,
-            recursive: config.recursive
-        });
+        const out: Record<string, unknown> = {};
+        if (config.sources && config.sources.length > 0) {
+            out.sources = config.sources;
+        } else {
+            if (config.path) out.path = config.path;
+            if (config.urls) out.urls = config.urls;
+            if (config.recursive !== undefined) out.recursive = config.recursive;
+        }
+        out.view = config.view;
+        return stringifyYaml(out);
     }
 }

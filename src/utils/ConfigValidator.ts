@@ -17,7 +17,9 @@ export class ConfigValidator {
         
         // Validate path only if no external urls provided
         if (!Array.isArray(config.urls) || config.urls.length === 0) {
-            errors.push(...this.validatePath(config.path));
+            if (!Array.isArray(config.sources) || config.sources.length === 0) {
+                errors.push(...this.validatePath(config.path));
+            }
         }
         
         // Validate view type
@@ -122,23 +124,31 @@ export class ConfigValidator {
     /**
      * Validate view type parameter
      */
-    private static validateView(view?: string): IConfigError[] {
+    private static validateView(view?: unknown): IConfigError[] {
         const errors: IConfigError[] = [];
         const validViews = ['thumbnail', 'carousel', 'grid'];
         
         if (view !== undefined) {
-            if (typeof view !== 'string') {
+            let viewType = '';
+            if (typeof view === 'string') {
+                viewType = view;
+            } else if (typeof view === 'object' && view !== null && 'type' in view) {
+                viewType = (view as { type: string }).type;
+            } else {
                 errors.push({
                     type: 'config',
                     field: 'view',
-                    message: 'View type must be a string',
+                    message: 'View type must be a string or object with type property',
                     suggestion: `Use one of: ${validViews.join(', ')}`
                 });
-            } else if (!validViews.includes(view)) {
+                return errors;
+            }
+
+            if (!validViews.includes(viewType)) {
                 errors.push({
                     type: 'config',
                     field: 'view',
-                    message: `Invalid view type: ${view}`,
+                    message: `Invalid view type: ${viewType}`,
                     suggestion: `Valid types are: ${validViews.join(', ')}`
                 });
             }
@@ -260,11 +270,21 @@ export class ConfigValidator {
      * Suggest corrections for invalid configuration
      */
     static suggestCorrections(config: IGalleryConfig): IGalleryConfig {
+        let viewType = 'thumbnail';
+        if (config.view) {
+            if (typeof config.view === 'string' && ['thumbnail', 'carousel', 'grid'].includes(config.view)) {
+                viewType = config.view;
+            } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
+                const typeVal = (config.view as Record<string, unknown>).type;
+                if (typeof typeVal === 'string' && ['thumbnail', 'carousel', 'grid'].includes(typeVal)) {
+                    viewType = typeVal;
+                }
+            }
+        }
+
         return {
             path: this.sanitizePath(config.path),
-            view: config.view && ['thumbnail', 'carousel', 'grid'].includes(config.view) 
-                ? config.view 
-                : 'thumbnail',
+            view: { type: viewType as 'thumbnail' | 'carousel' | 'grid' },
             recursive: typeof config.recursive === 'boolean' 
                 ? config.recursive 
                 : true

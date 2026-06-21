@@ -17,10 +17,16 @@ sidebar_position: 1
 
 ````markdown
 ```obs-gallery
-path: Photos/Vacation
-view: thumbnail
+sources:
+  - type: local
+    path: Photos/Vacation
+view:
+  type: thumbnail
 ```
 ````
+
+> [!NOTE]
+> The plugin fully supports the legacy v1 syntax (e.g., `path: Photos/Vacation`) for backward compatibility, but the v2 nested `sources` schema is preferred.
 
 ## Next steps
 

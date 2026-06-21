@@ -21,7 +21,7 @@ export interface IImageItem {
 class LegacyImageSource implements IImageSource {
   path: string;
   resourceUrl?: string;
-  type: 'local' | 'external';
+  type: 'local' | 'external' | 'immich-share';
   displayName: string;
   size?: number;
   dimensions?: { width: number; height: number };

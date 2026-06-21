@@ -7,7 +7,7 @@ import { IImageSource } from './interfaces';
 export class ImageSource implements IImageSource {
     public readonly path: string;
     public readonly resourceUrl?: string;
-    public readonly type: 'local' | 'external';
+    public readonly type: 'local' | 'external' | 'immich-share';
     public readonly displayName: string;
     public size?: number;
     public dimensions?: { width: number; height: number };
@@ -18,7 +18,7 @@ export class ImageSource implements IImageSource {
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    constructor(path: string, type: 'local' | 'external', displayName?: string, resourceUrl?: string) {
+    constructor(path: string, type: 'local' | 'external' | 'immich-share', displayName?: string, resourceUrl?: string) {
         this.path = path;
         this.resourceUrl = resourceUrl;
         this.type = type;

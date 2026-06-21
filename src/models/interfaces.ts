@@ -14,7 +14,13 @@ export interface IExternalSourceConfig {
   urls: string[];
 }
 
-export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig;
+export interface IImmichShareSourceConfig {
+  type: 'immich-share';
+  url: string;
+  password?: string;
+}
+
+export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig;
 
 export interface IViewConfig {
   type: 'thumbnail' | 'carousel' | 'grid';
@@ -52,7 +58,7 @@ export interface IImageSource {
   resourceUrl?: string;
   
   /** Source type */
-  type: 'local' | 'external';
+  type: 'local' | 'external' | 'immich-share';
   
   /** Display name for user */
   displayName: string;

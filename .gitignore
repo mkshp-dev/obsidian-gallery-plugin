@@ -36,3 +36,4 @@ package-lock.json
 .parcel-cache/
 .cache/
 .nyc_output/
+patch_immich4.sh

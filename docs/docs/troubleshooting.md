@@ -6,7 +6,7 @@ sidebar_position: 6
 
 ## Gallery not appearing
 
-- Verify the `path` exists in your vault and that the spelling and casing match exactly.
+- Verify that the path defined in your local source configuration (under `sources`) exists in your vault and that the spelling and casing match exactly.
 - Confirm images are in a supported format: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`.
 - Try switching between reading and editing mode to trigger a re-render.
 
@@ -30,4 +30,4 @@ sidebar_position: 6
 ## Performance with many images
 
 - The plugin uses lazy loading automatically.
-- Consider organizing large collections into subfolders and using `recursive: true` only when needed.
+- Consider organizing large collections into subfolders and using `recursive: true` under your local source only when needed.

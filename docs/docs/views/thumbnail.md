@@ -10,7 +10,10 @@ The default view. Displays images in a responsive grid. Clicking a thumbnail ope
 
 ````markdown
 ```obs-gallery
-path: Photos/Vacation
-view: thumbnail
+sources:
+  - type: local
+    path: Photos/Vacation
+view:
+  type: thumbnail
 ```
 ````

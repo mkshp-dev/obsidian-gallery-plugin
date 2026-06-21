@@ -10,8 +10,11 @@ A masonry-style grid with variable image heights, similar to a Pinterest layout.
 
 ````markdown
 ```obs-gallery
-path: Projects/WebDev
-view: grid
-recursive: true
+sources:
+  - type: local
+    path: Projects/WebDev
+    recursive: true
+view:
+  type: grid
 ```
 ````

@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- Added an internal API client/service layer for authenticated Immich connections.
 - Added an authenticated connection model and settings UI to support the authenticated `immich` provider path.
 - Added a command to generate Gallery View showcase notes and demo assets inside the vault.
 * Reorganized and refreshed Gallery View documentation to match the current `sources + view` schema, supported sources, and official plugin naming.

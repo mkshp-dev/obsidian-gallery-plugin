@@ -1,21 +1,8 @@
 import { requestUrl } from 'obsidian';
 import { IImmichConnection } from '../../models/interfaces';
 import { Logger } from '../../utils/Logger';
-
-export interface ImmichAsset {
-    id: string;
-    originalFileName?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: any;
-}
-
-export interface ImmichAlbum {
-    id: string;
-    albumName: string;
-    assets?: ImmichAsset[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: any;
-}
+import { ImmichAsset, ImmichAlbum } from '../../models/immich/ImmichTypes';
+import { ImmichHelpers } from '../../utils/immich/ImmichHelpers';
 
 export class ImmichClient {
     private connection: IImmichConnection;
@@ -23,18 +10,7 @@ export class ImmichClient {
 
     constructor(connection: IImmichConnection) {
         this.connection = connection;
-        this.baseUrl = this.normalizeBaseUrl(connection.baseUrl);
-    }
-
-    private normalizeBaseUrl(url: string): string {
-        try {
-            const urlObj = new URL(url);
-            // Remove trailing slash if present
-            return urlObj.origin + urlObj.pathname.replace(/\/$/, '');
-        } catch {
-            Logger.warn('Invalid base URL provided to ImmichClient', url);
-            return url.replace(/\/$/, '');
-        }
+        this.baseUrl = ImmichHelpers.normalizeBaseUrl(connection.baseUrl);
     }
 
     private getHeaders(): Record<string, string> {

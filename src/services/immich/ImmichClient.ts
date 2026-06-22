@@ -87,6 +87,34 @@ export class ImmichClient {
         return `${this.baseUrl}/api/assets/${assetId}/original`;
     }
 
+    public async validateConnection(): Promise<{ success: boolean; message: string }> {
+        if (!this.baseUrl) {
+            return { success: false, message: 'Invalid URL' };
+        }
+
+        const url = `${this.baseUrl}/api/albums`;
+        try {
+            const response = await requestUrl({
+                url,
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+
+            if (response.status === 200) {
+                return { success: true, message: 'Connection successful' };
+            } else if (response.status === 401 || response.status === 403) {
+                return { success: false, message: 'Authentication failed: Invalid API key' };
+            } else if (response.status === 404) {
+                return { success: false, message: 'Server responded, but API not found. Is this an Immich server?' };
+            } else {
+                return { success: false, message: `Unexpected server response: HTTP ${response.status}` };
+            }
+        } catch (e) {
+            Logger.debug(`Immich connection validation failed: ${e instanceof Error ? e.message : String(e)}`);
+            return { success: false, message: 'Server unreachable or invalid URL' };
+        }
+    }
+
     // Add auth to getAssetUrl so we can pass headers for rendering? Or for authenticated image delivery, that will be needed later.
     // The issue says: "no authenticated image delivery/rendering pipeline yet". So we only need the data endpoints for now.
 }

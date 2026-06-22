@@ -1,6 +1,7 @@
 import { Logger } from "./src/utils/Logger";
-import { Plugin, PluginSettingTab, Setting, App, MarkdownPostProcessorContext } from 'obsidian';
+import { Plugin, PluginSettingTab, Setting, App, MarkdownPostProcessorContext, Notice } from 'obsidian';
 import { ContentScanner } from './src/services/ContentScanner';
+import { ImmichClient } from './src/services/immich/ImmichClient';
 import { ViewFactory } from './src/views/ViewFactory';
 import { GalleryProcessor } from './src/processors/GalleryProcessor';
 import { VaultWatcher } from './src/utils/VaultWatcher';
@@ -174,6 +175,14 @@ class GallerySettingsTab extends PluginSettingTab {
                 );
 
             new Setting(connDiv)
+                .addButton(btn => btn
+                    .setButtonText('Test connection')
+                    .onClick(async () => {
+                        const client = new ImmichClient(conn);
+                        const result = await client.validateConnection();
+                        new Notice(result.message);
+                    })
+                )
                 .addButton(btn => btn
                     .setButtonText('Remove connection')
                     .setWarning()

@@ -109,4 +109,43 @@ describe('ImmichClient', () => {
         const url = client.getAssetUrl('asset123');
         expect(url).toBe('https://immich.example.com/api/assets/asset123/original');
     });
+
+    describe('validateConnection', () => {
+        it('should return success when connection is valid (status 200)', async () => {
+            (requestUrl as jest.Mock).mockResolvedValue({
+                status: 200,
+                json: []
+            });
+
+            const result = await client.validateConnection();
+            expect(result).toEqual({ success: true, message: 'Connection successful' });
+        });
+
+        it('should return auth failure when API key is invalid (status 401)', async () => {
+            (requestUrl as jest.Mock).mockResolvedValue({
+                status: 401,
+                json: { message: 'Unauthorized' }
+            });
+
+            const result = await client.validateConnection();
+            expect(result).toEqual({ success: false, message: 'Authentication failed: Invalid API key' });
+        });
+
+        it('should return not found when API is not found (status 404)', async () => {
+            (requestUrl as jest.Mock).mockResolvedValue({
+                status: 404,
+                text: 'Not Found'
+            });
+
+            const result = await client.validateConnection();
+            expect(result).toEqual({ success: false, message: 'Server responded, but API not found. Is this an Immich server?' });
+        });
+
+        it('should return generic unreachable error when network fails', async () => {
+            (requestUrl as jest.Mock).mockRejectedValue(new Error('Network Error'));
+
+            const result = await client.validateConnection();
+            expect(result).toEqual({ success: false, message: 'Server unreachable or invalid URL' });
+        });
+    });
 });

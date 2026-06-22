@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: Dev
 
       - name: Find active or queued Jules issue
         id: queue

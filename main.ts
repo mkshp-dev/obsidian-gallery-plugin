@@ -5,6 +5,7 @@ import { ViewFactory } from './src/views/ViewFactory';
 import { GalleryProcessor } from './src/processors/GalleryProcessor';
 import { VaultWatcher } from './src/utils/VaultWatcher';
 import { LazyLoader } from './src/utils/LazyLoader';
+import { ShowcaseGenerator } from './src/generators/ShowcaseGenerator';
 
 interface AppWithCommands extends App {
     commands: {
@@ -159,6 +160,15 @@ export default class GalleryPlugin extends Plugin {
         this.vaultWatcher.start();
 
         // Register the obs-gallery code block processor with professional pipeline
+        // Register showcase generator command
+        this.addCommand({
+            id: 'create-showcase-notes',
+            name: 'Create showcase notes',
+            callback: async () => {
+                await new ShowcaseGenerator(this.app).generateShowcase();
+            }
+        });
+
         this.registerMarkdownCodeBlockProcessor(
             'obs-gallery',
             async (source: string, el: HTMLElement, ctx) => {

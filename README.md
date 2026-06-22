@@ -127,6 +127,13 @@ For full details on configuring the plugin, usage examples, and available settin
 - **GIF** (`.gif`)
 - **WebP** (`.webp`)
 
+### Showcase Generator
+Gallery View includes a built-in command to generate a set of interactive demo notes inside your vault. This is the fastest way to see what the plugin can do and to learn the configuration syntax.
+
+1. Open the Obsidian command palette (`Ctrl+P` / `Cmd+P`)
+2. Run **Gallery View: Create showcase notes**
+3. Open the generated `GalleryDemo/` folder in your vault to explore working examples of local sources, external URLs, views, and template configurations for Immich shared links.
+
 ## Interface
 
 ### Thumbnail Grid

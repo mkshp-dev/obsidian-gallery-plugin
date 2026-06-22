@@ -34,6 +34,12 @@ view:
 ```
 ````
 
+## The Showcase Generator
+
+If you want a hands-on way to explore the plugin's features, Gallery View includes a built-in showcase generator.
+
+From the Obsidian command palette, run **Gallery View: Create showcase notes**. This will generate a safe-to-edit `GalleryDemo/` folder in your vault containing working examples of local sources, views, external URLs, and templates for Immich sharing.
+
 ## Where to go next
 
 - [Installation](./installation) — how to install the plugin

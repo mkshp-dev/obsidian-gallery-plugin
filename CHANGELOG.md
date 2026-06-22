@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- Added a command to generate Gallery View showcase notes and demo assets inside the vault.
 * Reorganized and refreshed Gallery View documentation to match the current `sources + view` schema, supported sources, and official plugin naming.
 
 ## 2.1.0 - 2026-06-22

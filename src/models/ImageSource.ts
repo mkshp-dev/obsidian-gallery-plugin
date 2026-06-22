@@ -109,7 +109,7 @@ export class ImageSource implements IImageSource {
      * Check if loading has timed out (10 seconds for external URLs)
      */
     hasTimedOut(): boolean {
-        if (this.type === 'local' || !this.loadStartTime) {
+        if (this.type === 'local' || this.type === 'immich' || !this.loadStartTime) {
             return false;
         }
         
@@ -189,11 +189,11 @@ export class ImageSource implements IImageSource {
 
     /**
      * Get the URL that should be used for loading in the browser
-     * For local files, returns resourceUrl if available, otherwise path
+     * For local files and authenticated immich assets, returns resourceUrl if available, otherwise path
      * For external files, returns path
      */
     getDisplayUrl(): string {
-        if (this.type === 'local' && this.resourceUrl) {
+        if ((this.type === 'local' || this.type === 'immich') && this.resourceUrl) {
             return this.resourceUrl;
         }
         return this.path;

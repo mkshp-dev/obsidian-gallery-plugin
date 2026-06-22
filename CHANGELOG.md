@@ -1,8 +1,12 @@
 # Changelog
 
 ## In-progress
+
+## 2.1.0 - 2026-06-22
+
 * Added support for Immich shared-link galleries as a new `immich-share` source in Gallery View.
 * Refactored gallery source loading into an internal resolver architecture to prepare for future source providers.
+
 
 ## 2.0.0 - 2026-06-21
 

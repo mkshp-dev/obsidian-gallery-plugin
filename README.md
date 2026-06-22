@@ -8,8 +8,8 @@ Create interactive image galleries in your Obsidian notes using simple code bloc
 
 - **Thumbnail galleries** — Display images in responsive grid layouts
 - **Modal viewer** — Click thumbnails to view full-size images
-- **Folder support** — Scan entire folders or individual files
-- **Simple syntax** — Easy `obs-gallery` code blocks
+- **Multiple Sources** — Load images from local folders, external URLs, or Immich shared links
+- **Simple syntax** — Easy `obs-gallery` code blocks with `sources` + `view` schema
 - **Responsive design** — Works on desktop and mobile
 - **Performance** — Lazy loading for large image collections
 - **Clean styling** — Integrates seamlessly with Obsidian themes
@@ -86,6 +86,18 @@ view:
 
 ![Grid View](docs/docs/views/Grid.png)
 
+### With Immich Shared Links
+Include images directly from an Immich public share:
+````markdown
+```obs-gallery
+sources:
+  - type: immich-share
+    url: https://photos.example.com/share/abc1234
+view:
+  type: grid
+```
+````
+
 ### With External Images
 Include remote images (requires enabling in settings):
 ````markdown
@@ -104,51 +116,9 @@ view:
 
 ![External URLs](docs/docs/views/External-linksOnly.png)
 
-## Configuration options (v2 Schema)
+## Documentation
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `sources` | list of objects | **Required** (unless using legacy `path` or `urls`). A list of local or remote image sources to display. |
-| `view` | object or string | **Optional** (defaults to `{ type: 'thumbnail' }`). Can be a string (e.g., `thumbnail`) or an object containing a `type` property (`thumbnail`, `carousel`, or `grid`). |
-
-### Source Object Fields
-
-#### Local Source (`type: local`)
-* `type`: Must be `local`.
-* `path`: Vault-relative path to folder or file.
-* `recursive` (optional): Include subfolders (default: `true`).
-
-#### External Source (`type: external`)
-* `type`: Must be `external`.
-* `urls`: List of remote image URLs.
-
-## Remote images (opt-in)
-
-You can reference externally hosted images using the `sources` YAML list in your `obs-gallery` code block. Remote images are disabled by default to preserve privacy. The plugin exposes these related settings in the Gallery Plugin settings panel:
-
-- `Allow remote images` (boolean) — enable loading images from external URLs.
-- `Remote load timeout (ms)` — how long the plugin waits for remote images before giving up.
-- `Validate remote content type` (optional) — when enabled the plugin will perform a lightweight HEAD request to verify the remote resource's Content-Type header looks like an image (e.g., `image/jpeg`) before attempting to load it. This can reduce accidental attempts to load non-image resources, at the cost of one extra small network request per URL.
-
-Example external sources usage:
-
-````markdown
-```obs-gallery
-sources:
-  - type: external
-    urls:
-      - https://example.com/photos/cover.jpg
-      - https://cdn.example.org/gallery/img123.webp
-view:
-  type: thumbnail
-```
-````
-
-Notes:
-
-- The plugin performs only syntactic validation of URLs by default. Enabling content-type validation activates the HEAD check described above.
-- Remote images are not automatically downloaded into your vault. If you need permanent local copies, mirror the assets manually.
-
+For full details on configuring the plugin, usage examples, and available settings, please refer to the [Gallery View documentation](https://mkshp-dev.github.io/obsidian-gallery-plugin/).
 
 ## Supported formats
 

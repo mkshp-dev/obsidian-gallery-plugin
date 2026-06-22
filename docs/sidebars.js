@@ -1,17 +1,38 @@
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
   tutorialSidebar: [
-    'getting-started',
+    'what-is-gallery-view',
     'installation',
-    'configuration',
-    'usage',
+    'gallery-block-syntax',
     {
       type: 'category',
-      label: 'View types',
+      label: 'Sources',
+      link: {
+        type: 'generated-index',
+        title: 'Sources',
+        description: 'Supported image source types for Gallery View.',
+        slug: '/category/sources',
+      },
+      items: [
+        'sources/local-vault-source',
+        'sources/external-urls',
+        'sources/immich-shared-links',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Views',
+      link: {
+        type: 'generated-index',
+        title: 'Views',
+        description: 'Supported gallery view types for Gallery View.',
+        slug: '/category/views',
+      },
       items: ['views/thumbnail', 'views/carousel', 'views/grid'],
     },
-    'remote-images',
+    'settings',
     'troubleshooting',
+    'changelog',
   ],
 };
 

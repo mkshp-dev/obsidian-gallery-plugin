@@ -2,25 +2,7 @@ import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { IImageSource, IImmichShareSourceConfig } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImageSource } from '../models/ImageSource';
-
-interface ImmichAsset {
-    id: string;
-    originalFileName?: string;
-    [key: string]: unknown;
-}
-
-interface ImmichAlbum {
-    id?: string;
-    assets?: ImmichAsset[];
-    [key: string]: unknown;
-}
-
-interface ImmichShareResponse {
-    assets?: ImmichAsset[];
-    asset?: ImmichAsset;
-    album?: ImmichAlbum;
-    [key: string]: unknown;
-}
+import { ImmichAsset, ImmichAlbum, ImmichShareResponse } from '../models/immich/ImmichTypes';
 
 export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichShareSourceConfig> {
     readonly type = 'immich-share';
@@ -146,7 +128,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
             }
 
             if (assets.length === 0) {
-                if (data.album && typeof data.album === 'object' && typeof data.album.id === 'string') {
+                if (!Array.isArray(data) && data.album && typeof data.album === 'object' && typeof data.album.id === 'string') {
                     const albumId = data.album.id;
                     const albumInfoUrl = `${urlObj.origin}${basePath}/api/albums/${String(albumId)}?key=${shareKey}`;
                     try {

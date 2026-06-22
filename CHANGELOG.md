@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- Extracted shared helper utilities for Immich sources into an internal `ImmichTypes` and `ImmichHelpers` layer to reduce duplication without merging setup requirements.
 - Added a test/validation flow for authenticated Immich connections in the plugin settings.
 - Added an internal API client/service layer for authenticated Immich connections.
 - Added an authenticated connection model and settings UI to support the authenticated `immich` provider path.

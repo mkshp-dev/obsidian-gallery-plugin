@@ -10,22 +10,22 @@ You can display images from an Immich shared album directly in Gallery View. Thi
 
 Add an `immich-share` source type to your gallery configuration and provide the share URL:
 
-```yaml
-```obsidian-gallery
+````markdown
+```obs-gallery
 sources:
   - type: immich-share
     url: https://photos.example.com/share/abc1234
 view:
   type: grid
 ```
-```
+````
 
 ### Password-Protected Links
 
 If your Immich shared link is protected by a password, you can specify the password using the optional `password` field:
 
-```yaml
-```obsidian-gallery
+````markdown
+```obs-gallery
 sources:
   - type: immich-share
     url: https://photos.example.com/share/abc1234
@@ -33,7 +33,7 @@ sources:
 view:
   type: grid
 ```
-```
+````
 
 ## Features
 
@@ -43,8 +43,8 @@ view:
 
 ### Mixed Sources Example
 
-```yaml
-```obsidian-gallery
+````markdown
+```obs-gallery
 sources:
   - type: local
     path: Images/My Vacation
@@ -53,7 +53,7 @@ sources:
 view:
   type: thumbnail
 ```
-```
+````
 
 ## Troubleshooting
 

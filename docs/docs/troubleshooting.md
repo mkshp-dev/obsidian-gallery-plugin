@@ -22,10 +22,17 @@ sidebar_position: 6
 
 ## Remote images not loading
 
-- Ensure **Allow remote images** is enabled in Settings → Image Gallery.
+- Ensure **Allow remote images** is enabled in **Settings → Gallery View**.
 - Check that the URL is publicly accessible and returns an image content type.
 - Try enabling **Validate remote content type** to get early feedback on bad URLs.
 - Increase the **Remote load timeout** if images are loading slowly.
+
+## Immich share issues
+
+- **Invalid URL:** Make sure the URL points to a valid Immich share link (typically containing `/share/`).
+- **Password Required / 401 Unauthorized:** If the shared album requires a password and you haven't provided it, or if the password provided is incorrect, you will see a password authentication failure error. Make sure to specify the correct password in the `password` field of your source configuration.
+- **Share not found:** The share may have been deleted, expired, or you might not have network access to the Immich server.
+- **Empty share:** If the album is empty, the gallery will render normally but without any images.
 
 ## Performance with many images
 

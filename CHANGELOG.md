@@ -2,6 +2,8 @@
 
 ## In-progress
 
+* Reorganized and refreshed Gallery View documentation to match the current `sources + view` schema, supported sources, and official plugin naming.
+
 ## 2.1.0 - 2026-06-22
 
 * Added support for Immich shared-link galleries as a new `immich-share` source in Gallery View.

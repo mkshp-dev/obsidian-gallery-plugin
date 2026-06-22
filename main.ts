@@ -6,6 +6,7 @@ import { GalleryProcessor } from './src/processors/GalleryProcessor';
 import { VaultWatcher } from './src/utils/VaultWatcher';
 import { LazyLoader } from './src/utils/LazyLoader';
 import { ShowcaseGenerator } from './src/generators/ShowcaseGenerator';
+import { IImmichConnection } from './src/models/interfaces';
 
 interface AppWithCommands extends App {
     commands: {
@@ -25,6 +26,7 @@ interface GalleryPluginSettings {
     gracePeriodMs?: number;
     // Enable verbose lifecycle logging to help debug detach/reattach behavior
     enableLifecycleLogging?: boolean;
+    immichConnections: IImmichConnection[];
 }
 
 const DEFAULT_SETTINGS: GalleryPluginSettings = {
@@ -34,6 +36,7 @@ const DEFAULT_SETTINGS: GalleryPluginSettings = {
     ,validateRemoteContentType: false
     ,gracePeriodMs: 30000
     ,enableLifecycleLogging: false
+    ,immichConnections: []
 };
 
 class GallerySettingsTab extends PluginSettingTab {
@@ -46,6 +49,10 @@ class GallerySettingsTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
+
+        new Setting(containerEl)
+            .setName('Plugin preferences')
+            .setHeading();
 
         new Setting(containerEl)
             .setName('Error display mode')
@@ -113,6 +120,86 @@ class GallerySettingsTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        new Setting(containerEl)
+            .setName('Immich authenticated providers')
+            .setHeading()
+            .setDesc('Configure authenticated access to your personal immich library. Note: Public immich-share links do not require configuration here.');
+
+        const immichContainer = containerEl.createDiv('immich-connections-container');
+
+        this.plugin.settings.immichConnections.forEach((conn, index) => {
+            const connDiv = immichContainer.createDiv('immich-connection-item');
+            // Replaced style properties with setCssStyles
+            connDiv.setCssStyles({
+                border: '1px solid var(--background-modifier-border)',
+                padding: '10px',
+                marginBottom: '10px',
+                borderRadius: '5px'
+            });
+
+            new Setting(connDiv)
+                .setName('Connection name')
+                .setDesc('A friendly name for this connection (e.g. Home).')
+                .addText(text => text
+                    .setPlaceholder('Home')
+                    .setValue(conn.name)
+                    .onChange(async (value) => {
+                        this.plugin.settings.immichConnections[index].name = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
+            new Setting(connDiv)
+                .setName('Base URL')
+                .setDesc('The base URL of your immich server (e.g. Https://immich.example.com).')
+                .addText(text => text
+                    .setPlaceholder('https://immich.example.com')
+                    .setValue(conn.baseUrl)
+                    .onChange(async (value) => {
+                        this.plugin.settings.immichConnections[index].baseUrl = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
+            new Setting(connDiv)
+                .setName('Api key')
+                .setDesc('Your personal immich api key.')
+                .addText(text => text
+                    .setPlaceholder('Your api key')
+                    .setValue(conn.apiKey)
+                    .onChange(async (value) => {
+                        this.plugin.settings.immichConnections[index].apiKey = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
+            new Setting(connDiv)
+                .addButton(btn => btn
+                    .setButtonText('Remove connection')
+                    .setWarning()
+                    .onClick(async () => {
+                        this.plugin.settings.immichConnections.splice(index, 1);
+                        await this.plugin.saveSettings();
+                        this.display(); // Refresh UI
+                    })
+                );
+        });
+
+        new Setting(containerEl)
+            .addButton(btn => btn
+                .setButtonText('Add immich connection')
+                .setCta()
+                .onClick(async () => {
+                    this.plugin.settings.immichConnections.push({
+                        id: Date.now().toString(),
+                        name: '',
+                        baseUrl: '',
+                        apiKey: ''
+                    });
+                    await this.plugin.saveSettings();
+                    this.display(); // Refresh UI
+                })
+            );
     }
 }
 

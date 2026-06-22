@@ -4,7 +4,7 @@
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Image Gallery',
+  title: 'Gallery View',
   tagline: 'Create interactive image galleries in your Obsidian notes.',
   favicon: 'img/favicon.ico',
 
@@ -43,7 +43,7 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        title: 'Image Gallery',
+        title: 'Gallery View',
         items: [
           {
             type: 'docSidebar',
@@ -64,8 +64,8 @@ const config = {
           {
             title: 'Docs',
             items: [
-              { label: 'Getting started', to: '/docs/getting-started' },
-              { label: 'Configuration', to: '/docs/configuration' },
+              { label: 'What is Gallery View', to: '/docs/what-is-gallery-view' },
+              { label: 'Gallery block syntax', to: '/docs/gallery-block-syntax' },
             ],
           },
           {

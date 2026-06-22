@@ -76,6 +76,35 @@ describe('ImmichAlbumSourceResolver', () => {
         expect(result.errors[0]).toBe('Network error');
     });
 
+    it('should request appropriate representation based on viewType', async () => {
+        const source: IImmichAlbumSourceConfig = { type: 'immich', connection: 'home', source: { type: 'album', id: 'album1' } };
+
+        const mockAssets = [
+            { id: 'asset1', originalFileName: 'photo1.jpg' }
+        ];
+
+        (ImmichClient.prototype.getAlbumAssets as jest.Mock).mockResolvedValue(mockAssets);
+        const getBlobUrlMock = (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockResolvedValue('blob:url1');
+
+        await resolver.resolve(source, { viewType: 'thumbnail' });
+        expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'thumbnail');
+
+        getBlobUrlMock.mockClear();
+
+        await resolver.resolve(source, { viewType: 'carousel' });
+        expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'preview');
+
+        getBlobUrlMock.mockClear();
+
+        await resolver.resolve(source, { viewType: 'grid' });
+        expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'thumbnail');
+
+        getBlobUrlMock.mockClear();
+
+        await resolver.resolve(source, {});
+        expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'original');
+    });
+
     it('should ignore single asset failure but resolve the rest', async () => {
         const source: IImmichAlbumSourceConfig = { type: 'immich', connection: 'home', source: { type: 'album', id: 'album1' } };
 

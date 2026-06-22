@@ -235,12 +235,21 @@ export class GalleryProcessor {
             loadingManager.startLoading('scan', { type: 'dots', text: 'Scanning for images...' });
         }
 
+        let viewType = 'thumbnail';
+        if (config.view) {
+            if (typeof config.view === 'string') {
+                viewType = config.view;
+            } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
+                viewType = (config.view as { type: string }).type;
+            }
+        }
+
         try {
             let images: IImageSource[] = [];
 
             if (config.sources) {
                 for (const source of config.sources) {
-                    const resolveContext = { timeoutMs: options.timeoutMs };
+                    const resolveContext = { timeoutMs: options.timeoutMs, viewType };
                     const { images: resolvedImages, errors: resolveErrors } = await this.resolverRegistry.resolveSource(source, resolveContext);
 
                     if (resolveErrors.length > 0) {

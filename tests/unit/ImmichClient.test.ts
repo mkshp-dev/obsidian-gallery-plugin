@@ -102,9 +102,22 @@ describe('ImmichClient', () => {
         expect(assets[0].id).toBe('asset1');
     });
 
-    it('should return correct asset URL', () => {
+    it('should return correct asset URL for original', () => {
         const url = client.getAssetUrl('asset123');
         expect(url).toBe('https://immich.example.com/api/assets/asset123/original');
+
+        const urlExplicit = client.getAssetUrl('asset123', 'original');
+        expect(urlExplicit).toBe('https://immich.example.com/api/assets/asset123/original');
+    });
+
+    it('should return correct asset URL for thumbnail', () => {
+        const url = client.getAssetUrl('asset123', 'thumbnail');
+        expect(url).toBe('https://immich.example.com/api/assets/asset123/thumbnail');
+    });
+
+    it('should return correct asset URL for preview', () => {
+        const url = client.getAssetUrl('asset123', 'preview');
+        expect(url).toBe('https://immich.example.com/api/assets/asset123/thumbnail?size=preview');
     });
 
     describe('validateConnection', () => {

@@ -42,6 +42,7 @@ To find your album ID:
 - Your API Key is stored locally in Obsidian's plugin settings.
 - The `immich` source type creates temporary, authenticated preview URLs to render images within Obsidian.
 - These URLs expire when you close the note and are never embedded into the Markdown document, ensuring your photos remain private.
+- The plugin intelligently fetches lighter thumbnail or preview assets depending on your active `view` to improve rendering speed, avoiding large original asset downloads for large grids.
 
 ## Troubleshooting
 

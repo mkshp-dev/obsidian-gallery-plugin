@@ -22,12 +22,22 @@ export interface IImmichShareSourceConfig {
 
 export interface IImmichConnection {
   id: string;
+  key: string;
   name: string;
   baseUrl: string;
   apiKey: string;
 }
 
-export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig;
+export interface IImmichAlbumSourceConfig {
+  type: 'immich';
+  connection: string;
+  source: {
+    type: 'album';
+    id: string;
+  };
+}
+
+export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichAlbumSourceConfig;
 
 export interface IViewConfig {
   type: 'thumbnail' | 'carousel' | 'grid';
@@ -65,7 +75,7 @@ export interface IImageSource {
   resourceUrl?: string;
   
   /** Source type */
-  type: 'local' | 'external' | 'immich-share';
+  type: 'local' | 'external' | 'immich-share' | 'immich';
   
   /** Display name for user */
   displayName: string;

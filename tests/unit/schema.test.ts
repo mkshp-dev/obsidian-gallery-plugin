@@ -273,3 +273,24 @@ view: thumbnail`;
         const config = ParameterParser.parseYaml(yaml);
         expect(config.sources[0].type).toBe('immich-share');
     });
+
+    it('new v2 immich album block parses correctly', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    source:
+      type: album
+      id: abc123
+view: grid`;
+        const config = ParameterParser.parseYaml(yaml);
+        expect(config.sources).toHaveLength(1);
+        expect(config.sources[0]).toEqual({
+            type: 'immich',
+            connection: 'home',
+            source: {
+                type: 'album',
+                id: 'abc123'
+            }
+        });
+        expect(config.view.type).toBe('grid');
+    });

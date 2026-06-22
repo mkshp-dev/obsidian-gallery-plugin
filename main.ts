@@ -139,6 +139,18 @@ class GallerySettingsTab extends PluginSettingTab {
             });
 
             new Setting(connDiv)
+                .setName('Connection key')
+                .setDesc('A stable reference used in gallery blocks (e.g. Home).')
+                .addText(text => text
+                    .setPlaceholder('Home')
+                    .setValue(conn.key || '')
+                    .onChange(async (value) => {
+                        this.plugin.settings.immichConnections[index].key = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
+            new Setting(connDiv)
                 .setName('Connection name')
                 .setDesc('A friendly name for this connection (e.g. Home).')
                 .addText(text => text
@@ -201,6 +213,7 @@ class GallerySettingsTab extends PluginSettingTab {
                 .onClick(async () => {
                     this.plugin.settings.immichConnections.push({
                         id: Date.now().toString(),
+                        key: '',
                         name: '',
                         baseUrl: '',
                         apiKey: ''
@@ -229,7 +242,7 @@ export default class GalleryPlugin extends Plugin {
         // Initialize core services
         this.contentScanner = new ContentScanner(this.app.vault);
         this.viewFactory = new ViewFactory();
-        this.galleryProcessor = new GalleryProcessor(this.contentScanner, this.viewFactory);
+        this.galleryProcessor = new GalleryProcessor(this.contentScanner, this.viewFactory, () => this.settings.immichConnections);
 
         // Initialize lazy loader
         this.lazyLoader = new LazyLoader({

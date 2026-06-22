@@ -8,7 +8,7 @@ Create interactive image galleries in your Obsidian notes using simple code bloc
 
 - **Thumbnail galleries** — Display images in responsive grid layouts
 - **Modal viewer** — Click thumbnails to view full-size images
-- **Multiple Sources** — Load images from local folders, external URLs, or Immich shared links
+- **Multiple Sources** — Load images from local folders, external URLs, Immich shared links, or authenticated Immich albums
 - **Simple syntax** — Easy `obs-gallery` code blocks with `sources` + `view` schema
 - **Responsive design** — Works on desktop and mobile
 - **Performance** — Lazy loading for large image collections

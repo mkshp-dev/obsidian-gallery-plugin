@@ -12,6 +12,7 @@ import { EmptyState } from '../views/components/EmptyState';
 import { ImageValidator } from '../utils/ImageValidator';
 import { FileSizeValidator } from '../utils/FileSizeValidator';
 import { ImageLoader } from '../utils/ImageLoader';
+import { IImmichConnection } from '../models/interfaces';
 
 export interface IGalleryProcessingOptions {
   errorDisplayMode?: 'full' | 'text' | 'hidden';
@@ -61,12 +62,12 @@ export class GalleryProcessor {
         ,enableLifecycleLogging: false
     };
 
-    constructor(contentScanner: IContentScanner, viewFactory: ViewFactory) {
+    constructor(contentScanner: IContentScanner, viewFactory: ViewFactory, getConnections: () => IImmichConnection[]) {
         this.contentScanner = contentScanner;
         this.viewFactory = viewFactory;
         this.imageValidator = new ImageValidator();
         this.fileSizeValidator = new FileSizeValidator();
-        this.resolverRegistry = new SourceResolverRegistry(contentScanner);
+        this.resolverRegistry = new SourceResolverRegistry(contentScanner, getConnections);
     }
 
     /**

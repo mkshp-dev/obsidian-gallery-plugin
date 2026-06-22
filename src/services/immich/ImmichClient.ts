@@ -31,11 +31,19 @@ export class ImmichClient {
             if (response.status === 200) {
                 return response.json as ImmichAlbum[];
             }
-            Logger.error(`Failed to fetch Immich albums: HTTP ${response.status}`);
-            return [];
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(`Authentication failed for Immich connection '${this.connection.name}' (HTTP ${response.status})`);
+            }
+            if (response.status === 404) {
+                throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
+            }
+            throw new Error(`Failed to fetch Immich albums: HTTP ${response.status}`);
         } catch (e) {
-            Logger.error(`Error fetching Immich albums: ${e instanceof Error ? e.message : String(e)}`);
-            throw e;
+            // Re-throw explicit errors, map network errors
+            if (e instanceof Error && e.message.includes('HTTP')) {
+                throw e;
+            }
+            throw new Error(`Server unreachable or invalid URL for Immich connection '${this.connection.name}'`);
         }
     }
 
@@ -51,11 +59,22 @@ export class ImmichClient {
                 const album = response.json as ImmichAlbum;
                 return album.assets || [];
             }
-            Logger.error(`Failed to fetch Immich album assets: HTTP ${response.status}`);
-            return [];
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(`Authentication failed for Immich connection '${this.connection.name}' (HTTP ${response.status})`);
+            }
+            if (response.status === 404) {
+                throw new Error(`Album '${albumId}' not found on Immich connection '${this.connection.name}'`);
+            }
+            throw new Error(`Failed to fetch Immich album assets: HTTP ${response.status}`);
         } catch (e) {
-            Logger.error(`Error fetching Immich album assets: ${e instanceof Error ? e.message : String(e)}`);
-            throw e;
+            // Re-throw explicit errors, map network errors
+            if (e instanceof Error && e.message.includes('HTTP')) {
+                throw e;
+            }
+            if (e instanceof Error && e.message.includes('not found on Immich connection')) {
+                throw e;
+            }
+            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.name}'`);
         }
     }
 
@@ -91,6 +110,31 @@ export class ImmichClient {
         }
     }
 
-    // Add auth to getAssetUrl so we can pass headers for rendering? Or for authenticated image delivery, that will be needed later.
-    // The issue says: "no authenticated image delivery/rendering pipeline yet". So we only need the data endpoints for now.
+    public async getAssetBlobUrl(assetId: string): Promise<string> {
+        const url = this.getAssetUrl(assetId);
+        try {
+            const response = await requestUrl({
+                url,
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+
+            if (response.status === 200) {
+                const blob = new Blob([response.arrayBuffer]);
+                return URL.createObjectURL(blob);
+            }
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(`Authentication failed for asset '${assetId}' (HTTP ${response.status})`);
+            }
+            if (response.status === 404) {
+                throw new Error(`Asset '${assetId}' not found`);
+            }
+            throw new Error(`Failed to fetch asset blob: HTTP ${response.status}`);
+        } catch (e) {
+            if (e instanceof Error && (e.message.includes('HTTP') || e.message.includes('not found'))) {
+                throw e;
+            }
+            throw new Error(`Network error fetching asset '${assetId}' on connection '${this.connection.name}'`);
+        }
+    }
 }

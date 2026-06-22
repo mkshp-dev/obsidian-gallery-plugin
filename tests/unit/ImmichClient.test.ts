@@ -67,16 +67,13 @@ describe('ImmichClient', () => {
         expect(albums[0].id).toBe('album1');
     });
 
-    it('should return empty array and log error on fetch albums failure', async () => {
+    it('should throw explicit error on fetch albums auth failure', async () => {
         (requestUrl as jest.Mock).mockResolvedValue({
             status: 401,
             json: { message: 'Unauthorized' }
         });
 
-        const albums = await client.getAlbums();
-
-        expect(albums).toHaveLength(0);
-        // We mocked Logger, so we can't easily check the log unless we import the mock, but the behavior is tested.
+        await expect(client.getAlbums()).rejects.toThrow(/Authentication failed for Immich connection/);
     });
 
     it('should fetch album assets successfully', async () => {

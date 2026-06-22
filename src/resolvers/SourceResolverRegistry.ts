@@ -3,15 +3,18 @@ import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySou
 import { LocalSourceResolver } from './LocalSourceResolver';
 import { ExternalSourceResolver } from './ExternalSourceResolver';
 import { ImmichShareSourceResolver } from './ImmichShareSourceResolver';
+import { ImmichAlbumSourceResolver } from './ImmichAlbumSourceResolver';
+import { IImmichConnection } from '../models/interfaces';
 
 export class SourceResolverRegistry {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private resolvers: Map<string, GallerySourceResolver<any>> = new Map();
 
-    constructor(contentScanner: IContentScanner) {
+    constructor(contentScanner: IContentScanner, getConnections: () => IImmichConnection[]) {
         this.registerResolver(new LocalSourceResolver(contentScanner));
         this.registerResolver(new ExternalSourceResolver());
         this.registerResolver(new ImmichShareSourceResolver());
+        this.registerResolver(new ImmichAlbumSourceResolver(getConnections));
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

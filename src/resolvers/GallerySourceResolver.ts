@@ -5,6 +5,7 @@ import { ISourceConfig, IImageSource } from '../models/interfaces';
  */
 export interface GallerySourceResolveContext {
     timeoutMs?: number;
+    viewType?: string;
     // Any future context properties can be added here
 }
 

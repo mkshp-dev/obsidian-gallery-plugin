@@ -44,6 +44,14 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
                 return { images, errors };
             }
 
+            // Determine the appropriate asset representation based on the view type
+            let representation: 'thumbnail' | 'preview' | 'original' = 'original';
+            if (context.viewType === 'thumbnail' || context.viewType === 'grid') {
+                representation = 'thumbnail';
+            } else if (context.viewType === 'carousel') {
+                representation = 'preview';
+            }
+
             // Fetch preview blobs for the MVP authenticated image delivery.
             // We use Promise.all to fetch concurrently, but we must map the results back
             // to preserve the original sorting order of the album.
@@ -51,7 +59,7 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
                 if (!asset.id) return null;
 
                 try {
-                    const blobUrl = await client.getAssetBlobUrl(asset.id);
+                    const blobUrl = await client.getAssetBlobUrl(asset.id, representation);
                     const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
 
                     // The path is logical, resourceUrl is the blob Object URL

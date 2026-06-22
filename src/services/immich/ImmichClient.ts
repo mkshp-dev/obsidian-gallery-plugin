@@ -78,7 +78,12 @@ export class ImmichClient {
         }
     }
 
-    public getAssetUrl(assetId: string): string {
+    public getAssetUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): string {
+        if (representation === 'thumbnail') {
+            return `${this.baseUrl}/api/assets/${assetId}/thumbnail`;
+        } else if (representation === 'preview') {
+            return `${this.baseUrl}/api/assets/${assetId}/thumbnail?size=preview`;
+        }
         return `${this.baseUrl}/api/assets/${assetId}/original`;
     }
 
@@ -110,8 +115,8 @@ export class ImmichClient {
         }
     }
 
-    public async getAssetBlobUrl(assetId: string): Promise<string> {
-        const url = this.getAssetUrl(assetId);
+    public async getAssetBlobUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): Promise<string> {
+        const url = this.getAssetUrl(assetId, representation);
         try {
             const response = await requestUrl({
                 url,

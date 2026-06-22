@@ -178,7 +178,11 @@ export class GalleryInstance implements IGalleryInstance {
         const removed = oldImages.filter(img => !newPaths.has(img.path));
         
         if (added.length > 0) changes.push('images_added');
-        if (removed.length > 0) changes.push('images_removed');
+        if (removed.length > 0) {
+            changes.push('images_removed');
+            // Clean up resources for removed images
+            removed.forEach(img => img.destroy?.());
+        }
         
         return changes;
     }
@@ -316,11 +320,14 @@ export class GalleryInstance implements IGalleryInstance {
         if (this._isDestroyed) return false;
         
         const initialLength = this._images.length;
+        const removedImages = this._images.filter(img => img.path === imagePath);
+
         this._images = this._images.filter(img => img.path !== imagePath);
         
         if (this._images.length < initialLength) {
             this.updateCounters();
             this.view.update(this._images);
+            removedImages.forEach(img => img.destroy?.());
             return true;
         }
         
@@ -381,6 +388,9 @@ export class GalleryInstance implements IGalleryInstance {
     try { this.container.removeAttribute('data-gallery-type'); } catch (error) { Logger.debug('Ignored error:', error); }
     try { this.container.removeAttribute('data-gallery-path'); } catch (error) { Logger.debug('Ignored error:', error); }
         
+        // Clean up image resources
+        this._images.forEach(img => img.destroy?.());
+
         // Clear references
         this._images = [];
         this._loadedCount = 0;

@@ -91,6 +91,7 @@ export class GalleryProcessor {
         };
 
         let loadingManager: LoadingManager | null = null;
+        let scannedImages: IImageSource[] = [];
 
         try {
             // Clear previous content (use safe clear for environments where `empty()` helper is unavailable)
@@ -113,18 +114,18 @@ export class GalleryProcessor {
             }
 
             // Step 2: Scan for images
-            const images = await this.scanForImages(config, result, opts, loadingManager);
-            if (images.length === 0) {
+            scannedImages = await this.scanForImages(config, result, opts, loadingManager);
+            if (scannedImages.length === 0) {
                 this.showProfessionalEmptyState(el, config, result);
                 result.processingTimeMs = Date.now() - startTime;
                 return result;
             }
 
             // Step 3: Validate images
-            const validImages = await this.validateImages(images, result, opts, loadingManager);
+            const validImages = await this.validateImages(scannedImages, result, opts, loadingManager);
             if (validImages.length === 0) {
                 // If there were external images but remote loading is disabled, show a friendly empty state
-                const hadExternal = images.some((img: IImageSource) => img.type === 'external');
+                const hadExternal = scannedImages.some((img: IImageSource) => img.type === 'external');
                 if (hadExternal && !opts.allowRemoteImages) {
                     const msg = 'No valid images: external URLs were present but remote image loading is disabled in plugin settings.';
                     result.errors.push(msg);
@@ -160,6 +161,11 @@ export class GalleryProcessor {
             return result;
 
         } catch (error) {
+            // Clean up any scanned images that haven't been safely handed off to a GalleryInstance
+            if (scannedImages.length > 0) {
+                scannedImages.forEach(img => img.destroy?.());
+            }
+
             const errorMessage = error instanceof Error ? error.message : String(error);
             result.errors.push(errorMessage);
             result.processingTimeMs = Date.now() - startTime;
@@ -362,6 +368,13 @@ export class GalleryProcessor {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 validationErrors.push(`Validation error for ${image.path}: ${errorMessage}`);
+            }
+        }
+
+        // Clean up resources for any images that failed validation and were excluded
+        for (const image of images) {
+            if (!validImages.includes(image)) {
+                image.destroy?.();
             }
         }
 

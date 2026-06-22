@@ -1,4 +1,5 @@
 import { IImageSource } from './interfaces';
+import { ObjectUrlManager } from '../utils/immich/ObjectUrlManager';
 
 /**
  * Represents an individual image source within a gallery
@@ -219,5 +220,14 @@ export class ImageSource implements IImageSource {
             errorMessage: this.errorMessage,
             loadingDuration: this.getLoadingDuration()
         };
+    }
+
+    /**
+     * Destroys the image source, cleaning up any resources (like blob URLs)
+     */
+    destroy(): void {
+        if (this.type === 'immich' && this.resourceUrl) {
+            ObjectUrlManager.releaseByUrl(this.resourceUrl);
+        }
     }
 }

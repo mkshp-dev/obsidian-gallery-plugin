@@ -3,6 +3,7 @@ import { IImmichConnection } from '../../models/interfaces';
 import { Logger } from '../../utils/Logger';
 import { ImmichAsset, ImmichAlbum } from '../../models/immich/ImmichTypes';
 import { ImmichHelpers } from '../../utils/immich/ImmichHelpers';
+import { ObjectUrlManager } from '../../utils/immich/ObjectUrlManager';
 
 export class ImmichClient {
     private connection: IImmichConnection;
@@ -116,6 +117,12 @@ export class ImmichClient {
     }
 
     public async getAssetBlobUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): Promise<string> {
+        const key = `immich:${this.connection.key}:${assetId}:${representation}`;
+        const existingUrl = ObjectUrlManager.acquire(key);
+        if (existingUrl) {
+            return existingUrl;
+        }
+
         const url = this.getAssetUrl(assetId, representation);
         try {
             const response = await requestUrl({
@@ -126,7 +133,7 @@ export class ImmichClient {
 
             if (response.status === 200) {
                 const blob = new Blob([response.arrayBuffer]);
-                return URL.createObjectURL(blob);
+                return ObjectUrlManager.create(key, blob);
             }
             if (response.status === 401 || response.status === 403) {
                 throw new Error(`Authentication failed for asset '${assetId}' (HTTP ${response.status})`);

@@ -118,6 +118,9 @@ export interface IImageSource {
 
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;
+
+  /** Destroys the image source, cleaning up any resources (like blob URLs) */
+  destroy?(): void;
 }
 
 export interface IGalleryView {

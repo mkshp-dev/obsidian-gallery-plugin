@@ -20,6 +20,13 @@ export interface IImmichShareSourceConfig {
   password?: string;
 }
 
+export interface IImmichConnection {
+  id: string;
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+}
+
 export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig;
 
 export interface IViewConfig {

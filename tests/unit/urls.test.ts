@@ -1,12 +1,45 @@
+import { createMockMarkdownPostProcessorContext } from "../setup";
 import { ParameterParser } from '../../src/processors/ParameterParser';
 import { GalleryProcessor } from '../../src/processors/GalleryProcessor';
 import { ViewFactory } from '../../src/views/ViewFactory';
 import { IContentScanner } from '../../src/models/interfaces';
 
+function createMockContainer(): HTMLElement & any {
+  const el = document.createElement('div') as HTMLElement & any;
+  const augment = (node: HTMLElement & any) => {
+    node.createEl = (tag: string, options?: any) => {
+      const child = document.createElement(tag) as HTMLElement & any;
+      if (options && options.cls) child.className = options.cls;
+      if (options && options.text) child.textContent = options.text;
+      if (options && options.attr) {
+        Object.keys(options.attr).forEach((k: string) => child.setAttribute(k, options.attr[k]));
+      }
+      augment(child);
+      node.appendChild(child);
+      return child;
+    };
+    node.createDiv = (options?: any) => {
+      let opts = typeof options === 'string' ? { cls: options } : options || {};
+      return node.createEl('div', opts);
+    };
+    node.createSpan = (options?: any) => {
+      let opts = typeof options === 'string' ? { cls: options } : options || {};
+      return node.createEl('span', opts);
+    };
+    node.empty = () => {
+      while (node.firstChild) {
+        node.removeChild(node.firstChild);
+      }
+    };
+  };
+  augment(el);
+  return el;
+}
+
 // Minimal fake view used by the processor for testing
 class DummyView {
     public type = 'thumbnail' as const;
-    public container: any = { createEl: () => {} };
+    public container: any = createMockContainer();
     public images: any[] = [];
     public remoteLoadTimeoutMs?: number;
     public allowRemoteImages?: boolean;
@@ -65,8 +98,8 @@ describe('ParameterParser and remote URL handling', () => {
     test('processor blocks external URLs when allowRemoteImages=false', async () => {
         const processor = new GalleryProcessor(fakeScanner as any, new FakeViewFactory() as any);
         const source = `path: ''\nurls:\n  - https://picsum.photos/200/300\nview: thumbnail`;
-        const container = document.createElement('div');
-        const result = await processor.processCodeBlock(source, container, {} as any, { allowRemoteImages: false });
+        const container = createMockContainer();
+        const result = await processor.processCodeBlock(source, container, createMockMarkdownPostProcessorContext() as any, { allowRemoteImages: false });
         expect(result.success).toBe(false);
         expect(result.errors.some(e => typeof e === 'string' && e.includes('external'))).toBeTruthy();
     });
@@ -74,8 +107,8 @@ describe('ParameterParser and remote URL handling', () => {
     test('processor accepts external URLs when allowRemoteImages=true', async () => {
         const processor = new GalleryProcessor(fakeScanner as any, new FakeViewFactory() as any);
         const source = `path: ''\nurls:\n  - https://picsum.photos/200/300\nview: thumbnail`;
-        const container = document.createElement('div');
-        const result = await processor.processCodeBlock(source, container, {} as any, { allowRemoteImages: true });
+        const container = createMockContainer();
+        const result = await processor.processCodeBlock(source, container, createMockMarkdownPostProcessorContext() as any, { allowRemoteImages: true });
         expect(result.success).toBe(true);
         expect(result.imagesFound).toBeGreaterThan(0);
     });

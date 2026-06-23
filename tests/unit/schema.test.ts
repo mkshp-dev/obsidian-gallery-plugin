@@ -1,3 +1,4 @@
+import { createMockMarkdownPostProcessorContext } from "../setup";
 import { ParameterParser } from '../../src/processors/ParameterParser';
 import { GalleryProcessor } from '../../src/processors/GalleryProcessor';
 import { ImageSource } from '../../src/models/ImageSource';
@@ -169,7 +170,7 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
             const resultLegacy = await processorLegacy.processCodeBlock(
                 `path: photos\nview: thumbnail\nrecursive: true`,
                 containerLegacy,
-                {} as any
+                createMockMarkdownPostProcessorContext() as any
             );
 
             const factoryV2 = new FakeViewFactory();
@@ -178,7 +179,7 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
             const resultV2 = await processorV2.processCodeBlock(
                 `sources:\n  - type: local\n    path: photos\n    recursive: true\nview:\n  type: thumbnail`,
                 containerV2,
-                {} as any
+                createMockMarkdownPostProcessorContext() as any
             );
 
             expect(resultLegacy.success).toBe(true);
@@ -203,7 +204,7 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
             const resultLegacy = await processorLegacy.processCodeBlock(
                 `urls:\n  - https://picsum.photos/200\nview: carousel`,
                 containerLegacy,
-                {} as any,
+                createMockMarkdownPostProcessorContext() as any,
                 { allowRemoteImages: true }
             );
 
@@ -213,7 +214,7 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
             const resultV2 = await processorV2.processCodeBlock(
                 `sources:\n  - type: external\n    urls:\n      - https://picsum.photos/200\nview:\n  type: carousel`,
                 containerV2,
-                {} as any,
+                createMockMarkdownPostProcessorContext() as any,
                 { allowRemoteImages: true }
             );
 
@@ -239,7 +240,7 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
                 const result = await processor.processCodeBlock(
                     `sources:\n  - type: local\n    path: photos\nview:\n  type: ${viewType}`,
                     container,
-                    {} as any
+                    createMockMarkdownPostProcessorContext() as any
                 );
 
                 expect(result.success).toBe(true);

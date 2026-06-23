@@ -1,6 +1,6 @@
 import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
-import { MarkdownPostProcessorContext } from 'obsidian';
+import { MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
 import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceConfig, ObsidianDOMExtensions } from '../models/interfaces';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
@@ -42,6 +42,21 @@ export interface IGalleryRenderResult {
  * Gallery processor for handling obs-gallery code blocks
  * Coordinates parsing, validation, and rendering of galleries
  */
+class GalleryRenderChild extends MarkdownRenderChild {
+    constructor(
+        containerEl: HTMLElement,
+        private readonly galleryId: string,
+        private readonly destroyCallback: (id: string) => void
+    ) {
+        super(containerEl);
+    }
+
+    onunload() {
+        this.destroyCallback(this.galleryId);
+        super.onunload();
+    }
+}
+
 export class GalleryProcessor {
     private contentScanner: IContentScanner;
     private viewFactory: ViewFactory;
@@ -148,6 +163,11 @@ export class GalleryProcessor {
             const galleryInstance = await this.createAndRenderGallery(
                 config, el, validImages, result, opts, loadingManager
             );
+
+            const child = new GalleryRenderChild(el, galleryInstance.id, (id) => {
+                this.destroyGallery(id);
+            });
+            ctx.addChild(child);
 
             result.success = true;
             result.galleryInstance = galleryInstance;
@@ -437,10 +457,6 @@ export class GalleryProcessor {
             // Store active gallery
             this.activeGalleries.set(galleryInstance.id, galleryInstance);
             
-            // Setup cleanup when container is removed (pass options so cleanup
-            // honors runtime-configurable grace period and logging)
-            this.setupGalleryCleanup(galleryInstance, options);
-            
             // Render gallery with retry logic
             let retryCount = 0;
             while (retryCount <= options.maxRetries) {
@@ -576,9 +592,6 @@ export class GalleryProcessor {
             
             // Store active gallery
             this.activeGalleries.set(gallery.id, gallery);
-            
-            // Setup cleanup when container is removed
-            this.setupGalleryCleanup(gallery);
             
             // Render gallery
             view.render();
@@ -749,97 +762,6 @@ export class GalleryProcessor {
         if (out.sort) lines.push(`sort: ${out.sort as string}`);
 
         return lines.join('\n');
-    }
-
-    /**
-     * Setup gallery cleanup when container is removed from DOM
-     */
-    private setupGalleryCleanup(gallery: GalleryInstance, options: Required<IGalleryProcessingOptions> = this.DEFAULT_OPTIONS): void {
-        // Use MutationObserver to detect when gallery container is removed
-        const observer = new MutationObserver((mutations) => {
-            // If we see a removal, don't immediately destroy: Obsidian may transiently
-            // move or reparent nodes when toggling sidebars or changing layouts. Defer
-            // the actual destruction check by a short timeout and only destroy if the
-            // gallery container remains detached from the activeDocument.
-            let sawRemoval = false;
-            mutations.forEach((mutation) => {
-                mutation.removedNodes.forEach((node) => {
-                    if (node === gallery.container || (node.instanceOf(Element) && node.contains(gallery.container))) {
-                        sawRemoval = true;
-                    }
-                });
-            });
-
-            if (!sawRemoval) return;
-
-            // Defer checks to allow transient DOM moves (sidebar toggle, layout shifts)
-            // to settle. Use a few retries with exponential backoff before deciding
-            // the container is permanently gone.
-            // Retry schedule (ms) — extended to handle slower reattachment scenarios
-            const attempts = [200, 500, 1000, 2000, 5000, 10000];
-            let attemptIndex = 0;
-
-            const tryCheck = () => {
-                try {
-                    const doc = gallery.container?.ownerDocument;
-                    const stillAttached = !!(doc && doc.body && doc.body.contains(gallery.container));
-                    if (stillAttached) {
-                        // it's back — do nothing
-                        return;
-                    }
-
-                    attemptIndex++;
-                    if (attemptIndex >= attempts.length) {
-                        // final check failed — consider it removed for now but allow a grace
-                        // period to support Obsidian re-rendering cycles (e.g., switching
-                        // between editor/preview). Mark the gallery as detached and
-                        // schedule a final destruction after a longer grace period so
-                        // that the markdown post-processor can reattach a new container
-                        // without losing the opportunity to recreate the gallery.
-                        try { (gallery as unknown as { _detached?: boolean })._detached = true; } catch (error) { Logger.debug('Ignored error:', error); }
-
-                        const GRACE_PERIOD_MS = Math.max(0, options.gracePeriodMs || 30000);
-                        if (options.enableLifecycleLogging) {
-                            Logger.debug(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
-                        }
-
-                        window.setTimeout(() => {
-                            try {
-                                if ((gallery as unknown as { _detached?: boolean })._detached) {
-                                    if (options.enableLifecycleLogging) {
-                                        Logger.debug(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
-                                    }
-                                    this.destroyGallery(gallery.id);
-                                }
-                            } catch {
-                                try { this.destroyGallery(gallery.id); } catch (error) { Logger.debug('Ignored error:', error); }
-                            }
-                        }, GRACE_PERIOD_MS);
-
-                        try { observer.disconnect(); } catch (error) { Logger.debug('Ignored error:', error); }
-                        return;
-                    }
-
-                    // schedule next check
-                    window.setTimeout(tryCheck, attempts[attemptIndex]);
-                } catch {
-                    // If something unexpected happens, attempt a safe cleanup
-                    try { this.destroyGallery(gallery.id); } catch (error) { Logger.debug('Ignored error:', error); }
-                    try { observer.disconnect(); } catch (error) { Logger.debug('Ignored error:', error); }
-                }
-            };
-
-            // Start checks
-            window.setTimeout(tryCheck, attempts[0]);
-        });
-
-        // Observe the parent document for changes
-        if (gallery.container.ownerDocument) {
-            observer.observe(gallery.container.ownerDocument.body, {
-                childList: true,
-                subtree: true
-            });
-        }
     }
 
     /**

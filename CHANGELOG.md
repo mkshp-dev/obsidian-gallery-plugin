@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- Fixed gallery rendering lifecycle to reliably preserve galleries across note transitions and markdown re-renders.
+
 - Improved authenticated Immich image loading so Gallery View uses lightweight thumbnails/previews instead of original assets where appropriate.
 - Added authenticated Immich `album` support under the new `immich` provider path.
 - Extracted shared helper utilities for Immich sources into an internal `ImmichTypes` and `ImmichHelpers` layer to reduce duplication without merging setup requirements.

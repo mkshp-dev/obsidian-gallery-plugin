@@ -1,6 +1,15 @@
 // Jest setup file for Obsidian plugin testing
 import '@testing-library/jest-dom';
 
+// Export mock factory for test consumption
+export const createMockMarkdownPostProcessorContext = () => ({
+  docId: 'mock-doc-id',
+  sourcePath: 'mock/source/path.md',
+  frontmatter: null,
+  addChild: jest.fn(),
+  getSectionInfo: jest.fn().mockReturnValue(null)
+});
+
 // Mock Obsidian API
 global.app = {
   vault: {
@@ -57,3 +66,28 @@ if (typeof UIEvent !== 'undefined' && !UIEvent.prototype.instanceOf) {
     return this instanceof type;
   };
 }
+
+// Mock Obsidian MarkdownRenderChild
+jest.mock('obsidian', () => ({
+  MarkdownRenderChild: class MockMarkdownRenderChild {
+    containerEl: HTMLElement;
+    constructor(containerEl: HTMLElement) {
+      this.containerEl = containerEl;
+    }
+    onload() {}
+    onunload() {}
+  },
+  Notice: class MockNotice {},
+  Plugin: class MockPlugin {},
+  PluginSettingTab: class MockPluginSettingTab {},
+  Setting: class MockSetting {},
+  requestUrl: jest.fn(),
+  parseYaml: jest.fn().mockImplementation((yamlStr: string) => {
+    const jsyaml = require('js-yaml');
+    try {
+        return jsyaml.load(yamlStr);
+    } catch (e) {
+        throw new Error('YAML parsing error');
+    }
+  }),
+}));

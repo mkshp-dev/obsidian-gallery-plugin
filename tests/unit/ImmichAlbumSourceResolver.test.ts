@@ -13,9 +13,7 @@ describe('ImmichAlbumSourceResolver', () => {
 
         mockConnections = [
             {
-                id: '123',
                 key: 'home',
-                name: 'Home Server',
                 baseUrl: 'https://immich.example.com',
                 apiKey: 'test-key'
             }

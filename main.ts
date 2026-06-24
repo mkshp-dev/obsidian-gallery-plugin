@@ -151,18 +151,6 @@ class GallerySettingsTab extends PluginSettingTab {
                 );
 
             new Setting(connDiv)
-                .setName('Connection name')
-                .setDesc('A friendly name for this connection (e.g. Home).')
-                .addText(text => text
-                    .setPlaceholder('Home')
-                    .setValue(conn.name)
-                    .onChange(async (value) => {
-                        this.plugin.settings.immichConnections[index].name = value;
-                        await this.plugin.saveSettings();
-                    })
-                );
-
-            new Setting(connDiv)
                 .setName('Base URL')
                 .setDesc('The base URL of your immich server (e.g. Https://immich.example.com).')
                 .addText(text => text
@@ -212,9 +200,7 @@ class GallerySettingsTab extends PluginSettingTab {
                 .setCta()
                 .onClick(async () => {
                     this.plugin.settings.immichConnections.push({
-                        id: Date.now().toString(),
                         key: '',
-                        name: '',
                         baseUrl: '',
                         apiKey: ''
                     });
@@ -302,6 +288,19 @@ export default class GalleryPlugin extends Plugin {
     async loadSettings() {
         const data = (await this.loadData()) as Partial<GalleryPluginSettings> | null;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, data || {});
+
+        // Migrate old Immich connection settings
+        if (this.settings.immichConnections && Array.isArray(this.settings.immichConnections)) {
+            this.settings.immichConnections = this.settings.immichConnections.map((connRaw) => {
+                const conn = connRaw as unknown as Record<string, string | undefined>;
+                // Remove internal ID and display name, ensure key is present
+                return {
+                    key: conn.key || conn.name || conn.id || `conn_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                    baseUrl: conn.baseUrl || '',
+                    apiKey: conn.apiKey || ''
+                };
+            });
+        }
     }
 
     async saveSettings() {

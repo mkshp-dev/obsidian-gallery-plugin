@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- Replaced oversized broken image placeholders with exact source failure reasons and compact inline error UI for Immich galleries.
 - Fixed gallery rendering lifecycle to reliably preserve galleries across note transitions and markdown re-renders.
 
 - Improved authenticated Immich image loading so Gallery View uses lightweight thumbnails/previews instead of original assets where appropriate.

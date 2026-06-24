@@ -247,6 +247,107 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
                 expect(factory.lastViewTypeCreated).toBe(viewType);
             }
         });
+
+        test('mixed-source block renders inline error when some sources fail', async () => {
+            // Setup an external source resolver that returns an error
+            const mixedScanner: Partial<IContentScanner> = {
+                scanPath: async () => [ImageSource.fromLocalPath(`photos/pic.jpg`)],
+                validateImageSource: async () => true
+            };
+
+            const factory = new FakeViewFactory();
+            const processor = new GalleryProcessor(mixedScanner as any, factory as any);
+
+            // Mock the resolver registry to return a specific error for external source
+            const originalResolve = processor['resolverRegistry'].resolveSource.bind(processor['resolverRegistry']);
+            processor['resolverRegistry'].resolveSource = async (source: any, context: any) => {
+                if (source.type === 'external') {
+                    return { images: [], errors: ['Simulated external source failure'] };
+                }
+                return originalResolve(source, context);
+            };
+
+            const container = createMockContainer();
+            const yaml = `sources:
+  - type: local
+    path: photos
+  - type: external
+    urls:
+      - https://example.com/broken.jpg
+view: thumbnail`;
+
+            const result = await processor.processCodeBlock(
+                yaml,
+                container,
+                createMockMarkdownPostProcessorContext() as any,
+                { allowRemoteImages: true }
+            );
+
+            expect(result.success).toBe(true);
+            expect(result.imagesFound).toBe(1);
+            expect(result.errors).toContain('Simulated external source failure');
+
+            // The inline error container should be created in the DOM
+            const inlineErrorContainer = Array.from(container.children).find(
+                (child: any) => child.className === 'gallery-inline-error-container'
+            );
+            expect(inlineErrorContainer).toBeDefined();
+
+            const errorList = (inlineErrorContainer as any).children[1]; // ul
+            expect(errorList.className).toBe('gallery-inline-error-list');
+            const errorItem = errorList.children[0]; // li
+            expect(errorItem.textContent).toBe('Simulated external source failure');
+        });
+
+        test('empty-state block renders source error when all sources fail', async () => {
+            const errorScanner: Partial<IContentScanner> = {
+                scanPath: async () => [],
+                validateImageSource: async () => true
+            };
+
+            const factory = new FakeViewFactory();
+            const processor = new GalleryProcessor(errorScanner as any, factory as any);
+
+            // Mock the resolver registry to return a specific error for the source
+            processor['resolverRegistry'].resolveSource = async () => {
+                return { images: [], errors: ['Simulated source failure (e.g. Immich connection missing)'] };
+            };
+
+            const container = createMockContainer();
+            const yaml = `sources:
+  - type: immich
+    connection: missing_conn
+    source:
+      type: album
+      id: 123
+view: thumbnail`;
+
+            const result = await processor.processCodeBlock(
+                yaml,
+                container,
+                createMockMarkdownPostProcessorContext() as any
+            );
+
+            // It shouldn't throw an unhandled exception but result success should be false
+            // Wait, actually processCodeBlock catches and returns result.
+            // In case of no images it returns early before creating a gallery
+            expect(result.success).toBe(false);
+            expect(result.imagesFound).toBe(0);
+            expect(result.errors).toContain('Simulated source failure (e.g. Immich connection missing)');
+
+            // The empty state source error container should be created
+            // The class used by EmptyState is gallery-error-custom
+            const emptyStateContainer = Array.from(container.children).find(
+                (child: any) => child.className?.includes('gallery-empty-custom')
+            );
+            expect(emptyStateContainer).toBeDefined();
+
+            const detailsElement = Array.from((emptyStateContainer as any).children).find(
+                (child: any) => child.className === 'gallery-empty-info'
+            );
+            expect(detailsElement).toBeDefined();
+            expect((detailsElement as any).textContent).toContain('Simulated source failure (e.g. Immich connection missing)');
+        });
     });
 });
 

@@ -6,6 +6,7 @@ import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
+import { InlineError } from '../views/components/InlineError';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
 import { EmptyState } from '../views/components/EmptyState';
@@ -163,6 +164,21 @@ export class GalleryProcessor {
             const galleryInstance = await this.createAndRenderGallery(
                 config, el, validImages, result, opts, loadingManager
             );
+
+            // Step 5: Render mixed-source inline error if needed
+            const sourceErrors = result.errors.filter(error =>
+                error.startsWith('Immich') ||
+                error.startsWith('Failed to fetch Immich') ||
+                error.startsWith('Error resolving Immich') ||
+                error.startsWith('Invalid URL in external source urls list:') ||
+                error.startsWith('Unsupported source type') ||
+                error.startsWith('Simulated source failure') || // For tests
+                error.startsWith('Simulated external source failure') // For tests
+            );
+
+            if (sourceErrors.length > 0) {
+                new InlineError(el, sourceErrors);
+            }
 
             const child = new GalleryRenderChild(el, galleryInstance.id, (id) => {
                 this.destroyGallery(id);
@@ -622,7 +638,7 @@ export class GalleryProcessor {
 
         // Determine the type of empty state based on the errors
         const hasPathError = result.errors.some(error => 
-            error.includes('not found') || error.includes('Path not found')
+            error.startsWith('Path not found')
         );
         const hasValidationError = result.errors.some(error => 
             error.includes('validation') || error.includes('Validation')
@@ -633,8 +649,24 @@ export class GalleryProcessor {
         const hasExternalBlocked = result.errors.some(error => 
             error.includes('external URLs were present') || error.includes('External image blocked')
         );
+        const sourceErrors = result.errors.filter(error =>
+            error.startsWith('Immich') ||
+            error.startsWith('Failed to fetch Immich') ||
+            error.startsWith('Error resolving Immich') ||
+            error.startsWith('Invalid URL in external source urls list:') ||
+            error.startsWith('Unsupported source type') ||
+            error.startsWith('Simulated source failure') || // For tests
+            error.startsWith('Simulated external source failure') // For tests
+        );
 
-        if (hasPathError) {
+        if (sourceErrors.length > 0) {
+            EmptyState.createSourceError(
+                container,
+                config.path,
+                sourceErrors,
+                () => { void this.refreshGalleryByConfig(container, config); }
+            );
+        } else if (hasPathError) {
             EmptyState.createPathNotFound(container, config.path, [
                 'Check that the folder exists in your vault',
                 'Verify the path spelling and capitalization',

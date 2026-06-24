@@ -21,9 +21,7 @@ export interface IImmichShareSourceConfig {
 }
 
 export interface IImmichConnection {
-  id: string;
   key: string;
-  name: string;
   baseUrl: string;
   apiKey: string;
 }

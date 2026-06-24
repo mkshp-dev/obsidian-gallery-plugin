@@ -33,7 +33,7 @@ export class ImmichClient {
                 return response.json as ImmichAlbum[];
             }
             if (response.status === 401 || response.status === 403) {
-                throw new Error(`Authentication failed for Immich connection '${this.connection.name}' (HTTP ${response.status})`);
+                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
             }
             if (response.status === 404) {
                 throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
@@ -44,7 +44,7 @@ export class ImmichClient {
             if (e instanceof Error && e.message.includes('HTTP')) {
                 throw e;
             }
-            throw new Error(`Server unreachable or invalid URL for Immich connection '${this.connection.name}'`);
+            throw new Error(`Server unreachable or invalid URL for Immich connection '${this.connection.key}'`);
         }
     }
 
@@ -61,10 +61,10 @@ export class ImmichClient {
                 return album.assets || [];
             }
             if (response.status === 401 || response.status === 403) {
-                throw new Error(`Authentication failed for Immich connection '${this.connection.name}' (HTTP ${response.status})`);
+                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
             }
             if (response.status === 404) {
-                throw new Error(`Album '${albumId}' not found on Immich connection '${this.connection.name}'`);
+                throw new Error(`Album '${albumId}' not found on Immich connection '${this.connection.key}'`);
             }
             throw new Error(`Failed to fetch Immich album assets: HTTP ${response.status}`);
         } catch (e) {
@@ -75,7 +75,7 @@ export class ImmichClient {
             if (e instanceof Error && e.message.includes('not found on Immich connection')) {
                 throw e;
             }
-            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.name}'`);
+            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
         }
     }
 
@@ -146,7 +146,7 @@ export class ImmichClient {
             if (e instanceof Error && (e.message.includes('HTTP') || e.message.includes('not found'))) {
                 throw e;
             }
-            throw new Error(`Network error fetching asset '${assetId}' on connection '${this.connection.name}'`);
+            throw new Error(`Network error fetching asset '${assetId}' on connection '${this.connection.key}'`);
         }
     }
 }

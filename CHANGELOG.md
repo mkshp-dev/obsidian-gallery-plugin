@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- Immich connection model cleanup: remove display name, keep stable key, add migration.
 - Replaced oversized broken image placeholders with exact source failure reasons and compact inline error UI for Immich galleries.
 - Fixed gallery rendering lifecycle to reliably preserve galleries across note transitions and markdown re-renders.
 

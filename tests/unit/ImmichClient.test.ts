@@ -17,8 +17,7 @@ jest.mock('../../src/utils/Logger', () => ({
 describe('ImmichClient', () => {
     let client: ImmichClient;
     const mockConnection: IImmichConnection = {
-        id: '123',
-        name: 'Test Server',
+        key: 'test',
         baseUrl: 'https://immich.example.com/',
         apiKey: 'test-api-key'
     };

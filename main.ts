@@ -1,3 +1,4 @@
+import { GalleryBuilderModal } from './src/ui/GalleryBuilderModal';
 import { Logger } from "./src/utils/Logger";
 import { Plugin, PluginSettingTab, Setting, App, MarkdownPostProcessorContext, Notice } from 'obsidian';
 import { ContentScanner } from './src/services/ContentScanner';
@@ -261,6 +262,14 @@ export default class GalleryPlugin extends Plugin {
             name: 'Create showcase notes',
             callback: async () => {
                 await new ShowcaseGenerator(this.app).generateShowcase();
+            }
+        });
+
+        this.addCommand({
+            id: 'insert-gallery',
+            name: 'Insert gallery',
+            editorCallback: (editor, ctx) => {
+                new GalleryBuilderModal(this.app, this, editor).open();
             }
         });
 

@@ -28,6 +28,34 @@ jest.mock('obsidian', () => ({
         constructor(containerEl: any) { this.containerEl = containerEl; }
     },
     Notice: class {},
+    Modal: class {
+        app: App;
+        contentEl: any;
+        constructor(app: App) {
+            this.app = app;
+            this.contentEl = {
+                empty: jest.fn(),
+                createEl: jest.fn().mockReturnValue({
+                    addEventListener: jest.fn()
+                }),
+                createDiv: jest.fn().mockReturnValue({
+                    createEl: jest.fn().mockReturnValue({
+                        addEventListener: jest.fn()
+                    }),
+                    createDiv: jest.fn().mockReturnValue({
+                        createEl: jest.fn().mockReturnValue({
+                            addEventListener: jest.fn()
+                        }),
+                        setCssStyles: jest.fn()
+                    }),
+                    setCssStyles: jest.fn()
+                }),
+                addClass: jest.fn()
+            };
+        }
+        open() {}
+        close() {}
+    },
     TFile: class {},
     requestUrl: jest.fn()
 }));

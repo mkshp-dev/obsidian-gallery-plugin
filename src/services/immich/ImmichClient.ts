@@ -79,6 +79,41 @@ export class ImmichClient {
         }
     }
 
+    public async getRecentAssets(): Promise<ImmichAsset[]> {
+        const url = `${this.baseUrl}/api/search/metadata`;
+        try {
+            const response = await requestUrl({
+                url,
+                method: 'POST',
+                headers: {
+                    ...this.getHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+            if (response.status === 200) {
+                const data = response.json as { assets?: { items: ImmichAsset[] }; items?: ImmichAsset[]; count?: number };
+                return data.assets?.items || data.items || [];
+            }
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
+            }
+            if (response.status === 404) {
+                throw new Error(`Search endpoint not found on Immich connection '${this.connection.key}'`);
+            }
+            throw new Error(`Failed to fetch Immich recent assets: HTTP ${response.status}`);
+        } catch (e) {
+            // Re-throw explicit errors, map network errors
+            if (e instanceof Error && e.message.includes('HTTP')) {
+                throw e;
+            }
+            if (e instanceof Error && e.message.includes('not found on Immich connection')) {
+                throw e;
+            }
+            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
+        }
+    }
+
     public async getFavorites(): Promise<ImmichAsset[]> {
         const url = `${this.baseUrl}/api/search/metadata`;
         try {

@@ -157,6 +157,44 @@ describe('ImmichClient', () => {
         await expect(client.getFavorites()).rejects.toThrow(/Authentication failed for Immich connection/);
     });
 
+    it('should fetch recent assets successfully', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 200,
+            json: {
+                assets: {
+                    items: [
+                        { id: 'recent1', originalFileName: 'photo-recent.jpg' }
+                    ],
+                    count: 1
+                }
+            }
+        });
+
+        const assets = await client.getRecentAssets();
+
+        expect(requestUrl).toHaveBeenCalledWith({
+            url: 'https://immich.example.com/api/search/metadata',
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'x-api-key': 'test-api-key',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        });
+        expect(assets).toHaveLength(1);
+        expect(assets[0].id).toBe('recent1');
+    });
+
+    it('should throw explicit error on fetch recent assets auth failure', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 401,
+            json: { message: 'Unauthorized' }
+        });
+
+        await expect(client.getRecentAssets()).rejects.toThrow(/Authentication failed for Immich connection/);
+    });
+
     it('should return correct asset URL for original', () => {
         const url = client.getAssetUrl('asset123');
         expect(url).toBe('https://immich.example.com/api/assets/asset123/original');

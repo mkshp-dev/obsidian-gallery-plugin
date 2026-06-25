@@ -415,3 +415,22 @@ view: grid`;
         });
         expect(config.view.type).toBe('grid');
     });
+
+    it('new v2 immich recent block parses correctly', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    source:
+      type: recent
+view: grid`;
+        const config = ParameterParser.parseYaml(yaml);
+        expect(config.sources).toHaveLength(1);
+        expect(config.sources[0]).toEqual({
+            type: 'immich',
+            connection: 'home',
+            source: {
+                type: 'recent'
+            }
+        });
+        expect(config.view.type).toBe('grid');
+    });

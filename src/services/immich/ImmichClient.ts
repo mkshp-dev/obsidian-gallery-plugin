@@ -80,15 +80,22 @@ export class ImmichClient {
     }
 
     public async getFavorites(): Promise<ImmichAsset[]> {
-        const url = `${this.baseUrl}/api/assets?isFavorite=true`;
+        const url = `${this.baseUrl}/api/search/metadata`;
         try {
             const response = await requestUrl({
                 url,
-                method: 'GET',
-                headers: this.getHeaders()
+                method: 'POST',
+                headers: {
+                    ...this.getHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    isFavorite: true
+                })
             });
             if (response.status === 200) {
-                return response.json as ImmichAsset[];
+                const data = response.json as { assets?: { items: ImmichAsset[] }; items?: ImmichAsset[]; count?: number };
+                return data.assets?.items || data.items || [];
             }
             if (response.status === 401 || response.status === 403) {
                 throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);

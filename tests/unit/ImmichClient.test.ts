@@ -101,6 +101,62 @@ describe('ImmichClient', () => {
         expect(assets[0].id).toBe('asset1');
     });
 
+    it('should fetch favorites successfully with nested assets items', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 200,
+            json: {
+                assets: {
+                    items: [
+                        { id: 'fav1', originalFileName: 'photo1.jpg' }
+                    ],
+                    count: 1
+                }
+            }
+        });
+
+        const assets = await client.getFavorites();
+
+        expect(requestUrl).toHaveBeenCalledWith({
+            url: 'https://immich.example.com/api/search/metadata',
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'x-api-key': 'test-api-key',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                isFavorite: true
+            })
+        });
+        expect(assets).toHaveLength(1);
+        expect(assets[0].id).toBe('fav1');
+    });
+
+    it('should fetch favorites successfully with flat items', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 200,
+            json: {
+                items: [
+                    { id: 'fav1', originalFileName: 'photo1.jpg' }
+                ],
+                count: 1
+            }
+        });
+
+        const assets = await client.getFavorites();
+        expect(assets).toHaveLength(1);
+        expect(assets[0].id).toBe('fav1');
+    });
+
+    it('should throw explicit error on fetch favorites auth failure', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 401,
+            json: { message: 'Unauthorized' }
+        });
+
+        await expect(client.getFavorites()).rejects.toThrow(/Authentication failed for Immich connection/);
+    });
+
     it('should return correct asset URL for original', () => {
         const url = client.getAssetUrl('asset123');
         expect(url).toBe('https://immich.example.com/api/assets/asset123/original');

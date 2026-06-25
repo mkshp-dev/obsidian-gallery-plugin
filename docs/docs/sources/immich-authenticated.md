@@ -55,6 +55,22 @@ view:
 
 **Note:** If you have no favorites in your Immich library, the gallery will be empty. This is expected behavior and will not produce an error.
 
+### Authenticated Recent
+
+To show your recently added assets, use the `immich` source type, reference your connection `key`, and specify `type: recent`. Like favorites, it does not require an album ID.
+
+```yaml
+sources:
+  - type: immich
+    connection: home
+    source:
+      type: recent
+view:
+  type: grid
+```
+
+**Note:** The assets returned will be empty if your library has no assets. This is expected behavior and will not produce an error.
+
 ## Privacy and Security
 
 - Your API Key is stored locally in Obsidian's plugin settings.

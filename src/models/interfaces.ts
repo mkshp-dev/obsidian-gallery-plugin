@@ -34,6 +34,8 @@ export interface IImmichAlbumSourceConfig {
     id: string;
   } | {
     type: 'favorites';
+  } | {
+    type: 'recent';
   };
 }
 

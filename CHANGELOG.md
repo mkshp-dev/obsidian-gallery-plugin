@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Added authenticated Immich `recent` source support.
 - Added authenticated Immich `favorites` source support.
 - Restructured Gallery View's settings UI into distinct General and Providers tabs.
 - Verified and finalized the Gallery builder modal and Immich insertion UX epic (#77).

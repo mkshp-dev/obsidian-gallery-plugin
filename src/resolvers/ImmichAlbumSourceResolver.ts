@@ -42,12 +42,17 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
         const client = new ImmichClient(connection);
 
         try {
-            const assets = source.source.type === 'favorites'
-                ? await client.getFavorites()
-                : await client.getAlbumAssets(source.source.id);
+            let assets;
+            if (source.source.type === 'favorites') {
+                assets = await client.getFavorites();
+            } else if (source.source.type === 'recent') {
+                assets = await client.getRecentAssets();
+            } else {
+                assets = await client.getAlbumAssets(source.source.id);
+            }
 
             if (assets.length === 0) {
-                // Return no images, but no error - genuinely empty album/favorites
+                // Return no images, but no error - genuinely empty album/favorites/recent
                 return { images, errors };
             }
 
@@ -70,9 +75,14 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
                     const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
 
                     // The path is logical, resourceUrl is the blob Object URL
-                    const logicalPath = source.source.type === 'favorites'
-                        ? `immich://${connection.key}/favorites/asset/${asset.id}`
-                        : `immich://${connection.key}/album/${source.source.id}/asset/${asset.id}`;
+                    let logicalPath;
+                    if (source.source.type === 'favorites') {
+                        logicalPath = `immich://${connection.key}/favorites/asset/${asset.id}`;
+                    } else if (source.source.type === 'recent') {
+                        logicalPath = `immich://${connection.key}/recent/asset/${asset.id}`;
+                    } else {
+                        logicalPath = `immich://${connection.key}/album/${source.source.id}/asset/${asset.id}`;
+                    }
 
                     return new ImageSource(logicalPath, 'immich', originalFileName, blobUrl);
                 } catch (e) {

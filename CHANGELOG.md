@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Verified and finalized the authenticated image delivery pipeline for Gallery View (#74).
 - Added Gallery builder modal command to compose multiple sources with interactive UIs, rather than writing YAML directly.
 
 - Immich connection model cleanup: remove display name, keep stable key, add migration.

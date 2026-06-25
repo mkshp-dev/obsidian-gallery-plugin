@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Added Gallery builder modal command to compose multiple sources with interactive UIs, rather than writing YAML directly.
 
 - Immich connection model cleanup: remove display name, keep stable key, add migration.
 - Replaced oversized broken image placeholders with exact source failure reasons and compact inline error UI for Immich galleries.

@@ -1,0 +1,14 @@
+chore: track authenticated Immich album epic completion
+
+Implementation Audit for Epic #75:
+
+1. Users can write a valid authenticated immich album source block: Satisfied by `ImmichAlbumSourceResolver` and `ParameterParser` enhancements.
+2. Gallery View can fetch and render the contents of that album end-to-end: Satisfied by `ImmichClient.getAlbumAssets`, `ImmichClient.getAssetBlobUrl` and proper representation loading.
+3. Authenticated album failures surface clear user-facing errors: Satisfied by `ImmichAlbumSourceResolver` returning explicit error strings and UI displaying inline error containers per source.
+4. Mixed galleries that include authenticated Immich albums behave correctly: Satisfied by `GalleryProcessor` error container rendering independently per-source.
+5. The authenticated album source is documented with current syntax/examples: Satisfied by `docs/docs/sources/immich-albums.md`.
+6. The album source has been manually tested against a real Immich instance: Satisfied by prior manual testing during feature implementation.
+
+This epic should now be closed.
+
+Fixes #75

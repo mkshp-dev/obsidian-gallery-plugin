@@ -17,6 +17,7 @@ const sidebars = {
         'sources/local-vault-source',
         'sources/external-urls',
         'sources/immich-shared-links',
+        'sources/immich-authenticated',
       ],
     },
     {

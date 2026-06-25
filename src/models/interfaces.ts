@@ -32,6 +32,8 @@ export interface IImmichAlbumSourceConfig {
   source: {
     type: 'album';
     id: string;
+  } | {
+    type: 'favorites';
   };
 }
 

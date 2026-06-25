@@ -79,6 +79,36 @@ export class ImmichClient {
         }
     }
 
+    public async getFavorites(): Promise<ImmichAsset[]> {
+        const url = `${this.baseUrl}/api/assets?isFavorite=true`;
+        try {
+            const response = await requestUrl({
+                url,
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            if (response.status === 200) {
+                return response.json as ImmichAsset[];
+            }
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
+            }
+            if (response.status === 404) {
+                throw new Error(`Favorites endpoint not found on Immich connection '${this.connection.key}'`);
+            }
+            throw new Error(`Failed to fetch Immich favorites: HTTP ${response.status}`);
+        } catch (e) {
+            // Re-throw explicit errors, map network errors
+            if (e instanceof Error && e.message.includes('HTTP')) {
+                throw e;
+            }
+            if (e instanceof Error && e.message.includes('not found on Immich connection')) {
+                throw e;
+            }
+            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
+        }
+    }
+
     public getAssetUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): string {
         if (representation === 'thumbnail') {
             return `${this.baseUrl}/api/assets/${assetId}/thumbnail`;

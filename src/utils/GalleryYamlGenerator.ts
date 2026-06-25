@@ -42,11 +42,17 @@ export class GalleryYamlGenerator {
                     break;
                 case 'immich':
                     if (!source.connection) throw new Error('Immich authenticated source requires a connection.');
-                    if (!source.source || !source.source.id) throw new Error('Immich authenticated source requires an album ID.');
+                    if (!source.source) throw new Error('Immich authenticated source requires a source configuration.');
                     yaml += `    connection: ${source.connection}\n`;
                     yaml += `    source:\n`;
-                    yaml += `      type: album\n`;
-                    yaml += `      id: ${source.source.id}\n`;
+
+                    if (source.source.type === 'favorites') {
+                        yaml += `      type: favorites\n`;
+                    } else if (source.source.type === 'album') {
+                        if (!source.source.id) throw new Error('Immich authenticated album source requires an album ID.');
+                        yaml += `      type: album\n`;
+                        yaml += `      id: ${source.source.id}\n`;
+                    }
                     break;
             }
         }

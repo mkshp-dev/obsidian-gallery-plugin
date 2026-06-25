@@ -103,6 +103,26 @@ describe('ImmichAlbumSourceResolver', () => {
         expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'original');
     });
 
+    it('should resolve and fetch blobs successfully for favorites', async () => {
+        const source: IImmichAlbumSourceConfig = { type: 'immich', connection: 'home', source: { type: 'favorites' } };
+
+        const mockAssets = [
+            { id: 'asset1', originalFileName: 'fav1.jpg' }
+        ];
+
+        (ImmichClient.prototype.getFavorites as jest.Mock).mockResolvedValue(mockAssets);
+        (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockResolvedValueOnce('blob:url_fav1');
+
+        const result = await resolver.resolve(source, {});
+
+        expect(result.errors).toHaveLength(0);
+        expect(result.images).toHaveLength(1);
+
+        expect(result.images[0].path).toBe('immich://home/favorites/asset/asset1');
+        expect(result.images[0].resourceUrl).toBe('blob:url_fav1');
+        expect(result.images[0].displayName).toBe('fav1.jpg');
+    });
+
     it('should ignore single asset failure but resolve the rest', async () => {
         const source: IImmichAlbumSourceConfig = { type: 'immich', connection: 'home', source: { type: 'album', id: 'album1' } };
 

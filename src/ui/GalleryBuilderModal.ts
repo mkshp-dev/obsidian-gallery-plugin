@@ -264,9 +264,13 @@ export class GalleryBuilderModal extends Modal {
                         albumOptions[album.id] = album.albumName || 'Untitled Album';
                     });
 
+                    // Since favorites authoring is currently out of scope for the builder,
+                    // we assume an album type for UI purposes for now.
+                    const albumSource = source.source as { type: 'album', id: string };
+
                     // Ensure selected album is valid, or select the first one
-                    if (!source.source!.id || !albumOptions[source.source!.id]) {
-                        source.source!.id = albums[0].id;
+                    if (!albumSource.id || !albumOptions[albumSource.id]) {
+                        albumSource.id = albums[0].id;
                     }
 
                     new Setting(albumContainer)
@@ -274,9 +278,9 @@ export class GalleryBuilderModal extends Modal {
                         .setDesc('Select an album to display.')
                         .addDropdown(dropdown => dropdown
                             .addOptions(albumOptions)
-                            .setValue(source.source!.id || '')
+                            .setValue(albumSource.id || '')
                             .onChange(value => {
-                                source.source!.id = value;
+                                albumSource.id = value;
                             })
                         );
                 } catch (e) {

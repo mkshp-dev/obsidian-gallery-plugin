@@ -21,7 +21,12 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
             return { images, errors };
         }
 
-        if (!source.source || source.source.type !== 'album' || !source.source.id) {
+        if (!source.source) {
+            errors.push(`Immich source is missing a 'source' block.`);
+            return { images, errors };
+        }
+
+        if (source.source.type === 'album' && !source.source.id) {
             errors.push(`Immich source is missing a valid album 'id'.`);
             return { images, errors };
         }
@@ -37,10 +42,12 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
         const client = new ImmichClient(connection);
 
         try {
-            const assets = await client.getAlbumAssets(source.source.id);
+            const assets = source.source.type === 'favorites'
+                ? await client.getFavorites()
+                : await client.getAlbumAssets(source.source.id);
 
             if (assets.length === 0) {
-                // Return no images, but no error - genuinely empty album
+                // Return no images, but no error - genuinely empty album/favorites
                 return { images, errors };
             }
 
@@ -63,11 +70,13 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
                     const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
 
                     // The path is logical, resourceUrl is the blob Object URL
-                    const logicalPath = `immich://${connection.key}/album/${source.source.id}/asset/${asset.id}`;
+                    const logicalPath = source.source.type === 'favorites'
+                        ? `immich://${connection.key}/favorites/asset/${asset.id}`
+                        : `immich://${connection.key}/album/${source.source.id}/asset/${asset.id}`;
 
                     return new ImageSource(logicalPath, 'immich', originalFileName, blobUrl);
                 } catch (e) {
-                    Logger.warn(`Failed to load asset ${asset.id} for Immich album source: ${e instanceof Error ? e.message : String(e)}`);
+                    Logger.warn(`Failed to load asset ${asset.id} for Immich source: ${e instanceof Error ? e.message : String(e)}`);
                     // We don't necessarily want to fail the whole album if one asset fails
                     return null;
                 }

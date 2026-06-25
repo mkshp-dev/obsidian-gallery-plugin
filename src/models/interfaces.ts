@@ -36,6 +36,7 @@ export interface IImmichAlbumSourceConfig {
     type: 'favorites';
   } | {
     type: 'recent';
+    limit?: number;
   };
 }
 

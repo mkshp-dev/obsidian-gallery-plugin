@@ -46,7 +46,8 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
             if (source.source.type === 'favorites') {
                 assets = await client.getFavorites();
             } else if (source.source.type === 'recent') {
-                assets = await client.getRecentAssets();
+                const limit = typeof source.source.limit === 'number' ? source.source.limit : 20;
+                assets = await client.getRecentAssets(limit);
             } else {
                 assets = await client.getAlbumAssets(source.source.id);
             }

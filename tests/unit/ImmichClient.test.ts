@@ -157,7 +157,7 @@ describe('ImmichClient', () => {
         await expect(client.getFavorites()).rejects.toThrow(/Authentication failed for Immich connection/);
     });
 
-    it('should fetch recent assets successfully', async () => {
+    it('should fetch recent assets successfully with default limit', async () => {
         (requestUrl as jest.Mock).mockResolvedValue({
             status: 200,
             json: {
@@ -180,7 +180,42 @@ describe('ImmichClient', () => {
                 'x-api-key': 'test-api-key',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({})
+            body: JSON.stringify({
+                size: 20,
+                order: 'desc'
+            })
+        });
+        expect(assets).toHaveLength(1);
+        expect(assets[0].id).toBe('recent1');
+    });
+
+    it('should fetch recent assets successfully with custom limit', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 200,
+            json: {
+                assets: {
+                    items: [
+                        { id: 'recent1', originalFileName: 'photo-recent.jpg' }
+                    ],
+                    count: 1
+                }
+            }
+        });
+
+        const assets = await client.getRecentAssets(35);
+
+        expect(requestUrl).toHaveBeenCalledWith({
+            url: 'https://immich.example.com/api/search/metadata',
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'x-api-key': 'test-api-key',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                size: 35,
+                order: 'desc'
+            })
         });
         expect(assets).toHaveLength(1);
         expect(assets[0].id).toBe('recent1');

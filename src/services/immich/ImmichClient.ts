@@ -79,7 +79,7 @@ export class ImmichClient {
         }
     }
 
-    public async getRecentAssets(): Promise<ImmichAsset[]> {
+    public async getRecentAssets(limit: number = 20): Promise<ImmichAsset[]> {
         const url = `${this.baseUrl}/api/search/metadata`;
         try {
             const response = await requestUrl({
@@ -89,7 +89,10 @@ export class ImmichClient {
                     ...this.getHeaders(),
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                    size: limit,
+                    order: 'desc'
+                })
             });
             if (response.status === 200) {
                 const data = response.json as { assets?: { items: ImmichAsset[] }; items?: ImmichAsset[]; count?: number };

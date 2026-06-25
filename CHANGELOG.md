@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Restructured Gallery View's settings UI into distinct General and Providers tabs.
 - Verified and finalized the Gallery builder modal and Immich insertion UX epic (#77).
 - Verified and finalized the authenticated Immich album source MVP (#75).
 - Verified and finalized the authenticated image delivery pipeline for Gallery View (#74).

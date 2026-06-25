@@ -162,6 +162,55 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
         });
     });
 
+    it('new v2 immich block fails validation on missing connection', () => {
+        const yaml = `sources:
+  - type: immich
+    source:
+      type: album
+      id: abc1234
+view: thumbnail`;
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source requires a "connection" string key');
+    });
+
+    it('new v2 immich block fails validation on missing source object', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+view: thumbnail`;
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source requires a "source" object');
+    });
+
+    it('new v2 immich album block fails validation on missing id', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    source:
+      type: album
+view: thumbnail`;
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich "album" source requires an "id" string');
+    });
+
+    it('new v2 immich recent block fails validation on invalid limit', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    source:
+      type: recent
+      limit: "fifty"
+view: thumbnail`;
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich "recent" source limit must be a number');
+    });
+
+    it('new v2 immich block fails validation on invalid source type', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    source:
+      type: invalid_type
+view: thumbnail`;
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source type must be "album", "favorites", or "recent"');
+    });
+
     describe('Rendering / Behavior', () => {
         test('v2 local block renders the same way as legacy local block', async () => {
             const factoryLegacy = new FakeViewFactory();
@@ -319,7 +368,7 @@ view: thumbnail`;
     connection: missing_conn
     source:
       type: album
-      id: 123
+      id: "123"
 view: thumbnail`;
 
             const result = await processor.processCodeBlock(

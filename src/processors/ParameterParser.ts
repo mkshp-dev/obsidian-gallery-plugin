@@ -244,6 +244,43 @@ export class ParameterParser {
                 'Recursive must be a boolean value'));
         }
 
+        // Validate immich source specifically
+        if (config.sources) {
+            for (let i = 0; i < config.sources.length; i++) {
+                const source = config.sources[i];
+                if (source.type === 'immich') {
+                    if (typeof source.connection !== 'string' || !source.connection.trim()) {
+                        errors.push(this.createConfigError(`sources[${i}].connection`,
+                            'Immich source requires a "connection" string key'));
+                    }
+                    if (typeof source.source !== 'object' || source.source === null) {
+                        errors.push(this.createConfigError(`sources[${i}].source`,
+                            'Immich source requires a "source" object'));
+                        continue;
+                    }
+
+                    const immichSource = source.source as Record<string, unknown>;
+
+                    if (immichSource.type === 'album') {
+                        if (typeof immichSource.id !== 'string' || !immichSource.id.trim()) {
+                            errors.push(this.createConfigError(`sources[${i}].source.id`,
+                                'Immich "album" source requires an "id" string'));
+                        }
+                    } else if (immichSource.type === 'recent') {
+                        if (immichSource.limit !== undefined && typeof immichSource.limit !== 'number') {
+                            errors.push(this.createConfigError(`sources[${i}].source.limit`,
+                                'Immich "recent" source limit must be a number'));
+                        }
+                    } else if (immichSource.type === 'favorites') {
+                        // favorites requires no extra fields, which is internally consistent
+                    } else {
+                        errors.push(this.createConfigError(`sources[${i}].source.type`,
+                            'Immich source type must be "album", "favorites", or "recent"'));
+                    }
+                }
+            }
+        }
+
         return errors;
     }
 

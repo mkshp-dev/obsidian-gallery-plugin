@@ -14,11 +14,17 @@ This is different from [Immich Shared Links](./immich-shared-links.md) because i
 2. **Set a Key**: Assign a short, memorable `key` (like `home`) to your connection in the plugin settings. This key is how you refer to the connection in your notes.
 3. **Generate an API Key**: Ensure you have created an API Key in your Immich account settings and entered it in the plugin settings.
 
+## Common Behavior
+
+- **View-Aware Loading**: The plugin intelligently fetches lighter thumbnail or preview assets depending on your active `view` to improve rendering speed, avoiding large original asset downloads for large grids.
+- **Inline Error Behavior**: If an asset fails to load, the gallery handles it inline gracefully, and can retry if the asset becomes available.
+- **Separate from Shared Links**: The `immich` authenticated source is entirely separate from `immich-share` and does not use public shared links. It exclusively uses your securely stored API keys.
+
 ## Supported Authenticated Sources
 
 ### Authenticated Album
 
-To show an entire authenticated album, use the `immich` source type, reference your connection `key`, and specify the album `id`.
+To show an entire authenticated album, use the `immich` source type, reference your connection `key`, and specify the album `id`. The `id` field is required for this source type.
 
 ```yaml
 sources:
@@ -41,7 +47,7 @@ To find your album ID:
 
 ### Authenticated Favorites
 
-To show all your favorited assets, use the `immich` source type, reference your connection `key`, and specify `type: favorites`. It does not require an album ID.
+To show all your favorited assets, use the `immich` source type, reference your connection `key`, and specify `type: favorites`. It does not require an album ID or any extra fields.
 
 ```yaml
 sources:
@@ -59,12 +65,15 @@ view:
 
 To show your recently added assets, use the `immich` source type, reference your connection `key`, and specify `type: recent`. Like favorites, it does not require an album ID.
 
+You can also provide an optional `limit` field to control how many recent assets are fetched (defaults to 20).
+
 ```yaml
 sources:
   - type: immich
     connection: home
     source:
       type: recent
+      limit: 50
 view:
   type: grid
 ```
@@ -76,7 +85,6 @@ view:
 - Your API Key is stored locally in Obsidian's plugin settings.
 - The `immich` source type creates temporary, authenticated preview URLs to render images within Obsidian.
 - These URLs expire when you close the note and are never embedded into the Markdown document, ensuring your photos remain private.
-- The plugin intelligently fetches lighter thumbnail or preview assets depending on your active `view` to improve rendering speed, avoiding large original asset downloads for large grids.
 
 ## Troubleshooting
 

@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Normalized and clarified the authenticated Immich source contract and documentation.
 - Added authenticated Immich `recent` source support.
 - Added authenticated Immich `favorites` source support.
 - Restructured Gallery View's settings UI into distinct General and Providers tabs.

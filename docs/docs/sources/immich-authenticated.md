@@ -98,6 +98,23 @@ view:
   type: grid
 ```
 
+
+### Authenticated People
+
+You can filter assets by Immich people by providing one or more person IDs in the `personIds` array. Like other filters, `personIds` can be combined with `albumIds`, `isFavorite`, or date filters.
+
+```yaml
+sources:
+  - type: immich
+    connection: home
+    filters:
+      personIds:
+        - 110e8400-e29b-41d4-a716-446655440000
+        - 2b2d56a1-3e4b-4a5c-8d1e-2c9a8b7f6e5d
+view:
+  type: grid
+```
+
 ### Date Range Filters
 
 You can filter assets by their creation date using `createdAfter` and `createdBefore`. The dates must be in `YYYY-MM-DD` format. These filters can be used on their own or combined with other filters like `albumIds` or `isFavorite`.

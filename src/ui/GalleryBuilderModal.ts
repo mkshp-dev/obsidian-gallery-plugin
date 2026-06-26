@@ -235,6 +235,8 @@ export class GalleryBuilderModal extends Modal {
                 mode = 'favorites';
             } else if (source.filters?.tagIds) {
                 mode = 'tags';
+            } else if (source.filters?.personIds) {
+                mode = 'people';
             }
 
             // Ensure source structure is initialized based on mode
@@ -368,6 +370,64 @@ export class GalleryBuilderModal extends Modal {
                             cls: 'gallery-error-text'
                         });
                     }
+                } else if (currentMode === 'people') {
+                    const connection = connections.find(c => c.key === connectionKey);
+                    if (!connection) return;
+
+                    dynamicContainer.createEl('p', { text: 'Loading people...' });
+
+                    try {
+                        const client = new ImmichClient(connection);
+                        const people = await client.getPeople();
+
+                        dynamicContainer.empty();
+
+                        if (people.length === 0) {
+                            dynamicContainer.createEl('p', { text: 'No people found on this connection.' });
+                            return;
+                        }
+
+                        // Initialize personIds filter if not present
+                        source.filters = { ...source.filters };
+                        if (!source.filters.personIds) {
+                            source.filters.personIds = [];
+                        }
+                        // Remove incompatible global parameters
+                        delete source.limit;
+                        delete source.sort;
+
+                        // Create a container for people
+                        const peopleContainer = dynamicContainer.createDiv('gallery-builder-people-container');
+
+                        people.forEach(person => {
+                            const personName = String(person.name || person.id);
+                            const isChecked = source.filters!.personIds!.includes(person.id);
+
+                            new Setting(peopleContainer)
+                                .setName(personName)
+                                .addToggle(toggle => toggle
+                                    .setValue(isChecked)
+                                    .onChange(checked => {
+                                        if (checked) {
+                                            if (!source.filters!.personIds!.includes(person.id)) {
+                                                source.filters!.personIds!.push(person.id);
+                                            }
+                                        } else {
+                                            source.filters!.personIds = source.filters!.personIds!.filter(id => id !== person.id);
+                                        }
+                                        if (source.filters!.personIds!.length === 0) {
+                                            delete source.filters!.personIds;
+                                        }
+                                    })
+                                );
+                        });
+                    } catch (e) {
+                        dynamicContainer.empty();
+                        dynamicContainer.createEl('p', {
+                            text: `Failed to load people: ${e instanceof Error ? e.message : String(e)}`,
+                            cls: 'gallery-error-text'
+                        });
+                    }
                 } else if (currentMode === 'favorites') {
                     source.filters = { isFavorite: true };
                     delete source.limit;
@@ -417,7 +477,8 @@ export class GalleryBuilderModal extends Modal {
                     'album': 'Album',
                     'favorites': 'Favorites',
                     'recent': 'Recent',
-                    'tags': 'Tags'
+                    'tags': 'Tags',
+                    'people': 'People'
                 })
                 .setValue(mode)
                 .onChange(async value => {

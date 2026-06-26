@@ -1,7 +1,7 @@
 import { requestUrl } from 'obsidian';
 import { IImmichConnection } from '../../models/interfaces';
 import { Logger } from '../../utils/Logger';
-import { ImmichAsset, ImmichAlbum, ImmichTag } from '../../models/immich/ImmichTypes';
+import { ImmichAsset, ImmichAlbum, ImmichTag, ImmichPerson } from '../../models/immich/ImmichTypes';
 import { ImmichHelpers } from '../../utils/immich/ImmichHelpers';
 import { ObjectUrlManager } from '../../utils/immich/ObjectUrlManager';
 
@@ -73,6 +73,9 @@ export class ImmichClient {
                 }
                 if (filters.tagIds !== undefined) {
                     body.tagIds = filters.tagIds;
+                }
+                if (filters.personIds !== undefined) {
+                    body.personIds = filters.personIds;
                 }
             }
 
@@ -149,6 +152,38 @@ export class ImmichClient {
                 throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
             }
             throw new Error(`Failed to fetch Immich tags: HTTP ${response.status}`);
+        } catch (e) {
+            if (e instanceof Error && e.message.includes('HTTP')) {
+                throw e;
+            }
+            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
+        }
+    }
+
+    public async getPeople(): Promise<ImmichPerson[]> {
+        const url = `${this.baseUrl}/api/people`;
+        try {
+            const response = await requestUrl({
+                url,
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            if (response.status === 200) {
+                const data = response.json as { items?: ImmichPerson[] } | ImmichPerson[];
+                if (Array.isArray(data)) {
+                    return data;
+                } else if (data && data.items && Array.isArray(data.items)) {
+                    return data.items;
+                }
+                return [];
+            }
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
+            }
+            if (response.status === 404) {
+                throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
+            }
+            throw new Error(`Failed to fetch Immich people: HTTP ${response.status}`);
         } catch (e) {
             if (e instanceof Error && e.message.includes('HTTP')) {
                 throw e;

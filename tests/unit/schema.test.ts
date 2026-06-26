@@ -529,6 +529,27 @@ view: grid`;
         expect(config.view.type).toBe('grid');
     });
 
+
+    it('new v2 immich people block parses correctly', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    filters:
+      personIds:
+        - p1
+        - p2
+view: grid`;
+        const config = ParameterParser.parseYaml(yaml);
+        expect(config.sources).toHaveLength(1);
+        expect(config.sources[0]).toEqual({
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                personIds: ['p1', 'p2']
+            }
+        });
+        expect(config.view.type).toBe('grid');
+    });
     it('new v2 immich recent block with limit parses correctly', () => {
         const yaml = `sources:
   - type: immich

@@ -61,6 +61,9 @@ export class GalleryYamlGenerator {
                         if (source.filters.createdBefore) {
                             yaml += `      createdBefore: ${source.filters.createdBefore}\n`;
                         }
+                        if (source.filters.assetType) {
+                            yaml += `      assetType: ${source.filters.assetType}\n`;
+                        }
                     }
                     if (source.limit) {
                         yaml += `    limit: ${source.limit}\n`;

@@ -68,6 +68,9 @@ export class ImmichClient {
                 if (filters.createdBefore !== undefined) {
                     body.createdBefore = filters.createdBefore;
                 }
+                if (filters.assetType !== undefined) {
+                    body.type = (filters.assetType as string).toUpperCase();
+                }
             }
 
             const promises = [];

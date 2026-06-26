@@ -199,4 +199,22 @@ describe('ImmichSourceResolver', () => {
 
         expect(searchSpy).toHaveBeenCalledWith({ createdAfter: '2025-01-01', createdBefore: '2025-12-31' }, undefined, undefined);
     });
+
+    it('should assert assetType filter is passed correctly', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                assetType: 'video'
+            }
+        };
+
+        const mockAssets = [{ id: 'asset1', originalFileName: 'video1.mp4' }];
+        const searchSpy = (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue(mockAssets);
+        (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockResolvedValueOnce('blob:url1');
+
+        await resolver.resolve(source, {});
+
+        expect(searchSpy).toHaveBeenCalledWith({ assetType: 'video' }, undefined, undefined);
+    });
 });

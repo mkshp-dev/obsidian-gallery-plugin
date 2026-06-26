@@ -253,29 +253,43 @@ export class ParameterParser {
                         errors.push(this.createConfigError(`sources[${i}].connection`,
                             'Immich source requires a "connection" string key'));
                     }
-                    if (typeof source.source !== 'object' || source.source === null) {
-                        errors.push(this.createConfigError(`sources[${i}].source`,
-                            'Immich source requires a "source" object'));
-                        continue;
+                    if (source.filters !== undefined && (typeof source.filters !== 'object' || source.filters === null)) {
+                        errors.push(this.createConfigError(`sources[${i}].filters`,
+                            'Immich source "filters" must be an object'));
+                    } else if (source.filters) {
+                        if (source.filters.albumIds !== undefined && (!Array.isArray(source.filters.albumIds) || !source.filters.albumIds.every(id => typeof id === 'string'))) {
+                            errors.push(this.createConfigError(`sources[${i}].filters.albumIds`,
+                                'Immich source "filters.albumIds" must be an array of strings'));
+                        }
+                        if (source.filters.isFavorite !== undefined && typeof source.filters.isFavorite !== 'boolean') {
+                            errors.push(this.createConfigError(`sources[${i}].filters.isFavorite`,
+                                'Immich source "filters.isFavorite" must be a boolean'));
+                        }
+                        if (source.filters.createdAfter !== undefined && (typeof source.filters.createdAfter !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(source.filters.createdAfter))) {
+                            errors.push(this.createConfigError(`sources[${i}].filters.createdAfter`,
+                                'Immich source "filters.createdAfter" must be a string in YYYY-MM-DD format'));
+                        }
+                        if (source.filters.createdBefore !== undefined && (typeof source.filters.createdBefore !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(source.filters.createdBefore))) {
+                            errors.push(this.createConfigError(`sources[${i}].filters.createdBefore`,
+                                'Immich source "filters.createdBefore" must be a string in YYYY-MM-DD format'));
+                        }
                     }
-
-                    const immichSource = source.source as Record<string, unknown>;
-
-                    if (immichSource.type === 'album') {
-                        if (typeof immichSource.id !== 'string' || !immichSource.id.trim()) {
-                            errors.push(this.createConfigError(`sources[${i}].source.id`,
-                                'Immich "album" source requires an "id" string'));
+                    if (source.limit !== undefined && typeof source.limit !== 'number') {
+                        errors.push(this.createConfigError(`sources[${i}].limit`,
+                            'Immich source "limit" must be a number'));
+                    }
+                    if (source.sort !== undefined && (typeof source.sort !== 'object' || source.sort === null)) {
+                        errors.push(this.createConfigError(`sources[${i}].sort`,
+                            'Immich source "sort" must be an object'));
+                    } else if (source.sort) {
+                        if (source.sort.by !== 'createdAt') {
+                            errors.push(this.createConfigError(`sources[${i}].sort.by`,
+                                'Immich source "sort.by" must be "createdAt"'));
                         }
-                    } else if (immichSource.type === 'recent') {
-                        if (immichSource.limit !== undefined && typeof immichSource.limit !== 'number') {
-                            errors.push(this.createConfigError(`sources[${i}].source.limit`,
-                                'Immich "recent" source limit must be a number'));
+                        if (source.sort.order !== undefined && source.sort.order !== 'asc' && source.sort.order !== 'desc') {
+                            errors.push(this.createConfigError(`sources[${i}].sort.order`,
+                                'Immich source "sort.order" must be "asc" or "desc"'));
                         }
-                    } else if (immichSource.type === 'favorites') {
-                        // favorites requires no extra fields, which is internally consistent
-                    } else {
-                        errors.push(this.createConfigError(`sources[${i}].source.type`,
-                            'Immich source type must be "album", "favorites", or "recent"'));
                     }
                 }
             }

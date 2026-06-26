@@ -58,16 +58,17 @@ describe('GalleryYamlGenerator', () => {
 
     it('should generate valid yaml for an authenticated immich source', () => {
         const sources: Partial<ISourceConfig>[] = [
-            { type: 'immich', connection: 'home', source: { type: 'album', id: 'album-123' } }
+            { type: 'immich', connection: 'home', filters: { albumIds: ['album-123'] } }
         ];
 
         const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
 
         expect(result).toContain('- type: immich');
         expect(result).toContain('connection: home');
-        expect(result).toContain('source:');
-        expect(result).toContain('type: album');
-        expect(result).toContain('id: album-123');
+
+        expect(result).toContain('filters:');
+        expect(result).toContain('albumIds:');
+        expect(result).toContain('- album-123');
     });
 
     it('should generate valid yaml for combined sources', () => {

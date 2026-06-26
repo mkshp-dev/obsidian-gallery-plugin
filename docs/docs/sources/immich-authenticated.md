@@ -30,9 +30,9 @@ To show an entire authenticated album, use the `immich` source type, reference y
 sources:
   - type: immich
     connection: home
-    source:
-      type: album
-      id: 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
+    filters:
+      albumIds:
+        - 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
 view:
   type: grid
 ```
@@ -53,8 +53,8 @@ To show all your favorited assets, use the `immich` source type, reference your 
 sources:
   - type: immich
     connection: home
-    source:
-      type: favorites
+    filters:
+      isFavorite: true
 view:
   type: grid
 ```
@@ -71,14 +71,33 @@ You can also provide an optional `limit` field to control how many recent assets
 sources:
   - type: immich
     connection: home
-    source:
-      type: recent
-      limit: 50
+    limit: 50
+    sort:
+      by: createdAt
+      order: desc
 view:
   type: grid
 ```
 
 **Note:** The assets returned will be empty if your library has no assets. This is expected behavior and will not produce an error.
+
+
+### Date Range Filters
+
+You can filter assets by their creation date using `createdAfter` and `createdBefore`. The dates must be in `YYYY-MM-DD` format. These filters can be used on their own or combined with other filters like `albumIds` or `isFavorite`.
+
+```yaml
+sources:
+  - type: immich
+    connection: home
+    filters:
+      createdAfter: 2025-01-01
+      createdBefore: 2025-12-31
+view:
+  type: grid
+```
+
+**Note:** Date filtering currently supports the *created date* (the date the asset was uploaded or created in the system), rather than the captured/taken date.
 
 ## Privacy and Security
 

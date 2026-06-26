@@ -172,43 +172,43 @@ view: thumbnail`;
         expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source requires a "connection" string key');
     });
 
-    it('new v2 immich block fails validation on missing source object', () => {
+    it('new v2 immich block fails validation on invalid date filter', () => {
         const yaml = `sources:
   - type: immich
     connection: home
+    filters:
+      createdAfter: invalid-date
 view: thumbnail`;
-        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source requires a "source" object');
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "filters.createdAfter" must be a string in YYYY-MM-DD format');
     });
 
-    it('new v2 immich album block fails validation on missing id', () => {
+    it('new v2 immich album block fails validation on invalid albumIds', () => {
         const yaml = `sources:
   - type: immich
     connection: home
-    source:
-      type: album
+    filters:
+      albumIds: "not-an-array"
 view: thumbnail`;
-        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich "album" source requires an "id" string');
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "filters.albumIds" must be an array of strings');
     });
 
-    it('new v2 immich recent block fails validation on invalid limit', () => {
+    it('new v2 immich block fails validation on invalid limit', () => {
         const yaml = `sources:
   - type: immich
     connection: home
-    source:
-      type: recent
-      limit: "fifty"
+    limit: "fifty"
 view: thumbnail`;
-        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich "recent" source limit must be a number');
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "limit" must be a number');
     });
 
-    it('new v2 immich block fails validation on invalid source type', () => {
+    it('new v2 immich block fails validation on invalid sort format', () => {
         const yaml = `sources:
   - type: immich
     connection: home
-    source:
-      type: invalid_type
+    sort:
+      by: invalid_field
 view: thumbnail`;
-        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source type must be "album", "favorites", or "recent"');
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "sort.by" must be "createdAt"');
     });
 
     describe('Rendering / Behavior', () => {

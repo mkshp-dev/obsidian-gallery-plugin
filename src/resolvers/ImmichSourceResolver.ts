@@ -1,10 +1,10 @@
-import { IImmichAlbumSourceConfig, IImmichConnection, IImageSource } from '../models/interfaces';
+import { IImmichSourceConfig, IImmichConnection, IImageSource } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 
-export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichAlbumSourceConfig> {
+export class ImmichSourceResolver implements GallerySourceResolver<IImmichSourceConfig> {
     readonly type = 'immich';
     private getConnections: () => IImmichConnection[];
 
@@ -12,22 +12,12 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
         this.getConnections = getConnections;
     }
 
-    async resolve(source: IImmichAlbumSourceConfig, context: GallerySourceResolveContext): Promise<{ images: IImageSource[], errors: string[] }> {
+    async resolve(source: IImmichSourceConfig, context: GallerySourceResolveContext): Promise<{ images: IImageSource[], errors: string[] }> {
         const images: IImageSource[] = [];
         const errors: string[] = [];
 
         if (!source.connection) {
             errors.push(`Immich source is missing a 'connection' reference.`);
-            return { images, errors };
-        }
-
-        if (!source.source) {
-            errors.push(`Immich source is missing a 'source' block.`);
-            return { images, errors };
-        }
-
-        if (source.source.type === 'album' && !source.source.id) {
-            errors.push(`Immich source is missing a valid album 'id'.`);
             return { images, errors };
         }
 
@@ -42,15 +32,7 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
         const client = new ImmichClient(connection);
 
         try {
-            let assets;
-            if (source.source.type === 'favorites') {
-                assets = await client.getFavorites();
-            } else if (source.source.type === 'recent') {
-                const limit = typeof source.source.limit === 'number' ? source.source.limit : 20;
-                assets = await client.getRecentAssets(limit);
-            } else {
-                assets = await client.getAlbumAssets(source.source.id);
-            }
+            const assets = await client.searchMetadata(source.filters, source.limit, source.sort);
 
             if (assets.length === 0) {
                 // Return no images, but no error - genuinely empty album/favorites/recent
@@ -76,14 +58,7 @@ export class ImmichAlbumSourceResolver implements GallerySourceResolver<IImmichA
                     const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
 
                     // The path is logical, resourceUrl is the blob Object URL
-                    let logicalPath;
-                    if (source.source.type === 'favorites') {
-                        logicalPath = `immich://${connection.key}/favorites/asset/${asset.id}`;
-                    } else if (source.source.type === 'recent') {
-                        logicalPath = `immich://${connection.key}/recent/asset/${asset.id}`;
-                    } else {
-                        logicalPath = `immich://${connection.key}/album/${source.source.id}/asset/${asset.id}`;
-                    }
+                    const logicalPath = `immich://${connection.key}/search/asset/${asset.id}`;
 
                     return new ImageSource(logicalPath, 'immich', originalFileName, blobUrl);
                 } catch (e) {

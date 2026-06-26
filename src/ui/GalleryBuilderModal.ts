@@ -233,6 +233,8 @@ export class GalleryBuilderModal extends Modal {
                 mode = 'recent';
             } else if (source.filters?.isFavorite) {
                 mode = 'favorites';
+            } else if (source.filters?.tagIds) {
+                mode = 'tags';
             }
 
             // Ensure source structure is initialized based on mode
@@ -307,6 +309,65 @@ export class GalleryBuilderModal extends Modal {
                             cls: 'gallery-error-text'
                         });
                     }
+                } else if (currentMode === 'tags') {
+                    const connection = connections.find(c => c.key === connectionKey);
+                    if (!connection) return;
+
+                    dynamicContainer.createEl('p', { text: 'Loading tags...' });
+
+                    try {
+                        const client = new ImmichClient(connection);
+                        const tags = await client.getTags();
+
+                        dynamicContainer.empty();
+
+                        if (tags.length === 0) {
+                            dynamicContainer.createEl('p', { text: 'No tags found on this connection.' });
+                            return;
+                        }
+
+                        // Initialize tags filter if not present
+                        source.filters = { ...source.filters };
+                        if (!source.filters.tagIds) {
+                            source.filters.tagIds = [];
+                        }
+                        // Remove incompatible global parameters
+                        delete source.limit;
+                        delete source.sort;
+
+                        // Create a container with custom class for tags grid/list
+                        const tagsContainer = dynamicContainer.createDiv('gallery-builder-tags-container');
+
+                        tags.forEach(tag => {
+                            const tagName = String(tag.name || tag.value || tag.id);
+                            const isChecked = source.filters!.tagIds!.includes(tag.id);
+
+                            new Setting(tagsContainer)
+                                .setName(tagName)
+                                .addToggle(toggle => toggle
+                                    .setValue(isChecked)
+                                    .onChange(checked => {
+                                        if (checked) {
+                                            if (!source.filters!.tagIds!.includes(tag.id)) {
+                                                source.filters!.tagIds!.push(tag.id);
+                                            }
+                                        } else {
+                                            source.filters!.tagIds = source.filters!.tagIds!.filter(id => id !== tag.id);
+                                        }
+                                        if (source.filters!.tagIds!.length === 0) {
+                                            delete source.filters!.tagIds;
+                                        }
+                                    })
+                                );
+                        });
+
+                    } catch (e) {
+                        dynamicContainer.empty();
+                        dynamicContainer.createEl('p', {
+                            text: `Failed to load tags: ${e instanceof Error ? e.message : String(e)}`,
+                            cls: 'gallery-error-text'
+                        });
+                    }
                 } else if (currentMode === 'favorites') {
                     source.filters = { isFavorite: true };
                     delete source.limit;
@@ -355,7 +416,8 @@ export class GalleryBuilderModal extends Modal {
                 .addOptions({
                     'album': 'Album',
                     'favorites': 'Favorites',
-                    'recent': 'Recent'
+                    'recent': 'Recent',
+                    'tags': 'Tags'
                 })
                 .setValue(mode)
                 .onChange(async value => {

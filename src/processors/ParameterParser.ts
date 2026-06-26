@@ -261,6 +261,10 @@ export class ParameterParser {
                             errors.push(this.createConfigError(`sources[${i}].filters.albumIds`,
                                 'Immich source "filters.albumIds" must be an array of strings'));
                         }
+                        if (source.filters.tagIds !== undefined && (!Array.isArray(source.filters.tagIds) || !source.filters.tagIds.every(id => typeof id === 'string'))) {
+                            errors.push(this.createConfigError(`sources[${i}].filters.tagIds`,
+                                'Immich source "filters.tagIds" must be an array of strings'));
+                        }
                         if (source.filters.isFavorite !== undefined && typeof source.filters.isFavorite !== 'boolean') {
                             errors.push(this.createConfigError(`sources[${i}].filters.isFavorite`,
                                 'Immich source "filters.isFavorite" must be a boolean'));

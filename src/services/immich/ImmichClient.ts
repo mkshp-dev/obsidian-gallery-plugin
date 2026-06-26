@@ -1,7 +1,7 @@
 import { requestUrl } from 'obsidian';
 import { IImmichConnection } from '../../models/interfaces';
 import { Logger } from '../../utils/Logger';
-import { ImmichAsset, ImmichAlbum } from '../../models/immich/ImmichTypes';
+import { ImmichAsset, ImmichAlbum, ImmichTag } from '../../models/immich/ImmichTypes';
 import { ImmichHelpers } from '../../utils/immich/ImmichHelpers';
 import { ObjectUrlManager } from '../../utils/immich/ObjectUrlManager';
 
@@ -71,6 +71,9 @@ export class ImmichClient {
                 if (filters.assetType !== undefined) {
                     body.type = (filters.assetType as string).toUpperCase();
                 }
+                if (filters.tagIds !== undefined) {
+                    body.tagIds = filters.tagIds;
+                }
             }
 
             const promises = [];
@@ -126,6 +129,32 @@ export class ImmichClient {
             return `${this.baseUrl}/api/assets/${assetId}/thumbnail?size=preview`;
         }
         return `${this.baseUrl}/api/assets/${assetId}/original`;
+    }
+
+    public async getTags(): Promise<ImmichTag[]> {
+        const url = `${this.baseUrl}/api/tags`;
+        try {
+            const response = await requestUrl({
+                url,
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            if (response.status === 200) {
+                return response.json as ImmichTag[];
+            }
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
+            }
+            if (response.status === 404) {
+                throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
+            }
+            throw new Error(`Failed to fetch Immich tags: HTTP ${response.status}`);
+        } catch (e) {
+            if (e instanceof Error && e.message.includes('HTTP')) {
+                throw e;
+            }
+            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
+        }
     }
 
     public async validateConnection(): Promise<{ success: boolean; message: string }> {

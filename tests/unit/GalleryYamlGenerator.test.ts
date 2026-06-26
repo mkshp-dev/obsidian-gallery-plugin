@@ -56,7 +56,7 @@ describe('GalleryYamlGenerator', () => {
         expect(result).not.toContain('password:');
     });
 
-    it('should generate valid yaml for an authenticated immich source', () => {
+    it('should generate valid yaml for an authenticated immich source (album mode)', () => {
         const sources: Partial<ISourceConfig>[] = [
             { type: 'immich', connection: 'home', filters: { albumIds: ['album-123'] } }
         ];
@@ -69,6 +69,34 @@ describe('GalleryYamlGenerator', () => {
         expect(result).toContain('filters:');
         expect(result).toContain('albumIds:');
         expect(result).toContain('- album-123');
+    });
+
+    it('should generate valid yaml for an authenticated immich source (favorites mode)', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'immich', connection: 'home', filters: { isFavorite: true } }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
+
+        expect(result).toContain('- type: immich');
+        expect(result).toContain('connection: home');
+        expect(result).toContain('filters:');
+        expect(result).toContain('isFavorite: true');
+    });
+
+    it('should generate valid yaml for an authenticated immich source (recent mode)', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'immich', connection: 'home', limit: 50, sort: { by: 'createdAt', order: 'desc' } }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
+
+        expect(result).toContain('- type: immich');
+        expect(result).toContain('connection: home');
+        expect(result).toContain('limit: 50');
+        expect(result).toContain('sort:');
+        expect(result).toContain('by: createdAt');
+        expect(result).toContain('order: desc');
     });
 
     it('should generate valid yaml for combined sources', () => {

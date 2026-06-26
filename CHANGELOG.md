@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Updated the Insert Gallery builder flow to emit canonical authenticated Immich source configurations (filters, limit, sort) across album, favorites, and recent modes.
 - Added authenticated Immich asset-type filter on canonical schema.
 - Added authenticated Immich date-range filters (`createdAfter`, `createdBefore`) on canonical schema.
 - Refactored authenticated Immich source schema to the canonical filters, limit, and sort model.

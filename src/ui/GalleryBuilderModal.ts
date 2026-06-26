@@ -227,72 +227,113 @@ export class GalleryBuilderModal extends Modal {
                 connectionOptions[conn.key] = conn.key;
             });
 
-            // Ensure source structure is initialized
-            if (!source.filters) {
-                source.filters = { albumIds: [] };
+            // Infer mode from current source state, default to 'album'
+            let mode = 'album';
+            if (source.sort?.by === 'createdAt' && source.limit) {
+                mode = 'recent';
+            } else if (source.filters?.isFavorite) {
+                mode = 'favorites';
+            }
+
+            // Ensure source structure is initialized based on mode
+            if (mode === 'album' && (!source.filters || !source.filters.albumIds)) {
+                source.filters = { ...source.filters, albumIds: [] };
             }
 
             const connSetting = new Setting(container)
                 .setName('Connection')
                 .setDesc('Select an immich connection.');
 
-            const albumContainer = container.createDiv('gallery-builder-immich-album');
+            const modeSetting = new Setting(container)
+                .setName('Mode')
+                .setDesc('Select what to display from immich.');
 
-            const fetchAndRenderAlbums = async (connectionKey: string) => {
-                albumContainer.empty();
+            const dynamicContainer = container.createDiv('gallery-builder-immich-dynamic');
+
+            const renderDynamicContent = async (connectionKey: string, currentMode: string) => {
+                dynamicContainer.empty();
 
                 if (!connectionKey) return;
 
-                const connection = connections.find(c => c.key === connectionKey);
-                if (!connection) return;
+                if (currentMode === 'album') {
+                    const connection = connections.find(c => c.key === connectionKey);
+                    if (!connection) return;
 
-                albumContainer.createEl('p', { text: 'Loading albums...' });
+                    dynamicContainer.createEl('p', { text: 'Loading albums...' });
 
-                try {
-                    const client = new ImmichClient(connection);
-                    const albums = await client.getAlbums();
+                    try {
+                        const client = new ImmichClient(connection);
+                        const albums = await client.getAlbums();
 
-                    albumContainer.empty();
+                        dynamicContainer.empty();
 
-                    if (albums.length === 0) {
-                        albumContainer.createEl('p', { text: 'No albums found on this connection.' });
-                        return;
+                        if (albums.length === 0) {
+                            dynamicContainer.createEl('p', { text: 'No albums found on this connection.' });
+                            return;
+                        }
+
+                        const albumOptions: Record<string, string> = {};
+                        albums.forEach(album => {
+                            albumOptions[album.id] = album.albumName || 'Untitled Album';
+                        });
+
+                        const albumIds = source.filters?.albumIds || [];
+                        let selectedId = albumIds[0] || '';
+
+                        // Ensure selected album is valid, or select the first one
+                        if (!selectedId || !albumOptions[selectedId]) {
+                            selectedId = albums[0].id;
+                            source.filters = { albumIds: [selectedId] };
+                            delete source.limit;
+                            delete source.sort;
+                        }
+
+                        new Setting(dynamicContainer)
+                            .setName('Album')
+                            .setDesc('Select an album to display.')
+                            .addDropdown(dropdown => dropdown
+                                .addOptions(albumOptions)
+                                .setValue(selectedId || '')
+                                .onChange(value => {
+                                    source.filters = { albumIds: [value] };
+                                    delete source.limit;
+                                    delete source.sort;
+                                })
+                            );
+                    } catch (e) {
+                        dynamicContainer.empty();
+                        dynamicContainer.createEl('p', {
+                            text: `Failed to load albums: ${e instanceof Error ? e.message : String(e)}`,
+                            cls: 'gallery-error-text'
+                        });
                     }
+                } else if (currentMode === 'favorites') {
+                    source.filters = { isFavorite: true };
+                    delete source.limit;
+                    delete source.sort;
 
-                    const albumOptions: Record<string, string> = {};
-                    albums.forEach(album => {
-                        albumOptions[album.id] = album.albumName || 'Untitled Album';
+                    dynamicContainer.createEl('p', {
+                        text: 'This will display your favorite items from immich.',
+                        cls: 'setting-item-description'
                     });
+                } else if (currentMode === 'recent') {
+                    // Initialize if missing
+                    if (!source.limit) source.limit = 50;
+                    if (!source.sort) source.sort = { by: 'createdAt', order: 'desc' };
+                    delete source.filters;
 
-                    // Since favorites authoring is currently out of scope for the builder,
-                    // we assume an album type for UI purposes for now.
-                    const albumIds = source.filters?.albumIds || [];
-                    let selectedId = albumIds[0] || '';
-
-                    // Ensure selected album is valid, or select the first one
-                    if (!selectedId || !albumOptions[selectedId]) {
-                        selectedId = albums[0].id;
-                        if (!source.filters) source.filters = {};
-                        source.filters.albumIds = [selectedId];
-                    }
-
-                    new Setting(albumContainer)
-                        .setName('Album')
-                        .setDesc('Select an album to display.')
-                        .addDropdown(dropdown => dropdown
-                            .addOptions(albumOptions)
-                            .setValue(selectedId || '')
+                    new Setting(dynamicContainer)
+                        .setName('Limit')
+                        .setDesc('Maximum number of recent items to display.')
+                        .addText(text => text
+                            .setValue(source.limit?.toString() || '50')
                             .onChange(value => {
-                                if (!source.filters) source.filters = {};
-                                source.filters.albumIds = [value];
+                                const parsed = parseInt(value, 10);
+                                if (!isNaN(parsed) && parsed > 0) {
+                                    source.limit = parsed;
+                                }
                             })
                         );
-                } catch (e) {
-                    albumContainer.empty();
-                    albumContainer.createEl('p', {
-                        text: `Failed to load albums: ${e instanceof Error ? e.message : String(e)}`,
-                        cls: 'gallery-error-text'
-                    });
                 }
             };
 
@@ -306,12 +347,25 @@ export class GalleryBuilderModal extends Modal {
                 .setValue(source.connection!)
                 .onChange(async value => {
                     source.connection = value;
-                    await fetchAndRenderAlbums(value);
+                    await renderDynamicContent(value, mode);
+                })
+            );
+
+            modeSetting.addDropdown(dropdown => dropdown
+                .addOptions({
+                    'album': 'Album',
+                    'favorites': 'Favorites',
+                    'recent': 'Recent'
+                })
+                .setValue(mode)
+                .onChange(async value => {
+                    mode = value;
+                    await renderDynamicContent(source.connection!, mode);
                 })
             );
 
             // Fetch initially
-            fetchAndRenderAlbums(source.connection).catch(e => console.error(e));
+            renderDynamicContent(source.connection, mode).catch(e => console.error(e));
         }
     }
 

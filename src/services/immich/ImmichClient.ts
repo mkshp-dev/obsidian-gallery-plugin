@@ -169,11 +169,16 @@ export class ImmichClient {
                 headers: this.getHeaders()
             });
             if (response.status === 200) {
-                const data = response.json as { items?: ImmichPerson[] } | ImmichPerson[];
+                const data = response.json as { items?: ImmichPerson[]; people?: ImmichPerson[] } | ImmichPerson[];
                 if (Array.isArray(data)) {
                     return data;
-                } else if (data && data.items && Array.isArray(data.items)) {
-                    return data.items;
+                } else if (data && typeof data === 'object') {
+                    if ('people' in data && Array.isArray(data.people)) {
+                        return data.people;
+                    }
+                    if ('items' in data && Array.isArray(data.items)) {
+                        return data.items;
+                    }
                 }
                 return [];
             }

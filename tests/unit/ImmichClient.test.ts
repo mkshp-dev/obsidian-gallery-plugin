@@ -105,6 +105,21 @@ describe('ImmichClient', () => {
         expect(people[0].id).toBe('person1');
     });
 
+    it('should fetch people successfully with people wrapping', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 200,
+            json: {
+                people: [
+                    { id: 'person1', name: 'Alice' }
+                ]
+            }
+        });
+
+        const people = await client.getPeople();
+        expect(people).toHaveLength(1);
+        expect(people[0].id).toBe('person1');
+    });
+
     it('should throw explicit error on fetch albums auth failure', async () => {
         (requestUrl as jest.Mock).mockResolvedValue({
             status: 401,

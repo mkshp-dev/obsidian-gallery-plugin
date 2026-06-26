@@ -22,6 +22,10 @@ describe('ImmichClient', () => {
         apiKey: 'test-api-key'
     };
 
+    afterEach(() => {
+        ImmichClient.invalidateCache();
+    });
+
     beforeEach(() => {
         jest.clearAllMocks();
         client = new ImmichClient(mockConnection);
@@ -251,6 +255,72 @@ describe('ImmichClient', () => {
 
             const result = await client.validateConnection();
             expect(result).toEqual({ success: false, message: 'Server unreachable or invalid URL' });
+        });
+    });
+
+    describe('Caching logic', () => {
+        it('should cache albums and avoid duplicate network calls within TTL', async () => {
+            (requestUrl as jest.Mock).mockResolvedValue({
+                status: 200,
+                json: [{ id: 'album1', albumName: 'Cached Album' }]
+            });
+
+            const albums1 = await client.getAlbums();
+            const albums2 = await client.getAlbums();
+
+            expect(requestUrl).toHaveBeenCalledTimes(1);
+            expect(albums1).toBe(albums2);
+        });
+
+        it('should bypass cache when forceRefresh is true', async () => {
+            (requestUrl as jest.Mock).mockResolvedValue({
+                status: 200,
+                json: [{ id: 'album1', albumName: 'Cached Album' }]
+            });
+
+            await client.getAlbums();
+            await client.getAlbums(true);
+
+            expect(requestUrl).toHaveBeenCalledTimes(2);
+        });
+
+        it('should return same promise for concurrent requests', async () => {
+            (requestUrl as jest.Mock).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ status: 200, json: [] }), 50)));
+
+            const promise1 = client.getAlbums();
+            const promise2 = client.getAlbums();
+
+            const [res1, res2] = await Promise.all([promise1, promise2]);
+            expect(res1).toBe(res2);
+            await Promise.all([promise1, promise2]);
+            expect(requestUrl).toHaveBeenCalledTimes(1);
+        });
+
+        it('should clear cache on invalidateCache', async () => {
+            (requestUrl as jest.Mock).mockResolvedValue({
+                status: 200,
+                json: []
+            });
+
+            await client.getAlbums();
+            ImmichClient.invalidateCache();
+            await client.getAlbums();
+
+            expect(requestUrl).toHaveBeenCalledTimes(2);
+        });
+
+        it('should clear cache when a network error occurs', async () => {
+            (requestUrl as jest.Mock).mockRejectedValueOnce(new Error('Network Error'));
+            (requestUrl as jest.Mock).mockResolvedValueOnce({
+                status: 200,
+                json: []
+            });
+
+            await expect(client.getAlbums()).rejects.toThrow();
+
+            await client.getAlbums();
+
+            expect(requestUrl).toHaveBeenCalledTimes(2);
         });
     });
 });

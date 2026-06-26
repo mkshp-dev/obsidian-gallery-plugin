@@ -10,6 +10,7 @@ export class GalleryBuilderModal extends Modal {
 
     private viewType: string = 'grid';
     private sources: Partial<ISourceConfig>[] = [];
+    private livePreviewContainer!: HTMLElement;
 
     constructor(app: App, plugin: GalleryPlugin, editor: Editor) {
         super(app);
@@ -22,7 +23,7 @@ export class GalleryBuilderModal extends Modal {
         contentEl.empty();
         contentEl.addClass('gallery-builder-modal');
 
-        contentEl.createEl('h2', { text: 'Gallery view builder' });
+        new Setting(contentEl).setName('Gallery view builder').setHeading();
 
         // View selector
         new Setting(contentEl)
@@ -37,11 +38,12 @@ export class GalleryBuilderModal extends Modal {
                 .setValue(this.viewType)
                 .onChange(value => {
                     this.viewType = value;
+                    this.refreshLivePreview();
                 })
             );
 
         // Sources container
-        contentEl.createEl('h3', { text: 'Sources' });
+        new Setting(contentEl).setName('Sources').setHeading();
         const sourcesContainer = contentEl.createDiv('gallery-builder-sources');
 
         this.renderSources(sourcesContainer);
@@ -66,6 +68,22 @@ export class GalleryBuilderModal extends Modal {
                 });
             });
 
+        // Live preview
+        new Setting(contentEl).setName('Live preview').setHeading();
+        this.livePreviewContainer = contentEl.createDiv('gallery-builder-live-preview');
+        this.livePreviewContainer.setCssStyles({
+            marginTop: '20px',
+            marginBottom: '20px',
+            backgroundColor: 'var(--background-secondary)',
+            padding: '10px',
+            borderRadius: '5px',
+            whiteSpace: 'pre-wrap',
+            fontFamily: 'var(--font-monospace)',
+            fontSize: 'var(--font-ui-smaller)',
+            maxHeight: '300px',
+            overflowY: 'auto'
+        });
+
         // Insert Button
         new Setting(contentEl)
             .addButton(btn => btn
@@ -75,6 +93,23 @@ export class GalleryBuilderModal extends Modal {
                     this.insertGallery();
                 })
             );
+
+        this.refreshLivePreview();
+    }
+
+    private refreshLivePreview() {
+        if (!this.livePreviewContainer) return;
+        this.livePreviewContainer.empty();
+        if (this.sources.length === 0) {
+            this.livePreviewContainer.setText('Add at least one source to see the preview.');
+            return;
+        }
+        try {
+            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType);
+            this.livePreviewContainer.setText(yaml);
+        } catch (e) {
+            this.livePreviewContainer.setText(`Cannot generate preview: ${e instanceof Error ? e.message : String(e)}`);
+        }
     }
 
     onClose() {
@@ -104,6 +139,7 @@ export class GalleryBuilderModal extends Modal {
             removeBtn.addEventListener('click', () => {
                 this.sources.splice(index, 1);
                 this.renderSources(container);
+                this.refreshLivePreview();
             });
 
             this.renderSourceConfig(sourceCard, source, index, container);
@@ -129,6 +165,7 @@ export class GalleryBuilderModal extends Modal {
 
         this.sources.push(newSource);
         this.renderSources(container);
+                this.refreshLivePreview();
     }
 
     private renderSourceConfig(container: HTMLElement, source: Partial<ISourceConfig>, index: number, rootContainer: HTMLElement) {
@@ -140,6 +177,7 @@ export class GalleryBuilderModal extends Modal {
                     .setValue(source.path || '')
                     .onChange(value => {
                         source.path = value;
+                        this.refreshLivePreview();
                     })
                 );
 
@@ -150,6 +188,7 @@ export class GalleryBuilderModal extends Modal {
                     .setValue(source.recursive !== false)
                     .onChange(value => {
                         source.recursive = value;
+                        this.refreshLivePreview();
                     })
                 );
         } else if (source.type === 'external') {
@@ -167,6 +206,7 @@ export class GalleryBuilderModal extends Modal {
                             .setValue(url)
                             .onChange(value => {
                                 source.urls![urlIndex] = value;
+                                this.refreshLivePreview();
                             })
                         )
                         .addButton(btn => btn
@@ -175,6 +215,7 @@ export class GalleryBuilderModal extends Modal {
                                 source.urls!.splice(urlIndex, 1);
                                 if (source.urls!.length === 0) source.urls = [''];
                                 renderUrls();
+                                this.refreshLivePreview();
                             })
                         );
                 });
@@ -185,6 +226,7 @@ export class GalleryBuilderModal extends Modal {
                         .onClick(() => {
                             source.urls!.push('');
                             renderUrls();
+                            this.refreshLivePreview();
                         })
                     );
             };
@@ -198,6 +240,7 @@ export class GalleryBuilderModal extends Modal {
                     .setValue(source.url || '')
                     .onChange(value => {
                         source.url = value;
+                        this.refreshLivePreview();
                     })
                 );
 
@@ -209,6 +252,7 @@ export class GalleryBuilderModal extends Modal {
                     text.setValue(source.password || '')
                         .onChange(value => {
                             source.password = value;
+                            this.refreshLivePreview();
                         });
                 });
         } else if (source.type === 'immich') {
@@ -227,278 +271,303 @@ export class GalleryBuilderModal extends Modal {
                 connectionOptions[conn.key] = conn.key;
             });
 
-            // Infer mode from current source state, default to 'album'
-            let mode = 'album';
-            if (source.sort?.by === 'createdAt' && source.limit) {
-                mode = 'recent';
-            } else if (source.filters?.isFavorite) {
-                mode = 'favorites';
-            } else if (source.filters?.tagIds || source.filters?.tags) {
-                mode = 'tags';
-            } else if (source.filters?.personIds || source.filters?.people) {
-                mode = 'people';
+            // Ensure filters object exists
+            if (!source.filters) {
+                source.filters = {};
             }
 
-            // Ensure source structure is initialized based on mode
-            if (mode === 'album' && (!source.filters || !source.filters.albumIds)) {
-                source.filters = { ...source.filters, albumIds: [] };
+            // Connection Section
+            new Setting(container).setName('Connection').setHeading();
+
+            if (!source.connection || !connectionOptions[source.connection]) {
+                source.connection = connections[0].key;
             }
 
             const connSetting = new Setting(container)
                 .setName('Connection')
                 .setDesc('Select an immich connection.');
 
-            const modeSetting = new Setting(container)
-                .setName('Mode')
-                .setDesc('Select what to display from immich.');
+            const renderDynamicContent = async (connectionKey: string) => {
+                filtersContainer.empty();
 
-            const dynamicContainer = container.createDiv('gallery-builder-immich-dynamic');
+                const connection = connections.find(c => c.key === connectionKey);
+                if (!connection) return;
 
-            const renderDynamicContent = async (connectionKey: string, currentMode: string) => {
-                dynamicContainer.empty();
+                // Static Filters
+                new Setting(filtersContainer).setName('Filter criteria').setHeading();
 
-                if (!connectionKey) return;
+                new Setting(filtersContainer)
+                    .setName('Favorites only')
+                    .addToggle(toggle => toggle
+                        .setValue(source.filters?.isFavorite || false)
+                        .onChange(value => {
+                            if (value) {
+                                source.filters!.isFavorite = true;
+                            } else {
+                                delete source.filters!.isFavorite;
+                            }
+                            this.refreshLivePreview();
+                        })
+                    );
 
-                if (currentMode === 'album') {
-                    const connection = connections.find(c => c.key === connectionKey);
-                    if (!connection) return;
+                new Setting(filtersContainer)
+                    .setName('Asset type')
+                    .addDropdown(dropdown => dropdown
+                        .addOptions({'': 'All', 'image': 'Image', 'video': 'Video'})
+                        .setValue(source.filters?.assetType || '')
+                        .onChange(value => {
+                            if (value) {
+                                source.filters!.assetType = value as 'image' | 'video';
+                            } else {
+                                delete source.filters!.assetType;
+                            }
+                            this.refreshLivePreview();
+                        })
+                    );
 
-                    dynamicContainer.createEl('p', { text: 'Loading albums...' });
+                new Setting(filtersContainer)
+                    .setName('Created after')
+                    .addText(text => text
+                        .setPlaceholder('YYYY-MM-DD')
+                        .setValue(source.filters?.createdAfter || '')
+                        .onChange(value => {
+                            if (value) {
+                                source.filters!.createdAfter = value;
+                            } else {
+                                delete source.filters!.createdAfter;
+                            }
+                            this.refreshLivePreview();
+                        })
+                    );
 
-                    try {
-                        const client = new ImmichClient(connection);
-                        const albums = await client.getAlbums();
+                new Setting(filtersContainer)
+                    .setName('Created before')
+                    .addText(text => text
+                        .setPlaceholder('YYYY-MM-DD')
+                        .setValue(source.filters?.createdBefore || '')
+                        .onChange(value => {
+                            if (value) {
+                                source.filters!.createdBefore = value;
+                            } else {
+                                delete source.filters!.createdBefore;
+                            }
+                            this.refreshLivePreview();
+                        })
+                    );
 
-                        dynamicContainer.empty();
+                const client = new ImmichClient(connection);
 
-                        if (albums.length === 0) {
-                            dynamicContainer.createEl('p', { text: 'No albums found on this connection.' });
-                            return;
+                // Albums
+                new Setting(filtersContainer).setName('Albums').setHeading();
+                const albumsWrapper = filtersContainer.createDiv();
+                albumsWrapper.createEl('p', { text: 'Loading albums...' });
+                try {
+                    const albums = await client.getAlbums();
+                    albumsWrapper.empty();
+                    const albumItems = albums.map(a => ({ id: a.id, name: a.albumName || 'Untitled Album' }));
+                    this.createSearchableList(albumsWrapper, albumItems, source.filters?.albumIds || [], (selected) => {
+                        if (selected.length > 0) {
+                            source.filters!.albumIds = selected;
+                        } else {
+                            delete source.filters!.albumIds;
                         }
+                        this.refreshLivePreview();
+                    }, false); // Allow multi-select, although previously it was single in builder. Let's stick to array support as per schema.
+                } catch (e) {
+                    albumsWrapper.empty();
+                    albumsWrapper.createEl('p', { text: `Failed to load albums: ${e instanceof Error ? e.message : String(e)}`, cls: 'gallery-error-text' });
+                }
 
-                        const albumOptions: Record<string, string> = {};
-                        albums.forEach(album => {
-                            albumOptions[album.id] = album.albumName || 'Untitled Album';
-                        });
-
-                        const albumIds = source.filters?.albumIds || [];
-                        let selectedId = albumIds[0] || '';
-
-                        // Ensure selected album is valid, or select the first one
-                        if (!selectedId || !albumOptions[selectedId]) {
-                            selectedId = albums[0].id;
-                            source.filters = { albumIds: [selectedId] };
-                            delete source.limit;
-                            delete source.sort;
-                        }
-
-                        new Setting(dynamicContainer)
-                            .setName('Album')
-                            .setDesc('Select an album to display.')
-                            .addDropdown(dropdown => dropdown
-                                .addOptions(albumOptions)
-                                .setValue(selectedId || '')
-                                .onChange(value => {
-                                    source.filters = { albumIds: [value] };
-                                    delete source.limit;
-                                    delete source.sort;
-                                })
-                            );
-                    } catch (e) {
-                        dynamicContainer.empty();
-                        dynamicContainer.createEl('p', {
-                            text: `Failed to load albums: ${e instanceof Error ? e.message : String(e)}`,
-                            cls: 'gallery-error-text'
-                        });
-                    }
-                } else if (currentMode === 'tags') {
-                    const connection = connections.find(c => c.key === connectionKey);
-                    if (!connection) return;
-
-                    dynamicContainer.createEl('p', { text: 'Loading tags...' });
-
-                    try {
-                        const client = new ImmichClient(connection);
-                        const tags = await client.getTags();
-
-                        dynamicContainer.empty();
-
-                        if (tags.length === 0) {
-                            dynamicContainer.createEl('p', { text: 'No tags found on this connection.' });
-                            return;
-                        }
-
-                        // Initialize tags filter if not present
-                        source.filters = { ...source.filters };
-                        if (!source.filters.tags) {
-                            source.filters.tags = [];
-                        }
-                        // Migrate any existing tagIds to tags (though unlikely in builder context, good for safety)
-                        if (source.filters.tagIds) {
-                           delete source.filters.tagIds;
-                        }
-
-                        // Remove incompatible global parameters
-                        delete source.limit;
-                        delete source.sort;
-
-                        // Create a container with custom class for tags grid/list
-                        const tagsContainer = dynamicContainer.createDiv('gallery-builder-tags-container');
-
-                        tags.forEach(tag => {
-                            const tagName = String(tag.value || tag.name || tag.id);
-                            const isChecked = source.filters!.tags!.includes(tagName);
-
-                            new Setting(tagsContainer)
-                                .setName(tagName)
-                                .addToggle(toggle => toggle
-                                    .setValue(isChecked)
-                                    .onChange(checked => {
-                                        if (checked) {
-                                            if (!source.filters!.tags!.includes(tagName)) {
-                                                source.filters!.tags!.push(tagName);
-                                            }
-                                        } else {
-                                            source.filters!.tags = source.filters!.tags!.filter(name => name !== tagName);
-                                        }
-                                        if (source.filters!.tags!.length === 0) {
-                                            delete source.filters!.tags;
-                                        }
-                                    })
-                                );
-                        });
-
-                    } catch (e) {
-                        dynamicContainer.empty();
-                        dynamicContainer.createEl('p', {
-                            text: `Failed to load tags: ${e instanceof Error ? e.message : String(e)}`,
-                            cls: 'gallery-error-text'
-                        });
-                    }
-                } else if (currentMode === 'people') {
-                    const connection = connections.find(c => c.key === connectionKey);
-                    if (!connection) return;
-
-                    dynamicContainer.createEl('p', { text: 'Loading people...' });
-
-                    try {
-                        const client = new ImmichClient(connection);
-                        const people = await client.getPeople();
-
-                        dynamicContainer.empty();
-
-                        if (people.length === 0) {
-                            dynamicContainer.createEl('p', { text: 'No people found on this connection.' });
-                            return;
-                        }
-
-                        // Initialize personIds filter if not present
-                        source.filters = { ...source.filters };
-                        if (!source.filters.people) {
-                            source.filters.people = [];
-                        }
-                        if (source.filters.personIds) {
-                            delete source.filters.personIds;
-                        }
-
-                        // Remove incompatible global parameters
-                        delete source.limit;
-                        delete source.sort;
-
-                        // Create a container for people
-                        const peopleContainer = dynamicContainer.createDiv('gallery-builder-people-container');
-
-                        people.forEach(person => {
-                            const personName = String(person.name || person.id);
-                            const isChecked = source.filters!.people!.includes(personName);
-
-                            new Setting(peopleContainer)
-                                .setName(personName)
-                                .addToggle(toggle => toggle
-                                    .setValue(isChecked)
-                                    .onChange(checked => {
-                                        if (checked) {
-                                            if (!source.filters!.people!.includes(personName)) {
-                                                source.filters!.people!.push(personName);
-                                            }
-                                        } else {
-                                            source.filters!.people = source.filters!.people!.filter(name => name !== personName);
-                                        }
-                                        if (source.filters!.people!.length === 0) {
-                                            delete source.filters!.people;
-                                        }
-                                    })
-                                );
-                        });
-                    } catch (e) {
-                        dynamicContainer.empty();
-                        dynamicContainer.createEl('p', {
-                            text: `Failed to load people: ${e instanceof Error ? e.message : String(e)}`,
-                            cls: 'gallery-error-text'
-                        });
-                    }
-                } else if (currentMode === 'favorites') {
-                    source.filters = { isFavorite: true };
-                    delete source.limit;
-                    delete source.sort;
-
-                    dynamicContainer.createEl('p', {
-                        text: 'This will display your favorite items from immich.',
-                        cls: 'setting-item-description'
+                // Tags
+                new Setting(filtersContainer).setName('Tags').setHeading();
+                const tagsWrapper = filtersContainer.createDiv();
+                tagsWrapper.createEl('p', { text: 'Loading tags...' });
+                try {
+                    const tags = await client.getTags();
+                    tagsWrapper.empty();
+                    const tagItems = tags.map(t => {
+                        const name = String(t.value || t.name || t.id);
+                        return { id: name, name: name }; // Use value for ImmichTag
                     });
-                } else if (currentMode === 'recent') {
-                    // Initialize if missing
-                    if (!source.limit) source.limit = 50;
-                    if (!source.sort) source.sort = { by: 'createdAt', order: 'desc' };
-                    delete source.filters;
+                    this.createSearchableList(tagsWrapper, tagItems, source.filters?.tags || [], (selected) => {
+                        if (selected.length > 0) {
+                            source.filters!.tags = selected;
+                        } else {
+                            delete source.filters!.tags;
+                        }
+                        this.refreshLivePreview();
+                    });
+                } catch (e) {
+                    tagsWrapper.empty();
+                    tagsWrapper.createEl('p', { text: `Failed to load tags: ${e instanceof Error ? e.message : String(e)}`, cls: 'gallery-error-text' });
+                }
 
-                    new Setting(dynamicContainer)
-                        .setName('Limit')
-                        .setDesc('Maximum number of recent items to display.')
-                        .addText(text => text
-                            .setValue(source.limit?.toString() || '50')
-                            .onChange(value => {
-                                const parsed = parseInt(value, 10);
-                                if (!isNaN(parsed) && parsed > 0) {
-                                    source.limit = parsed;
-                                }
-                            })
-                        );
+                // People
+                new Setting(filtersContainer).setName('People').setHeading();
+                const peopleWrapper = filtersContainer.createDiv();
+                peopleWrapper.createEl('p', { text: 'Loading people...' });
+                try {
+                    const people = await client.getPeople();
+                    peopleWrapper.empty();
+                    const peopleItems = people.map(p => {
+                        const name = String(p.name || p.id);
+                        return { id: name, name: name }; // Use name for ImmichPerson
+                    });
+                    this.createSearchableList(peopleWrapper, peopleItems, source.filters?.people || [], (selected) => {
+                        if (selected.length > 0) {
+                            source.filters!.people = selected;
+                        } else {
+                            delete source.filters!.people;
+                        }
+                        this.refreshLivePreview();
+                    });
+                } catch (e) {
+                    peopleWrapper.empty();
+                    peopleWrapper.createEl('p', { text: `Failed to load people: ${e instanceof Error ? e.message : String(e)}`, cls: 'gallery-error-text' });
                 }
             };
 
-            // Set initial connection or first available
-            if (!source.connection || !connectionOptions[source.connection]) {
-                source.connection = connections[0].key;
-            }
+            new Setting(container).setName('Filters').setHeading();
+            const filtersContainer = container.createDiv('gallery-builder-immich-filters');
 
             connSetting.addDropdown(dropdown => dropdown
                 .addOptions(connectionOptions)
                 .setValue(source.connection!)
                 .onChange(async value => {
                     source.connection = value;
-                    await renderDynamicContent(value, mode);
+                    this.refreshLivePreview();
+                    await renderDynamicContent(value);
                 })
             );
 
-            modeSetting.addDropdown(dropdown => dropdown
-                .addOptions({
-                    'album': 'Album',
-                    'favorites': 'Favorites',
-                    'recent': 'Recent',
-                    'tags': 'Tags',
-                    'people': 'People'
-                })
-                .setValue(mode)
-                .onChange(async value => {
-                    mode = value;
-                    await renderDynamicContent(source.connection!, mode);
-                })
-            );
+            // Display Section
+            new Setting(container).setName('Display').setHeading();
 
-            // Fetch initially
-            renderDynamicContent(source.connection, mode).catch(e => console.error(e));
+            new Setting(container)
+                .setName('Limit')
+                .setDesc('Maximum number of items to fetch.')
+                .addText(text => text
+                    .setValue(source.limit?.toString() || '')
+                    .onChange(value => {
+                        const parsed = parseInt(value, 10);
+                        if (!isNaN(parsed) && parsed > 0) {
+                            source.limit = parsed;
+                        } else {
+                            delete source.limit;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Sort order')
+                .addDropdown(dropdown => dropdown
+                    .addOptions({'': 'Default (None)', 'asc': 'Oldest first', 'desc': 'Newest first'})
+                    .setValue(source.sort?.order || '')
+                    .onChange(value => {
+                        if (value) {
+                            source.sort = { by: 'createdAt', order: value as 'asc' | 'desc' };
+                        } else {
+                            delete source.sort;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
+            renderDynamicContent(source.connection).catch(e => console.error(e));
         }
+    }
+
+    private createSearchableList(
+        container: HTMLElement,
+        items: { id: string, name: string }[],
+        selectedIds: string[],
+        onChange: (selected: string[]) => void,
+        singleSelect: boolean = false
+    ) {
+        new Setting(container)
+            .addSearch(search => search
+                .setPlaceholder('Search...')
+                .onChange(value => {
+                    const term = value.toLowerCase();
+                    const itemEls = listContainer.querySelectorAll('.gallery-builder-list-item');
+                    itemEls.forEach((el: Element) => {
+                        const htmlEl = el as HTMLElement;
+                        const text = htmlEl.getAttribute('data-name')?.toLowerCase() || '';
+                        if (text.includes(term)) {
+                            htmlEl.setCssStyles({ display: 'flex' });
+                        } else {
+                            htmlEl.setCssStyles({ display: 'none' });
+                        }
+                    });
+                })
+            );
+
+        const listContainer = container.createDiv('gallery-builder-list-container');
+        listContainer.setCssStyles({
+            maxHeight: '200px',
+            overflowY: 'auto',
+            border: '1px solid var(--background-modifier-border)',
+            borderRadius: '5px',
+            padding: '5px'
+        });
+
+        const currentSelected = new Set(selectedIds);
+
+        const renderItems = () => {
+            listContainer.empty();
+            if (items.length === 0) {
+                listContainer.createEl('p', { text: 'No items found.', cls: 'setting-item-description' });
+                return;
+            }
+
+            items.forEach(item => {
+                const itemDiv = listContainer.createDiv('gallery-builder-list-item');
+                itemDiv.setAttribute('data-name', item.name);
+                itemDiv.setCssStyles({
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '5px',
+                    borderBottom: '1px solid var(--background-modifier-border)'
+                });
+
+                if (singleSelect) {
+                    const radio = itemDiv.createEl('input');
+                    radio.type = 'radio';
+                    radio.name = `radio-group-${container.id || Math.random()}`;
+                    radio.value = item.id;
+                    radio.checked = currentSelected.has(item.id);
+                    radio.setCssStyles({ marginRight: '10px' });
+
+                    radio.addEventListener('change', () => {
+                        if (radio.checked) {
+                            currentSelected.clear();
+                            currentSelected.add(item.id);
+                            onChange(Array.from(currentSelected));
+                        }
+                    });
+                } else {
+                    const checkbox = itemDiv.createEl('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = item.id;
+                    checkbox.checked = currentSelected.has(item.id);
+                    checkbox.setCssStyles({ marginRight: '10px' });
+
+                    checkbox.addEventListener('change', () => {
+                        if (checkbox.checked) {
+                            currentSelected.add(item.id);
+                        } else {
+                            currentSelected.delete(item.id);
+                        }
+                        onChange(Array.from(currentSelected));
+                    });
+                }
+
+                itemDiv.createEl('label', { text: item.name });
+            });
+        };
+
+        renderItems();
     }
 
     private insertGallery() {

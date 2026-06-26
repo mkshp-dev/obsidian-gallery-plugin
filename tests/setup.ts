@@ -69,6 +69,8 @@ if (typeof UIEvent !== 'undefined' && !UIEvent.prototype.instanceOf) {
 
 // Mock Obsidian MarkdownRenderChild
 jest.mock('obsidian', () => ({
+  EditorSuggest: class MockEditorSuggest { constructor() {} },
+  PopoverSuggest: class MockPopoverSuggest { constructor() {} },
   MarkdownRenderChild: class MockMarkdownRenderChild {
     containerEl: HTMLElement;
     constructor(containerEl: HTMLElement) {

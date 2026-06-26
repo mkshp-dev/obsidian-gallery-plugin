@@ -32,6 +32,66 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
         const client = new ImmichClient(connection);
 
         try {
+            // Resolve tags to tagIds
+            if (source.filters && source.filters.tags && source.filters.tags.length > 0) {
+                const availableTags = await client.getTags();
+                const resolvedTagIds: string[] = [];
+
+                for (const tagName of source.filters.tags) {
+                    const matchingTags = availableTags.filter(t => t.value === tagName);
+
+                    if (matchingTags.length === 0) {
+                        throw new Error(`Tag not found: '${tagName}'.`);
+                    } else if (matchingTags.length > 1) {
+                        throw new Error(`Ambiguous tag name: '${tagName}' matches multiple tags. Please make the name unique in Immich.`);
+                    }
+
+                    resolvedTagIds.push(matchingTags[0].id);
+                }
+
+                // Initialize tagIds array if it doesn't exist
+                if (!source.filters.tagIds) {
+                    source.filters.tagIds = [];
+                }
+
+                // Add resolved IDs, ensuring uniqueness
+                for (const id of resolvedTagIds) {
+                    if (!source.filters.tagIds.includes(id)) {
+                        source.filters.tagIds.push(id);
+                    }
+                }
+            }
+
+            // Resolve people to personIds
+            if (source.filters && source.filters.people && source.filters.people.length > 0) {
+                const availablePeople = await client.getPeople();
+                const resolvedPersonIds: string[] = [];
+
+                for (const personName of source.filters.people) {
+                    const matchingPeople = availablePeople.filter(p => p.name === personName);
+
+                    if (matchingPeople.length === 0) {
+                        throw new Error(`Person not found: '${personName}'.`);
+                    } else if (matchingPeople.length > 1) {
+                        throw new Error(`Ambiguous person name: '${personName}' matches multiple people. Please make the name unique in Immich.`);
+                    }
+
+                    resolvedPersonIds.push(matchingPeople[0].id);
+                }
+
+                // Initialize personIds array if it doesn't exist
+                if (!source.filters.personIds) {
+                    source.filters.personIds = [];
+                }
+
+                // Add resolved IDs, ensuring uniqueness
+                for (const id of resolvedPersonIds) {
+                    if (!source.filters.personIds.includes(id)) {
+                        source.filters.personIds.push(id);
+                    }
+                }
+            }
+
             const assets = await client.searchMetadata(source.filters, source.limit, source.sort);
 
             if (assets.length === 0) {

@@ -233,9 +233,9 @@ export class GalleryBuilderModal extends Modal {
                 mode = 'recent';
             } else if (source.filters?.isFavorite) {
                 mode = 'favorites';
-            } else if (source.filters?.tagIds) {
+            } else if (source.filters?.tagIds || source.filters?.tags) {
                 mode = 'tags';
-            } else if (source.filters?.personIds) {
+            } else if (source.filters?.personIds || source.filters?.people) {
                 mode = 'people';
             }
 
@@ -330,9 +330,14 @@ export class GalleryBuilderModal extends Modal {
 
                         // Initialize tags filter if not present
                         source.filters = { ...source.filters };
-                        if (!source.filters.tagIds) {
-                            source.filters.tagIds = [];
+                        if (!source.filters.tags) {
+                            source.filters.tags = [];
                         }
+                        // Migrate any existing tagIds to tags (though unlikely in builder context, good for safety)
+                        if (source.filters.tagIds) {
+                           delete source.filters.tagIds;
+                        }
+
                         // Remove incompatible global parameters
                         delete source.limit;
                         delete source.sort;
@@ -341,8 +346,8 @@ export class GalleryBuilderModal extends Modal {
                         const tagsContainer = dynamicContainer.createDiv('gallery-builder-tags-container');
 
                         tags.forEach(tag => {
-                            const tagName = String(tag.name || tag.value || tag.id);
-                            const isChecked = source.filters!.tagIds!.includes(tag.id);
+                            const tagName = String(tag.value || tag.name || tag.id);
+                            const isChecked = source.filters!.tags!.includes(tagName);
 
                             new Setting(tagsContainer)
                                 .setName(tagName)
@@ -350,14 +355,14 @@ export class GalleryBuilderModal extends Modal {
                                     .setValue(isChecked)
                                     .onChange(checked => {
                                         if (checked) {
-                                            if (!source.filters!.tagIds!.includes(tag.id)) {
-                                                source.filters!.tagIds!.push(tag.id);
+                                            if (!source.filters!.tags!.includes(tagName)) {
+                                                source.filters!.tags!.push(tagName);
                                             }
                                         } else {
-                                            source.filters!.tagIds = source.filters!.tagIds!.filter(id => id !== tag.id);
+                                            source.filters!.tags = source.filters!.tags!.filter(name => name !== tagName);
                                         }
-                                        if (source.filters!.tagIds!.length === 0) {
-                                            delete source.filters!.tagIds;
+                                        if (source.filters!.tags!.length === 0) {
+                                            delete source.filters!.tags;
                                         }
                                     })
                                 );
@@ -389,9 +394,13 @@ export class GalleryBuilderModal extends Modal {
 
                         // Initialize personIds filter if not present
                         source.filters = { ...source.filters };
-                        if (!source.filters.personIds) {
-                            source.filters.personIds = [];
+                        if (!source.filters.people) {
+                            source.filters.people = [];
                         }
+                        if (source.filters.personIds) {
+                            delete source.filters.personIds;
+                        }
+
                         // Remove incompatible global parameters
                         delete source.limit;
                         delete source.sort;
@@ -401,7 +410,7 @@ export class GalleryBuilderModal extends Modal {
 
                         people.forEach(person => {
                             const personName = String(person.name || person.id);
-                            const isChecked = source.filters!.personIds!.includes(person.id);
+                            const isChecked = source.filters!.people!.includes(personName);
 
                             new Setting(peopleContainer)
                                 .setName(personName)
@@ -409,14 +418,14 @@ export class GalleryBuilderModal extends Modal {
                                     .setValue(isChecked)
                                     .onChange(checked => {
                                         if (checked) {
-                                            if (!source.filters!.personIds!.includes(person.id)) {
-                                                source.filters!.personIds!.push(person.id);
+                                            if (!source.filters!.people!.includes(personName)) {
+                                                source.filters!.people!.push(personName);
                                             }
                                         } else {
-                                            source.filters!.personIds = source.filters!.personIds!.filter(id => id !== person.id);
+                                            source.filters!.people = source.filters!.people!.filter(name => name !== personName);
                                         }
-                                        if (source.filters!.personIds!.length === 0) {
-                                            delete source.filters!.personIds;
+                                        if (source.filters!.people!.length === 0) {
+                                            delete source.filters!.people;
                                         }
                                     })
                                 );

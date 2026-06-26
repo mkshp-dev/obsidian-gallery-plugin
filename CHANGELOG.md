@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Allow users to write human-readable tag and people names in Gallery View YAML instead of Immich internal UUIDs.
 - Added authenticated Immich people filters to canonical schema
 - Add authenticated Immich tag filters on canonical schema.
 - Updated the Insert Gallery builder flow to emit canonical authenticated Immich source configurations (filters, limit, sort) across album, favorites, and recent modes.

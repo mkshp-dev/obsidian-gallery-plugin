@@ -84,16 +84,16 @@ view:
 
 ### Authenticated Tags
 
-You can filter assets by Immich tags by providing one or more tag IDs in the `tagIds` array. Like other filters, `tagIds` can be combined with `albumIds`, `isFavorite`, or date filters.
+You can filter assets by Immich tags by providing one or more tag names in the `tags` array. Like other filters, `tags` can be combined with `albumIds`, `isFavorite`, or date filters.
 
 ```yaml
 sources:
   - type: immich
     connection: home
     filters:
-      tagIds:
-        - 550e8400-e29b-41d4-a716-446655440000
-        - 7b2d56a1-3e4b-4a5c-8d1e-2c9a8b7f6e5d
+      tags:
+        - Photography
+        - Family
 view:
   type: grid
 ```
@@ -101,16 +101,16 @@ view:
 
 ### Authenticated People
 
-You can filter assets by Immich people by providing one or more person IDs in the `personIds` array. Like other filters, `personIds` can be combined with `albumIds`, `isFavorite`, or date filters.
+You can filter assets by Immich people by providing one or more person names in the `people` array. Like other filters, `people` can be combined with `albumIds`, `isFavorite`, or date filters.
 
 ```yaml
 sources:
   - type: immich
     connection: home
     filters:
-      personIds:
-        - 110e8400-e29b-41d4-a716-446655440000
-        - 2b2d56a1-3e4b-4a5c-8d1e-2c9a8b7f6e5d
+      people:
+        - Alice
+        - Bob
 view:
   type: grid
 ```

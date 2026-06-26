@@ -64,6 +64,30 @@ export class GalleryYamlGenerator {
                         if (source.filters.assetType) {
                             yaml += `      assetType: ${source.filters.assetType}\n`;
                         }
+                        if (source.filters.tagIds && source.filters.tagIds.length > 0) {
+                            yaml += `      tagIds:\n`;
+                            for (const id of source.filters.tagIds) {
+                                yaml += `        - ${id}\n`;
+                            }
+                        }
+                        if (source.filters.tags && source.filters.tags.length > 0) {
+                            yaml += `      tags:\n`;
+                            for (const tag of source.filters.tags) {
+                                yaml += `        - ${tag}\n`;
+                            }
+                        }
+                        if (source.filters.personIds && source.filters.personIds.length > 0) {
+                            yaml += `      personIds:\n`;
+                            for (const id of source.filters.personIds) {
+                                yaml += `        - ${id}\n`;
+                            }
+                        }
+                        if (source.filters.people && source.filters.people.length > 0) {
+                            yaml += `      people:\n`;
+                            for (const person of source.filters.people) {
+                                yaml += `        - ${person}\n`;
+                            }
+                        }
                     }
                     if (source.limit) {
                         yaml += `    limit: ${source.limit}\n`;

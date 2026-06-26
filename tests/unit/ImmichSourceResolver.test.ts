@@ -235,4 +235,152 @@ describe('ImmichSourceResolver', () => {
 
         expect(searchSpy).toHaveBeenCalledWith({ tagIds: ['tag1', 'tag2'] }, undefined, undefined);
     });
+
+    it('should resolve human readable tags to tagIds', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                tags: ['Family', 'Holiday']
+            }
+        };
+
+        const mockTags = [
+            { id: 'uuid-1', value: 'Family' },
+            { id: 'uuid-2', value: 'Holiday' },
+            { id: 'uuid-3', value: 'Pets' }
+        ];
+
+        const mockAssets = [{ id: 'asset1', originalFileName: 'photo.jpg' }];
+        (ImmichClient.prototype.getTags as jest.Mock).mockResolvedValue(mockTags);
+        const searchSpy = (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue(mockAssets);
+        (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockResolvedValueOnce('blob:url1');
+
+        await resolver.resolve(source, {});
+
+        expect(searchSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ tagIds: ['uuid-1', 'uuid-2'] }),
+            undefined,
+            undefined
+        );
+    });
+
+    it('should fail with a clear error if a human readable tag is missing', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                tags: ['Family', 'MissingTag']
+            }
+        };
+
+        const mockTags = [
+            { id: 'uuid-1', value: 'Family' }
+        ];
+
+        (ImmichClient.prototype.getTags as jest.Mock).mockResolvedValue(mockTags);
+
+        const result = await resolver.resolve(source, {});
+
+        expect(result.images).toHaveLength(0);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain("Tag not found: 'MissingTag'.");
+    });
+
+    it('should fail with a clear error if a human readable tag is ambiguous', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                tags: ['DuplicateTag']
+            }
+        };
+
+        const mockTags = [
+            { id: 'uuid-1', value: 'DuplicateTag' },
+            { id: 'uuid-2', value: 'DuplicateTag' }
+        ];
+
+        (ImmichClient.prototype.getTags as jest.Mock).mockResolvedValue(mockTags);
+
+        const result = await resolver.resolve(source, {});
+
+        expect(result.images).toHaveLength(0);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain("Ambiguous tag name: 'DuplicateTag' matches multiple tags. Please make the name unique in Immich.");
+    });
+
+    it('should resolve human readable people to personIds', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                people: ['Alice', 'Bob']
+            }
+        };
+
+        const mockPeople = [
+            { id: 'person-1', name: 'Alice' },
+            { id: 'person-2', name: 'Bob' },
+            { id: 'person-3', name: 'Charlie' }
+        ];
+
+        const mockAssets = [{ id: 'asset1', originalFileName: 'photo.jpg' }];
+        (ImmichClient.prototype.getPeople as jest.Mock).mockResolvedValue(mockPeople);
+        const searchSpy = (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue(mockAssets);
+        (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockResolvedValueOnce('blob:url1');
+
+        await resolver.resolve(source, {});
+
+        expect(searchSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ personIds: ['person-1', 'person-2'] }),
+            undefined,
+            undefined
+        );
+    });
+
+    it('should fail with a clear error if a human readable person is missing', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                people: ['Alice', 'MissingPerson']
+            }
+        };
+
+        const mockPeople = [
+            { id: 'person-1', name: 'Alice' }
+        ];
+
+        (ImmichClient.prototype.getPeople as jest.Mock).mockResolvedValue(mockPeople);
+
+        const result = await resolver.resolve(source, {});
+
+        expect(result.images).toHaveLength(0);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain("Person not found: 'MissingPerson'.");
+    });
+
+    it('should fail with a clear error if a human readable person is ambiguous', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                people: ['DuplicatePerson']
+            }
+        };
+
+        const mockPeople = [
+            { id: 'person-1', name: 'DuplicatePerson' },
+            { id: 'person-2', name: 'DuplicatePerson' }
+        ];
+
+        (ImmichClient.prototype.getPeople as jest.Mock).mockResolvedValue(mockPeople);
+
+        const result = await resolver.resolve(source, {});
+
+        expect(result.images).toHaveLength(0);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain("Ambiguous person name: 'DuplicatePerson' matches multiple people. Please make the name unique in Immich.");
+    });
 });

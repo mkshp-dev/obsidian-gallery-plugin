@@ -48,110 +48,72 @@ export class ImmichClient {
         }
     }
 
-    public async getAlbumAssets(albumId: string): Promise<ImmichAsset[]> {
-        const url = `${this.baseUrl}/api/albums/${albumId}`;
+    public async searchMetadata(filters?: Record<string, unknown>, limit?: number, sort?: Record<string, unknown>): Promise<ImmichAsset[]> {
+        const url = `${this.baseUrl}/api/search/metadata`;
         try {
-            const response = await requestUrl({
-                url,
-                method: 'GET',
-                headers: this.getHeaders()
-            });
-            if (response.status === 200) {
-                const album = response.json as ImmichAlbum;
-                return album.assets || [];
+            const body: Record<string, unknown> = {};
+            if (limit) {
+                body.size = limit;
             }
-            if (response.status === 401 || response.status === 403) {
-                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
+            if (sort) {
+                body.order = sort.order || 'desc';
             }
-            if (response.status === 404) {
-                throw new Error(`Album '${albumId}' not found on Immich connection '${this.connection.key}'`);
+            if (filters) {
+                if (filters.isFavorite !== undefined) {
+                    body.isFavorite = filters.isFavorite;
+                }
+                if (filters.createdAfter !== undefined) {
+                    body.createdAfter = filters.createdAfter;
+                }
+                if (filters.createdBefore !== undefined) {
+                    body.createdBefore = filters.createdBefore;
+                }
             }
-            throw new Error(`Failed to fetch Immich album assets: HTTP ${response.status}`);
+
+            const promises = [];
+            if (filters && Array.isArray(filters.albumIds) && filters.albumIds.length > 0) {
+                for (const albumId of filters.albumIds as string[]) {
+                    const albumBody = { ...body, albumId: albumId };
+                    promises.push(this.doSearch(url, albumBody));
+                }
+            } else {
+                promises.push(this.doSearch(url, body));
+            }
+
+            const results = await Promise.all(promises);
+            const allAssets = results.flat();
+            const uniqueAssets = Array.from(new Map(allAssets.map(a => [a.id, a])).values());
+            return uniqueAssets;
+
         } catch (e) {
-            // Re-throw explicit errors, map network errors
             if (e instanceof Error && e.message.includes('HTTP')) {
-                throw e;
-            }
-            if (e instanceof Error && e.message.includes('not found on Immich connection')) {
                 throw e;
             }
             throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
         }
     }
 
-    public async getRecentAssets(limit: number = 20): Promise<ImmichAsset[]> {
-        const url = `${this.baseUrl}/api/search/metadata`;
-        try {
-            const response = await requestUrl({
-                url,
-                method: 'POST',
-                headers: {
-                    ...this.getHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    size: limit,
-                    order: 'desc'
-                })
-            });
-            if (response.status === 200) {
-                const data = response.json as { assets?: { items: ImmichAsset[] }; items?: ImmichAsset[]; count?: number };
-                return data.assets?.items || data.items || [];
-            }
-            if (response.status === 401 || response.status === 403) {
-                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
-            }
-            if (response.status === 404) {
-                throw new Error(`Search endpoint not found on Immich connection '${this.connection.key}'`);
-            }
-            throw new Error(`Failed to fetch Immich recent assets: HTTP ${response.status}`);
-        } catch (e) {
-            // Re-throw explicit errors, map network errors
-            if (e instanceof Error && e.message.includes('HTTP')) {
-                throw e;
-            }
-            if (e instanceof Error && e.message.includes('not found on Immich connection')) {
-                throw e;
-            }
-            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
+    private async doSearch(url: string, body: Record<string, unknown>): Promise<ImmichAsset[]> {
+        const response = await requestUrl({
+            url,
+            method: 'POST',
+            headers: {
+                ...this.getHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        if (response.status === 200) {
+            const data = response.json as { assets?: { items: ImmichAsset[] }; items?: ImmichAsset[]; count?: number };
+            return data.assets?.items || data.items || [];
         }
-    }
-
-    public async getFavorites(): Promise<ImmichAsset[]> {
-        const url = `${this.baseUrl}/api/search/metadata`;
-        try {
-            const response = await requestUrl({
-                url,
-                method: 'POST',
-                headers: {
-                    ...this.getHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    isFavorite: true
-                })
-            });
-            if (response.status === 200) {
-                const data = response.json as { assets?: { items: ImmichAsset[] }; items?: ImmichAsset[]; count?: number };
-                return data.assets?.items || data.items || [];
-            }
-            if (response.status === 401 || response.status === 403) {
-                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
-            }
-            if (response.status === 404) {
-                throw new Error(`Favorites endpoint not found on Immich connection '${this.connection.key}'`);
-            }
-            throw new Error(`Failed to fetch Immich favorites: HTTP ${response.status}`);
-        } catch (e) {
-            // Re-throw explicit errors, map network errors
-            if (e instanceof Error && e.message.includes('HTTP')) {
-                throw e;
-            }
-            if (e instanceof Error && e.message.includes('not found on Immich connection')) {
-                throw e;
-            }
-            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
+        if (response.status === 401 || response.status === 403) {
+            throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
         }
+        if (response.status === 404) {
+            throw new Error(`Search endpoint not found on Immich connection '${this.connection.key}'`);
+        }
+        throw new Error(`Failed to fetch Immich assets: HTTP ${response.status}`);
     }
 
     public getAssetUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): string {

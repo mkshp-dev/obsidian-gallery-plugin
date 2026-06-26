@@ -26,21 +26,23 @@ export interface IImmichConnection {
   apiKey: string;
 }
 
-export interface IImmichAlbumSourceConfig {
+export interface IImmichSourceConfig {
   type: 'immich';
   connection: string;
-  source: {
-    type: 'album';
-    id: string;
-  } | {
-    type: 'favorites';
-  } | {
-    type: 'recent';
-    limit?: number;
+  filters?: {
+    albumIds?: string[];
+    isFavorite?: boolean;
+    createdAfter?: string;
+    createdBefore?: string;
+  };
+  limit?: number;
+  sort?: {
+    by: 'createdAt';
+    order: 'asc' | 'desc';
   };
 }
 
-export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichAlbumSourceConfig;
+export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichSourceConfig;
 
 export interface IViewConfig {
   type: 'thumbnail' | 'carousel' | 'grid';

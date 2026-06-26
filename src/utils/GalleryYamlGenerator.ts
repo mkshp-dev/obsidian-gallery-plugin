@@ -42,16 +42,33 @@ export class GalleryYamlGenerator {
                     break;
                 case 'immich':
                     if (!source.connection) throw new Error('Immich authenticated source requires a connection.');
-                    if (!source.source) throw new Error('Immich authenticated source requires a source configuration.');
                     yaml += `    connection: ${source.connection}\n`;
-                    yaml += `    source:\n`;
 
-                    if (source.source.type === 'favorites') {
-                        yaml += `      type: favorites\n`;
-                    } else if (source.source.type === 'album') {
-                        if (!source.source.id) throw new Error('Immich authenticated album source requires an album ID.');
-                        yaml += `      type: album\n`;
-                        yaml += `      id: ${source.source.id}\n`;
+                    if (source.filters) {
+                        yaml += `    filters:\n`;
+                        if (source.filters.isFavorite) {
+                            yaml += `      isFavorite: true\n`;
+                        }
+                        if (source.filters.albumIds && source.filters.albumIds.length > 0) {
+                            yaml += `      albumIds:\n`;
+                            for (const id of source.filters.albumIds) {
+                                yaml += `        - ${id}\n`;
+                            }
+                        }
+                        if (source.filters.createdAfter) {
+                            yaml += `      createdAfter: ${source.filters.createdAfter}\n`;
+                        }
+                        if (source.filters.createdBefore) {
+                            yaml += `      createdBefore: ${source.filters.createdBefore}\n`;
+                        }
+                    }
+                    if (source.limit) {
+                        yaml += `    limit: ${source.limit}\n`;
+                    }
+                    if (source.sort) {
+                        yaml += `    sort:\n`;
+                        yaml += `      by: ${source.sort.by}\n`;
+                        yaml += `      order: ${source.sort.order}\n`;
                     }
                     break;
             }

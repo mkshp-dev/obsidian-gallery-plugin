@@ -123,7 +123,7 @@ export class GalleryBuilderModal extends Modal {
                 newSource = { type: 'immich-share', url: '' };
                 break;
             case 'immich':
-                newSource = { type: 'immich', connection: '', source: { type: 'album', id: '' } };
+                newSource = { type: 'immich', connection: '' };
                 break;
         }
 
@@ -228,8 +228,8 @@ export class GalleryBuilderModal extends Modal {
             });
 
             // Ensure source structure is initialized
-            if (!source.source) {
-                source.source = { type: 'album', id: '' };
+            if (!source.filters) {
+                source.filters = { albumIds: [] };
             }
 
             const connSetting = new Setting(container)
@@ -266,11 +266,14 @@ export class GalleryBuilderModal extends Modal {
 
                     // Since favorites authoring is currently out of scope for the builder,
                     // we assume an album type for UI purposes for now.
-                    const albumSource = source.source as { type: 'album', id: string };
+                    const albumIds = source.filters?.albumIds || [];
+                    let selectedId = albumIds[0] || '';
 
                     // Ensure selected album is valid, or select the first one
-                    if (!albumSource.id || !albumOptions[albumSource.id]) {
-                        albumSource.id = albums[0].id;
+                    if (!selectedId || !albumOptions[selectedId]) {
+                        selectedId = albums[0].id;
+                        if (!source.filters) source.filters = {};
+                        source.filters.albumIds = [selectedId];
                     }
 
                     new Setting(albumContainer)
@@ -278,9 +281,10 @@ export class GalleryBuilderModal extends Modal {
                         .setDesc('Select an album to display.')
                         .addDropdown(dropdown => dropdown
                             .addOptions(albumOptions)
-                            .setValue(albumSource.id || '')
+                            .setValue(selectedId || '')
                             .onChange(value => {
-                                albumSource.id = value;
+                                if (!source.filters) source.filters = {};
+                                source.filters.albumIds = [value];
                             })
                         );
                 } catch (e) {

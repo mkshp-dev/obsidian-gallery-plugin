@@ -75,159 +75,72 @@ describe('ImmichClient', () => {
         await expect(client.getAlbums()).rejects.toThrow(/Authentication failed for Immich connection/);
     });
 
-    it('should fetch album assets successfully', async () => {
+    it('should searchMetadata mapping limit and sort correctly', async () => {
         (requestUrl as jest.Mock).mockResolvedValue({
             status: 200,
-            json: {
-                id: 'album1',
-                albumName: 'Vacation',
-                assets: [
-                    { id: 'asset1', originalFileName: 'photo.jpg' }
-                ]
-            }
+            json: { items: [{ id: 'asset1' }] }
         });
 
-        const assets = await client.getAlbumAssets('album1');
+        const client = new ImmichClient(mockConnection);
+        const assets = await client.searchMetadata(undefined, 35, { order: 'desc' });
 
         expect(requestUrl).toHaveBeenCalledWith({
-            url: 'https://immich.example.com/api/albums/album1',
-            method: 'GET',
+            url: 'https://immich.example.com/api/search/metadata',
+            method: 'POST',
             headers: {
                 'Accept': 'application/json',
+                'Content-Type': 'application/json',
                 'x-api-key': 'test-api-key'
-            }
+            },
+            body: JSON.stringify({ size: 35, order: 'desc' })
         });
         expect(assets).toHaveLength(1);
-        expect(assets[0].id).toBe('asset1');
     });
 
-    it('should fetch favorites successfully with nested assets items', async () => {
+    it('should searchMetadata mapping filters correctly', async () => {
         (requestUrl as jest.Mock).mockResolvedValue({
             status: 200,
-            json: {
-                assets: {
-                    items: [
-                        { id: 'fav1', originalFileName: 'photo1.jpg' }
-                    ],
-                    count: 1
-                }
-            }
+            json: { items: [{ id: 'asset1' }] }
         });
 
-        const assets = await client.getFavorites();
+        const client = new ImmichClient(mockConnection);
+        const assets = await client.searchMetadata({ isFavorite: true, createdAfter: '2025-01-01', createdBefore: '2025-12-31' });
 
         expect(requestUrl).toHaveBeenCalledWith({
             url: 'https://immich.example.com/api/search/metadata',
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
-                'x-api-key': 'test-api-key',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-api-key': 'test-api-key'
             },
-            body: JSON.stringify({
-                isFavorite: true
-            })
+            body: JSON.stringify({ isFavorite: true, createdAfter: '2025-01-01', createdBefore: '2025-12-31' })
         });
         expect(assets).toHaveLength(1);
-        expect(assets[0].id).toBe('fav1');
     });
 
-    it('should fetch favorites successfully with flat items', async () => {
+    it('should searchMetadata looping over albumIds', async () => {
         (requestUrl as jest.Mock).mockResolvedValue({
             status: 200,
-            json: {
-                items: [
-                    { id: 'fav1', originalFileName: 'photo1.jpg' }
-                ],
-                count: 1
-            }
+            json: { items: [{ id: 'asset1' }] }
         });
 
-        const assets = await client.getFavorites();
-        expect(assets).toHaveLength(1);
-        expect(assets[0].id).toBe('fav1');
+        const client = new ImmichClient(mockConnection);
+        const assets = await client.searchMetadata({ albumIds: ['album1', 'album2'] });
+
+        expect(requestUrl).toHaveBeenCalledTimes(2);
+        expect(assets).toHaveLength(1); // deduped
     });
 
-    it('should throw explicit error on fetch favorites auth failure', async () => {
+    it('should throw explicit error on search auth failure', async () => {
         (requestUrl as jest.Mock).mockResolvedValue({
             status: 401,
-            json: { message: 'Unauthorized' }
+            json: {}
         });
 
-        await expect(client.getFavorites()).rejects.toThrow(/Authentication failed for Immich connection/);
-    });
+        const client = new ImmichClient(mockConnection);
 
-    it('should fetch recent assets successfully with default limit', async () => {
-        (requestUrl as jest.Mock).mockResolvedValue({
-            status: 200,
-            json: {
-                assets: {
-                    items: [
-                        { id: 'recent1', originalFileName: 'photo-recent.jpg' }
-                    ],
-                    count: 1
-                }
-            }
-        });
-
-        const assets = await client.getRecentAssets();
-
-        expect(requestUrl).toHaveBeenCalledWith({
-            url: 'https://immich.example.com/api/search/metadata',
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'x-api-key': 'test-api-key',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                size: 20,
-                order: 'desc'
-            })
-        });
-        expect(assets).toHaveLength(1);
-        expect(assets[0].id).toBe('recent1');
-    });
-
-    it('should fetch recent assets successfully with custom limit', async () => {
-        (requestUrl as jest.Mock).mockResolvedValue({
-            status: 200,
-            json: {
-                assets: {
-                    items: [
-                        { id: 'recent1', originalFileName: 'photo-recent.jpg' }
-                    ],
-                    count: 1
-                }
-            }
-        });
-
-        const assets = await client.getRecentAssets(35);
-
-        expect(requestUrl).toHaveBeenCalledWith({
-            url: 'https://immich.example.com/api/search/metadata',
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'x-api-key': 'test-api-key',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                size: 35,
-                order: 'desc'
-            })
-        });
-        expect(assets).toHaveLength(1);
-        expect(assets[0].id).toBe('recent1');
-    });
-
-    it('should throw explicit error on fetch recent assets auth failure', async () => {
-        (requestUrl as jest.Mock).mockResolvedValue({
-            status: 401,
-            json: { message: 'Unauthorized' }
-        });
-
-        await expect(client.getRecentAssets()).rejects.toThrow(/Authentication failed for Immich connection/);
+        await expect(client.searchMetadata()).rejects.toThrow("Authentication failed for Immich connection 'test' (HTTP 401)");
     });
 
     it('should return correct asset URL for original', () => {

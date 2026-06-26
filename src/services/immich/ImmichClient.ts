@@ -1,3 +1,4 @@
+
 import { requestUrl } from 'obsidian';
 import { IImmichConnection } from '../../models/interfaces';
 import { Logger } from '../../utils/Logger';
@@ -5,7 +6,29 @@ import { ImmichAsset, ImmichAlbum, ImmichTag, ImmichPerson } from '../../models/
 import { ImmichHelpers } from '../../utils/immich/ImmichHelpers';
 import { ObjectUrlManager } from '../../utils/immich/ObjectUrlManager';
 
+interface CacheEntry<T> {
+    promise: Promise<T>;
+    timestamp: number;
+}
+
 export class ImmichClient {
+    private static albumCache: Map<string, CacheEntry<ImmichAlbum[]>> = new Map();
+    private static tagCache: Map<string, CacheEntry<ImmichTag[]>> = new Map();
+    private static peopleCache: Map<string, CacheEntry<ImmichPerson[]>> = new Map();
+    private static readonly CACHE_TTL_MS = 5 * 60 * 1000;
+
+    public static invalidateCache(connectionKey?: string) {
+        if (connectionKey) {
+            ImmichClient.albumCache.delete(connectionKey);
+            ImmichClient.tagCache.delete(connectionKey);
+            ImmichClient.peopleCache.delete(connectionKey);
+        } else {
+            ImmichClient.albumCache.clear();
+            ImmichClient.tagCache.clear();
+            ImmichClient.peopleCache.clear();
+        }
+    }
+
     private connection: IImmichConnection;
     private baseUrl: string;
 
@@ -21,33 +44,47 @@ export class ImmichClient {
         };
     }
 
-    public async getAlbums(): Promise<ImmichAlbum[]> {
-        const url = `${this.baseUrl}/api/albums`;
-        try {
-            const response = await requestUrl({
-                url,
-                method: 'GET',
-                headers: this.getHeaders()
-            });
-            if (response.status === 200) {
-                return response.json as ImmichAlbum[];
-            }
-            if (response.status === 401 || response.status === 403) {
-                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
-            }
-            if (response.status === 404) {
-                throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
-            }
-            throw new Error(`Failed to fetch Immich albums: HTTP ${response.status}`);
-        } catch (e) {
-            // Re-throw explicit errors, map network errors
-            if (e instanceof Error && e.message.includes('HTTP')) {
-                throw e;
-            }
-            throw new Error(`Server unreachable or invalid URL for Immich connection '${this.connection.key}'`);
-        }
-    }
+        public async getAlbums(forceRefresh: boolean = false): Promise<ImmichAlbum[]> {
+        const key = this.connection.key;
+        const now = Date.now();
+        const cached = ImmichClient.albumCache.get(key);
 
+        if (!forceRefresh && cached && (now - cached.timestamp < ImmichClient.CACHE_TTL_MS)) {
+            return cached.promise;
+        }
+
+        const url = `${this.baseUrl}/api/albums`;
+
+        const promise = (async () => {
+            try {
+                const response = await requestUrl({
+                    url,
+                    method: 'GET',
+                    headers: this.getHeaders()
+                });
+                if (response.status === 200) {
+                    return response.json as ImmichAlbum[];
+                }
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
+                }
+                if (response.status === 404) {
+                    throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
+                }
+                throw new Error(`Failed to fetch Immich albums: HTTP ${response.status}`);
+            } catch (e) {
+                ImmichClient.albumCache.delete(key);
+                // Re-throw explicit errors, map network errors
+                if (e instanceof Error && e.message.includes('HTTP')) {
+                    throw e;
+                }
+                throw new Error(`Server unreachable or invalid URL for Immich connection '${this.connection.key}'`);
+            }
+        })();
+
+        ImmichClient.albumCache.set(key, { promise, timestamp: now });
+        return promise;
+    }
     public async searchMetadata(filters?: Record<string, unknown>, limit?: number, sort?: Record<string, unknown>): Promise<ImmichAsset[]> {
         const url = `${this.baseUrl}/api/search/metadata`;
         try {
@@ -134,69 +171,100 @@ export class ImmichClient {
         return `${this.baseUrl}/api/assets/${assetId}/original`;
     }
 
-    public async getTags(): Promise<ImmichTag[]> {
+        public async getTags(forceRefresh: boolean = false): Promise<ImmichTag[]> {
+        const key = this.connection.key;
+        const now = Date.now();
+        const cached = ImmichClient.tagCache.get(key);
+
+        if (!forceRefresh && cached && (now - cached.timestamp < ImmichClient.CACHE_TTL_MS)) {
+            return cached.promise;
+        }
+
         const url = `${this.baseUrl}/api/tags`;
-        try {
-            const response = await requestUrl({
-                url,
-                method: 'GET',
-                headers: this.getHeaders()
-            });
-            if (response.status === 200) {
-                return response.json as ImmichTag[];
-            }
-            if (response.status === 401 || response.status === 403) {
-                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
-            }
-            if (response.status === 404) {
-                throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
-            }
-            throw new Error(`Failed to fetch Immich tags: HTTP ${response.status}`);
-        } catch (e) {
-            if (e instanceof Error && e.message.includes('HTTP')) {
-                throw e;
-            }
-            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
-        }
-    }
 
-    public async getPeople(): Promise<ImmichPerson[]> {
-        const url = `${this.baseUrl}/api/people`;
-        try {
-            const response = await requestUrl({
-                url,
-                method: 'GET',
-                headers: this.getHeaders()
-            });
-            if (response.status === 200) {
-                const data = response.json as { items?: ImmichPerson[]; people?: ImmichPerson[] } | ImmichPerson[];
-                if (Array.isArray(data)) {
-                    return data;
-                } else if (data && typeof data === 'object') {
-                    if ('people' in data && Array.isArray(data.people)) {
-                        return data.people;
-                    }
-                    if ('items' in data && Array.isArray(data.items)) {
-                        return data.items;
-                    }
+        const promise = (async () => {
+            try {
+                const response = await requestUrl({
+                    url,
+                    method: 'GET',
+                    headers: this.getHeaders()
+                });
+                if (response.status === 200) {
+                    return response.json as ImmichTag[];
+
                 }
-                return [];
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
+                }
+                if (response.status === 404) {
+                    throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
+                }
+                throw new Error(`Failed to fetch Immich tags: HTTP ${response.status}`);
+            } catch (e) {
+                ImmichClient.tagCache.delete(key);
+                // Re-throw explicit errors, map network errors
+                if (e instanceof Error && e.message.includes('HTTP')) {
+                    throw e;
+                }
+                throw new Error(`Server unreachable or invalid URL for Immich connection '${this.connection.key}'`);
             }
-            if (response.status === 401 || response.status === 403) {
-                throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
-            }
-            if (response.status === 404) {
-                throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
-            }
-            throw new Error(`Failed to fetch Immich people: HTTP ${response.status}`);
-        } catch (e) {
-            if (e instanceof Error && e.message.includes('HTTP')) {
-                throw e;
-            }
-            throw new Error(`Server unreachable or network error for Immich connection '${this.connection.key}'`);
-        }
-    }
+        })();
 
+        ImmichClient.tagCache.set(key, { promise, timestamp: now });
+        return promise;
+    }
+        public async getPeople(forceRefresh: boolean = false): Promise<ImmichPerson[]> {
+        const key = this.connection.key;
+        const now = Date.now();
+        const cached = ImmichClient.peopleCache.get(key);
+
+        if (!forceRefresh && cached && (now - cached.timestamp < ImmichClient.CACHE_TTL_MS)) {
+            return cached.promise;
+        }
+
+        const url = `${this.baseUrl}/api/people`;
+
+        const promise = (async () => {
+            try {
+                const response = await requestUrl({
+                    url,
+                    method: 'GET',
+                    headers: this.getHeaders()
+                });
+                if (response.status === 200) {
+                    const data = response.json as { items?: ImmichPerson[]; people?: ImmichPerson[] } | ImmichPerson[];
+                    if (Array.isArray(data)) {
+                        return data;
+                    } else if (data && typeof data === 'object') {
+                        if ('people' in data && Array.isArray(data.people)) {
+                            return data.people;
+                        }
+                        if ('items' in data && Array.isArray(data.items)) {
+                            return data.items;
+                        }
+                    }
+                    return [];
+                }
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error(`Authentication failed for Immich connection '${this.connection.key}' (HTTP ${response.status})`);
+                }
+                if (response.status === 404) {
+                    throw new Error(`Immich server API not found (HTTP ${response.status}). Check base URL.`);
+                }
+                throw new Error(`Failed to fetch Immich people: HTTP ${response.status}`);
+            } catch (e) {
+                ImmichClient.peopleCache.delete(key);
+                // Re-throw explicit errors, map network errors
+                if (e instanceof Error && e.message.includes('HTTP')) {
+                    throw e;
+                }
+                throw new Error(`Server unreachable or invalid URL for Immich connection '${this.connection.key}'`);
+            }
+        })();
+
+        ImmichClient.peopleCache.set(key, { promise, timestamp: now });
+        return promise;
+    }
     public async validateConnection(): Promise<{ success: boolean; message: string }> {
         if (!this.baseUrl) {
             return { success: false, message: 'Invalid URL' };

@@ -428,6 +428,21 @@ export class GalleryBuilderModal extends Modal {
             };
 
             new Setting(container).setName('Filters').setHeading();
+
+            new Setting(container)
+                .setName('Refresh metadata')
+                .setDesc('Clear cache and refetch albums, tags, and people')
+                .addButton(button => button
+                    .setButtonText('Refresh')
+                    .onClick(async () => {
+                        if (source.connection) {
+                            ImmichClient.invalidateCache(source.connection);
+                            await renderDynamicContent(source.connection);
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
             const filtersContainer = container.createDiv('gallery-builder-immich-filters');
 
             connSetting.addDropdown(dropdown => dropdown

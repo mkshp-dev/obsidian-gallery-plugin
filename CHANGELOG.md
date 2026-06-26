@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Cache albums, tags and people per authenticated connection.
 - Polished Insert Gallery builder UX for authenticated Immich (logical groups, searchable multi-selects, live YAML preview).
 - Allow users to write human-readable tag and people names in Gallery View YAML instead of Immich internal UUIDs.
 - Added authenticated Immich people filters to canonical schema

@@ -66,6 +66,45 @@ describe('ImmichClient', () => {
         expect(albums[0].id).toBe('album1');
     });
 
+
+    it('should fetch people successfully', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 200,
+            json: [
+                { id: 'person1', name: 'Alice' },
+                { id: 'person2', name: 'Bob' }
+            ]
+        });
+
+        const people = await client.getPeople();
+
+        expect(requestUrl).toHaveBeenCalledWith({
+            url: 'https://immich.example.com/api/people',
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'x-api-key': 'test-api-key'
+            }
+        });
+        expect(people).toHaveLength(2);
+        expect(people[0].id).toBe('person1');
+    });
+
+    it('should fetch people successfully with items wrapping', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 200,
+            json: {
+                items: [
+                    { id: 'person1', name: 'Alice' }
+                ]
+            }
+        });
+
+        const people = await client.getPeople();
+        expect(people).toHaveLength(1);
+        expect(people[0].id).toBe('person1');
+    });
+
     it('should throw explicit error on fetch albums auth failure', async () => {
         (requestUrl as jest.Mock).mockResolvedValue({
             status: 401,

@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Added authenticated Immich people filters to canonical schema
 - Add authenticated Immich tag filters on canonical schema.
 - Updated the Insert Gallery builder flow to emit canonical authenticated Immich source configurations (filters, limit, sort) across album, favorites, and recent modes.
 - Added authenticated Immich asset-type filter on canonical schema.

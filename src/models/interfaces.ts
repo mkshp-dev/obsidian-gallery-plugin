@@ -32,6 +32,7 @@ export interface IImmichSourceConfig {
   filters?: {
     albumIds?: string[];
     tagIds?: string[];
+    personIds?: string[];
     isFavorite?: boolean;
     createdAfter?: string;
     createdBefore?: string;

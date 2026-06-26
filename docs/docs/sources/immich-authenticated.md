@@ -82,6 +82,22 @@ view:
 **Note:** The assets returned will be empty if your library has no assets. This is expected behavior and will not produce an error.
 
 
+### Authenticated Tags
+
+You can filter assets by Immich tags by providing one or more tag IDs in the `tagIds` array. Like other filters, `tagIds` can be combined with `albumIds`, `isFavorite`, or date filters.
+
+```yaml
+sources:
+  - type: immich
+    connection: home
+    filters:
+      tagIds:
+        - 550e8400-e29b-41d4-a716-446655440000
+        - 7b2d56a1-3e4b-4a5c-8d1e-2c9a8b7f6e5d
+view:
+  type: grid
+```
+
 ### Date Range Filters
 
 You can filter assets by their creation date using `createdAfter` and `createdBefore`. The dates must be in `YYYY-MM-DD` format. These filters can be used on their own or combined with other filters like `albumIds` or `isFavorite`.

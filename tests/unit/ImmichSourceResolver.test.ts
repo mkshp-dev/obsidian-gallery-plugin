@@ -217,4 +217,22 @@ describe('ImmichSourceResolver', () => {
 
         expect(searchSpy).toHaveBeenCalledWith({ assetType: 'video' }, undefined, undefined);
     });
+
+    it('should assert tag filters are passed correctly', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                tagIds: ['tag1', 'tag2']
+            }
+        };
+
+        const mockAssets = [{ id: 'asset1', originalFileName: 'photo.jpg' }];
+        const searchSpy = (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue(mockAssets);
+        (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockResolvedValueOnce('blob:url1');
+
+        await resolver.resolve(source, {});
+
+        expect(searchSpy).toHaveBeenCalledWith({ tagIds: ['tag1', 'tag2'] }, undefined, undefined);
+    });
 });

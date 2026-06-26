@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Refactored authenticated Immich source schema to the canonical filters, limit, and sort model.
 - Normalized and clarified the authenticated Immich source contract and documentation.
 - Added authenticated Immich `recent` source support.
 - Added authenticated Immich `favorites` source support.

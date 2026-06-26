@@ -99,6 +99,50 @@ view:
 
 **Note:** Date filtering currently supports the *created date* (the date the asset was uploaded or created in the system), rather than the captured/taken date.
 
+### Asset Type Filters
+
+You can filter assets by their type using `assetType`. This allows you to request only images or only videos. The supported values are `image` and `video`. Like date range filters, these can be used on their own or combined with other filters.
+
+Only videos from a specific album:
+```yaml
+sources:
+  - type: immich
+    connection: home
+    filters:
+      albumIds:
+        - 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
+      assetType: video
+view:
+  type: grid
+```
+
+Favorite images only:
+```yaml
+sources:
+  - type: immich
+    connection: home
+    filters:
+      isFavorite: true
+      assetType: image
+view:
+  type: grid
+```
+
+Recent videos:
+```yaml
+sources:
+  - type: immich
+    connection: home
+    filters:
+      assetType: video
+    limit: 20
+    sort:
+      by: createdAt
+      order: desc
+view:
+  type: grid
+```
+
 ## Privacy and Security
 
 - Your API Key is stored locally in Obsidian's plugin settings.

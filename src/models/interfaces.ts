@@ -34,6 +34,7 @@ export interface IImmichSourceConfig {
     isFavorite?: boolean;
     createdAfter?: string;
     createdBefore?: string;
+    assetType?: 'image' | 'video';
   };
   limit?: number;
   sort?: {

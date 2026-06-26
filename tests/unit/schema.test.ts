@@ -192,6 +192,30 @@ view: thumbnail`;
         expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "filters.albumIds" must be an array of strings');
     });
 
+    it('new v2 immich block fails validation on invalid assetType', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    filters:
+      assetType: "gif"
+view: thumbnail`;
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "filters.assetType" must be either "image" or "video"');
+    });
+
+    it('new v2 immich block passes validation with valid assetType', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    filters:
+      assetType: "video"
+view: thumbnail`;
+        const config = ParameterParser.parseAndValidate(yaml);
+        expect(config.sources[0].type).toBe('immich');
+        if (config.sources[0].type === 'immich') {
+            expect(config.sources[0].filters?.assetType).toBe('video');
+        }
+    });
+
     it('new v2 immich block fails validation on invalid limit', () => {
         const yaml = `sources:
   - type: immich

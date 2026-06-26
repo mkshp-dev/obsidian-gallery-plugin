@@ -273,6 +273,10 @@ export class ParameterParser {
                             errors.push(this.createConfigError(`sources[${i}].filters.createdBefore`,
                                 'Immich source "filters.createdBefore" must be a string in YYYY-MM-DD format'));
                         }
+                        if (source.filters.assetType !== undefined && source.filters.assetType !== 'image' && source.filters.assetType !== 'video') {
+                            errors.push(this.createConfigError(`sources[${i}].filters.assetType`,
+                                'Immich source "filters.assetType" must be either "image" or "video"'));
+                        }
                     }
                     if (source.limit !== undefined && typeof source.limit !== 'number') {
                         errors.push(this.createConfigError(`sources[${i}].limit`,

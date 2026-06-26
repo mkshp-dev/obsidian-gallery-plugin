@@ -1,6 +1,7 @@
 # Changelog
 
 ## In-progress
+- Added authenticated Immich asset-type filter on canonical schema.
 - Added authenticated Immich date-range filters (`createdAfter`, `createdBefore`) on canonical schema.
 - Refactored authenticated Immich source schema to the canonical filters, limit, and sort model.
 - Normalized and clarified the authenticated Immich source contract and documentation.

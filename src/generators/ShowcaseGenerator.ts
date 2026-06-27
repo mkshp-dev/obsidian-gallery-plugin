@@ -43,15 +43,9 @@ export class ShowcaseGenerator {
     }
 
     private async createFolderSafe(path: string): Promise<void> {
-        try {
-            // eslint-disable-next-line obsidianmd/no-unsupported-api
-            await this.app.vault.createFolder(path);
-        } catch (e) {
-            // Error when folder already exists in some vault implementations
-            if (e instanceof Error && e.message.includes('Folder already exists')) {
-                return;
-            }
-            throw e;
+        const exists = await this.app.vault.adapter.exists(path);
+        if (!exists) {
+            await this.app.vault.adapter.mkdir(path);
         }
     }
 

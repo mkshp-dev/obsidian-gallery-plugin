@@ -46,8 +46,7 @@ global.fetch = jest.fn();
 // Avoid jsdom's unimplemented canvas getContext from printing noisy errors in tests.
 // Return null so code paths that check getContext will fallback cleanly.
 try {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
+  // @ts-expect-error: jsdom does not implement getContext; assigning null prevents noisy unimplemented errors in tests
   HTMLCanvasElement.prototype.getContext = function () { return null; };
 } catch (e) {
   // ignore if environment doesn't allow mutation
@@ -85,9 +84,9 @@ jest.mock('obsidian', () => ({
   Setting: class MockSetting {},
   requestUrl: jest.fn(),
   parseYaml: jest.fn().mockImplementation((yamlStr: string) => {
-    const jsyaml = require('js-yaml');
+    const { parse } = require('yaml');
     try {
-        return jsyaml.load(yamlStr);
+        return parse(yamlStr);
     } catch (e) {
         throw new Error('YAML parsing error');
     }

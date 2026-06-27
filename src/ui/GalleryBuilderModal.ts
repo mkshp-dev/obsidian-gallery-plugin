@@ -386,7 +386,7 @@ export class GalleryBuilderModal extends Modal {
                     const tags = await client.getTags();
                     tagsWrapper.empty();
                     const tagItems = tags.map(t => {
-                        const name = String(t.value || t.name || t.id);
+                        const name = t.value || t.id;
                         return { id: name, name: name }; // Use value for ImmichTag
                     });
                     this.createSearchableList(tagsWrapper, tagItems, source.filters?.tags || [], (selected) => {

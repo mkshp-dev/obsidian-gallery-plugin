@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- Replaced all gallery error and empty-state blocks with a compact single-line message (`⚠️ gallery: …`) so errors are unobtrusive and don't push note content around.
+
 ## 2.2.2 - 2026-06-27
 
 ## 2.2.0 - 2026-06-27

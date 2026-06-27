@@ -182,17 +182,10 @@ export default class GalleryPlugin extends Plugin {
         ctx: MarkdownPostProcessorContext
     ): Promise<void> {
         if (!this.galleryProcessor) {
-            if (this.settings.errorDisplayMode === 'hidden') {
-                return;
-            } else if (this.settings.errorDisplayMode === 'text') {
+            if (this.settings.errorDisplayMode !== 'hidden') {
                 el.createEl('div', {
-                    text: 'Gallery processor not initialized',
-                    cls: 'gallery-error-text'
-                });
-            } else {
-                el.createEl('div', {
-                    text: 'Gallery processor not initialized',
-                    cls: 'gallery-error'
+                    text: '⚠️ gallery: processor not initialized',
+                    cls: 'gallery-error-compact'
                 });
             }
             return;
@@ -218,17 +211,10 @@ export default class GalleryPlugin extends Plugin {
 
         } catch (error) {
             console.error('Unexpected error in gallery processing:', error);
-            if (this.settings.errorDisplayMode === 'hidden') {
-                return;
-            } else if (this.settings.errorDisplayMode === 'text') {
+            if (this.settings.errorDisplayMode !== 'hidden') {
                 el.createEl('div', {
-                    text: `Gallery Error: ${error instanceof Error ? error.message : String(error)}`,
-                    cls: 'gallery-error-text'
-                });
-            } else {
-                el.createEl('div', {
-                    text: `Gallery Error: ${error instanceof Error ? error.message : String(error)}`,
-                    cls: 'gallery-error'
+                    text: `⚠️ gallery: ${error instanceof Error ? error.message : String(error)}`,
+                    cls: 'gallery-error-compact'
                 });
             }
         }

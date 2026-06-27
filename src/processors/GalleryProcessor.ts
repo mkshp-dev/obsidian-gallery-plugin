@@ -1,17 +1,12 @@
 import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
-import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceConfig, ObsidianDOMExtensions } from '../models/interfaces';
+import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ObsidianDOMExtensions } from '../models/interfaces';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { ConfigValidator } from '../utils/ConfigValidator';
-import { ErrorHandler } from '../utils/ErrorHandler';
-import { InlineError } from '../views/components/InlineError';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
-import { EmptyState } from '../views/components/EmptyState';
-import { ImageValidator } from '../utils/ImageValidator';
-import { FileSizeValidator } from '../utils/FileSizeValidator';
 import { ImageLoader } from '../utils/ImageLoader';
 import { IImmichConnection } from '../models/interfaces';
 
@@ -61,8 +56,6 @@ class GalleryRenderChild extends MarkdownRenderChild {
 export class GalleryProcessor {
     private contentScanner: IContentScanner;
     private viewFactory: ViewFactory;
-    private imageValidator: ImageValidator;
-    private fileSizeValidator: FileSizeValidator;
     private activeGalleries: Map<string, GalleryInstance> = new Map();
     private resolverRegistry: SourceResolverRegistry;
 
@@ -81,8 +74,6 @@ export class GalleryProcessor {
     constructor(contentScanner: IContentScanner, viewFactory: ViewFactory, getConnections: () => IImmichConnection[]) {
         this.contentScanner = contentScanner;
         this.viewFactory = viewFactory;
-        this.imageValidator = new ImageValidator();
-        this.fileSizeValidator = new FileSizeValidator();
         this.resolverRegistry = new SourceResolverRegistry(contentScanner, getConnections);
     }
 
@@ -177,7 +168,7 @@ export class GalleryProcessor {
             );
 
             if (sourceErrors.length > 0) {
-                new InlineError(el, sourceErrors);
+                GalleryProcessor.renderCompactError(el, sourceErrors[0] + (sourceErrors.length > 1 ? ` (+${sourceErrors.length - 1} more)` : ''));
             }
 
             const child = new GalleryRenderChild(el, galleryInstance.id, (id) => {
@@ -621,11 +612,27 @@ export class GalleryProcessor {
     }
 
     /**
-     * Show professional empty state using EmptyState component
+     * Render a compact single-line error message into container.
+     * This is the sole UI used for all error and empty states.
+     */
+    private static renderCompactError(container: HTMLElement, message: string): void {
+        const obsContainer = container as unknown as ObsidianDOMExtensions;
+        if (obsContainer.createEl && typeof obsContainer.createEl === 'function') {
+            obsContainer.createEl('div', { cls: 'gallery-error-compact', text: `⚠️ gallery: ${message}` });
+        } else {
+            const el = (container.ownerDocument || activeDocument).createElement('div');
+            el.className = 'gallery-error-compact';
+            el.textContent = `⚠️ gallery: ${message}`;
+            container.appendChild(el);
+        }
+    }
+
+    /**
+     * Show a compact empty-state line (replaces full EmptyState cards)
      */
     private showProfessionalEmptyState(
-        container: HTMLElement, 
-        config: IGalleryConfig, 
+        container: HTMLElement,
+        config: IGalleryConfig,
         result: IGalleryRenderResult
     ): void {
         // Clear container
@@ -636,88 +643,37 @@ export class GalleryProcessor {
             while (container.firstChild) container.removeChild(container.firstChild);
         }
 
-        // Determine the type of empty state based on the errors
-        const hasPathError = result.errors.some(error => 
-            error.startsWith('Path not found')
-        );
-        const hasValidationError = result.errors.some(error => 
-            error.includes('validation') || error.includes('Validation')
-        );
-        const hasPermissionError = result.errors.some(error => 
-            error.includes('permission') || error.includes('Access')
-        );
-        const hasExternalBlocked = result.errors.some(error => 
-            error.includes('external URLs were present') || error.includes('External image blocked')
-        );
         const sourceErrors = result.errors.filter(error =>
             error.startsWith('Immich') ||
             error.startsWith('Failed to fetch Immich') ||
             error.startsWith('Error resolving Immich') ||
             error.startsWith('Invalid URL in external source urls list:') ||
             error.startsWith('Unsupported source type') ||
-            error.startsWith('Simulated source failure') || // For tests
-            error.startsWith('Simulated external source failure') // For tests
+            error.startsWith('Simulated source failure') ||
+            error.startsWith('Simulated external source failure')
         );
 
+        const hasPathError     = result.errors.some(e => e.startsWith('Path not found'));
+        const hasExternalBlock = result.errors.some(e => e.includes('external URLs were present') || e.includes('External image blocked'));
+        const hasPermission    = result.errors.some(e => e.includes('permission') || e.includes('Access'));
+        const hasValidation    = result.errors.some(e => e.includes('validation') || e.includes('Validation'));
+
+        let message: string;
         if (sourceErrors.length > 0) {
-            EmptyState.createSourceError(
-                container,
-                config.path,
-                sourceErrors,
-                () => { void this.refreshGalleryByConfig(container, config); }
-            );
+            message = sourceErrors[0];
         } else if (hasPathError) {
-            EmptyState.createPathNotFound(container, config.path, [
-                'Check that the folder exists in your vault',
-                'Verify the path spelling and capitalization',
-                'Make sure you have access to the folder'
-            ]);
-        } else if (hasExternalBlocked) {
-            // Show a specific message guiding the user to enable remote images
-            EmptyState.createCustom(
-                container,
-                'External images blocked',
-                'The gallery contains external image URLs, but remote image loading is disabled in plugin settings. Enable "Allow remote images" in Settings → Gallery Plugin to display them.',
-                {
-                    path: config.path,
-                    customDetails: 'External URLs were detected in the gallery configuration.'
-                },
-                [
-                    {
-                        label: 'Open Settings',
-                        action: () => {
-                            try { activeDocument.dispatchEvent(new CustomEvent('gallery-open-settings')); } catch (error) { Logger.debug('Ignored error:', error); };
-                        },
-                        type: 'primary',
-                        icon: '⚙️'
-                    },
-                    {
-                        label: 'Scan Again',
-                        action: () => { void this.refreshGalleryByConfig(container, config); },
-                        type: 'secondary',
-                        icon: '🔄'
-                    }
-                ]
-            );
-        } else if (hasValidationError) {
-            EmptyState.createValidationFailed(
-                container, 
-                config.path, 
-                result.imagesFound,
-                result.errors,
-                () => { void this.refreshGalleryByConfig(container, config); }
-            );
-        } else if (hasPermissionError) {
-            EmptyState.createPermissionDenied(container, config.path);
+            message = `Path not found: "${config.path}"`;
+        } else if (hasExternalBlock) {
+            message = 'External images blocked — enable "Allow remote images" in plugin settings';
+        } else if (hasValidation) {
+            message = `No images passed validation in "${config.path}"`;
+        } else if (hasPermission) {
+            message = `Permission denied for "${config.path}"`;
         } else {
-            // No images found
-            EmptyState.createNoImages(
-                container,
-                config.path,
-                config.recursive || true,
-                () => { void this.refreshGalleryByConfig(container, config); }
-            );
+            message = config.path ? `No images found in "${config.path}"` : 'No images found';
         }
+
+        GalleryProcessor.renderCompactError(container, message);
     }
 
     /**
@@ -759,7 +715,7 @@ export class GalleryProcessor {
         const lines: string[] = [];
         if (out.sources) {
             lines.push('sources:');
-            for (const src of out.sources as ISourceConfig[]) {
+            for (const src of out.sources as Array<{ type: string; path?: string; recursive?: boolean; urls?: string[] }>) {
                 lines.push(`  - type: ${src.type}`);
                 if (src.type === 'local' && src.path) lines.push(`    path: ${src.path}`);
                 if (src.type === 'local' && src.recursive !== undefined) lines.push(`    recursive: ${(src.recursive) ? 'true' : 'false'}`);
@@ -797,7 +753,7 @@ export class GalleryProcessor {
     }
 
     /**
-     * Handle processing errors
+     * Handle processing errors — always renders a compact single-line message.
      */
     private handleProcessingError(error: Error, container: HTMLElement, options?: Required<IGalleryProcessingOptions>): void {
         const errorDisplayMode = options?.errorDisplayMode || this.DEFAULT_OPTIONS.errorDisplayMode;
@@ -812,36 +768,12 @@ export class GalleryProcessor {
         };
 
         if (errorDisplayMode === 'hidden') {
-            // Clear container and do not render any error message
             emptyContainer();
             return;
         }
 
-        if (errorDisplayMode === 'text') {
-            emptyContainer();
-
-            const errorEl = container.ownerDocument.createElement('div');
-            errorEl.className = 'gallery-error-text';
-            errorEl.textContent = `Gallery Error: ${error.message}`;
-            container.appendChild(errorEl);
-            return;
-        }
-        // Clear container (support both Obsidian helpers and plain DOM)
         emptyContainer();
-        
-        // Check if it's a configuration error
-        if (error.message.includes('Configuration')) {
-            const configError = {
-                type: 'config' as const,
-                field: 'general',
-                message: error.message,
-                suggestion: 'Check the gallery configuration syntax and parameters'
-            };
-            ErrorHandler.handleConfigError(configError, container);
-        } else {
-            // General plugin error
-            ErrorHandler.handlePluginError(error, 'code block processing', container);
-        }
+        GalleryProcessor.renderCompactError(container, error.message);
     }
 
     /**
@@ -871,7 +803,7 @@ export class GalleryProcessor {
             
         } catch (error) {
             Logger.error('Error refreshing gallery:', error);
-            ErrorHandler.handlePluginError(error as Error, 'gallery refresh', gallery.container);
+            GalleryProcessor.renderCompactError(gallery.container, `Refresh failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 

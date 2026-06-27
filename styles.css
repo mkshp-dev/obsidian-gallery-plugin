@@ -1064,7 +1064,21 @@
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
-}.gallery-error-text { color: var(--text-error); font-size: var(--font-ui-small); padding: var(--size-4-2); }
+}
+
+.gallery-error-text { color: var(--text-error); font-size: var(--font-ui-small); padding: var(--size-4-2); }
+
+/* Compact single-line error — used for all gallery error/empty states */
+.gallery-error-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+  padding: 2px var(--size-4-2);
+  opacity: 0.85;
+}
+
 
 /* InlineError Component Styles */
 .gallery-inline-error-container {

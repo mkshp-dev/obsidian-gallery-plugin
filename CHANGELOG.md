@@ -1,6 +1,9 @@
 # Changelog
 
 ## In-progress
+
+## 2.2.0 - 2026-06-27
+
 - Cache albums, tags and people per authenticated connection.
 - Polished Insert Gallery builder UX for authenticated Immich (logical groups, searchable multi-selects, live YAML preview).
 - Allow users to write human-readable tag and people names in Gallery View YAML instead of Immich internal UUIDs.
@@ -31,6 +34,7 @@
 - Added an authenticated connection model and settings UI to support the authenticated `immich` provider path.
 - Added a command to generate Gallery View showcase notes and demo assets inside the vault.
 * Reorganized and refreshed Gallery View documentation to match the current `sources + view` schema, supported sources, and official plugin naming.
+
 
 ## 2.1.0 - 2026-06-22
 

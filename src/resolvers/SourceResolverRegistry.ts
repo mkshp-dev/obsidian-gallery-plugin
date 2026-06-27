@@ -7,8 +7,7 @@ import { ImmichSourceResolver } from './ImmichSourceResolver';
 import { IImmichConnection } from '../models/interfaces';
 
 export class SourceResolverRegistry {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private resolvers: Map<string, GallerySourceResolver<any>> = new Map();
+    private resolvers: Map<string, GallerySourceResolver<ISourceConfig>> = new Map();
 
     constructor(contentScanner: IContentScanner, getConnections: () => IImmichConnection[]) {
         this.registerResolver(new LocalSourceResolver(contentScanner));
@@ -17,13 +16,11 @@ export class SourceResolverRegistry {
         this.registerResolver(new ImmichSourceResolver(getConnections));
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    registerResolver(resolver: GallerySourceResolver<any>) {
-        this.resolvers.set(resolver.type as string, resolver);
+    registerResolver(resolver: GallerySourceResolver<ISourceConfig>) {
+        this.resolvers.set(resolver.type, resolver);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getResolver(type: string): GallerySourceResolver<any> | undefined {
+    getResolver(type: string): GallerySourceResolver<ISourceConfig> | undefined {
         return this.resolvers.get(type);
     }
 

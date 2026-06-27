@@ -2,6 +2,8 @@
 
 ## In-progress
 
+## 2.2.2 - 2026-06-27
+
 ## 2.2.0 - 2026-06-27
 
 - Cache albums, tags and people per authenticated connection.

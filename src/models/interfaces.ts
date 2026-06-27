@@ -20,7 +20,34 @@ export interface IImmichShareSourceConfig {
   password?: string;
 }
 
-export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig;
+export interface IImmichConnection {
+  key: string;
+  baseUrl: string;
+  apiKey: string;
+}
+
+export interface IImmichSourceConfig {
+  type: 'immich';
+  connection: string;
+  filters?: {
+    albumIds?: string[];
+    tagIds?: string[];
+    tags?: string[];
+    personIds?: string[];
+    people?: string[];
+    isFavorite?: boolean;
+    createdAfter?: string;
+    createdBefore?: string;
+    assetType?: 'image' | 'video';
+  };
+  limit?: number;
+  sort?: {
+    by: 'createdAt';
+    order: 'asc' | 'desc';
+  };
+}
+
+export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichSourceConfig;
 
 export interface IViewConfig {
   type: 'thumbnail' | 'carousel' | 'grid';
@@ -58,7 +85,7 @@ export interface IImageSource {
   resourceUrl?: string;
   
   /** Source type */
-  type: 'local' | 'external' | 'immich-share';
+  type: 'local' | 'external' | 'immich-share' | 'immich';
   
   /** Display name for user */
   displayName: string;
@@ -101,6 +128,9 @@ export interface IImageSource {
 
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;
+
+  /** Destroys the image source, cleaning up any resources (like blob URLs) */
+  destroy?(): void;
 }
 
 export interface IGalleryView {

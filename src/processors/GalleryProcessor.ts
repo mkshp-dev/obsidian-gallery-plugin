@@ -1,17 +1,19 @@
 import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
-import { MarkdownPostProcessorContext } from 'obsidian';
+import { MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
 import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceConfig, ObsidianDOMExtensions } from '../models/interfaces';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
+import { InlineError } from '../views/components/InlineError';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
 import { EmptyState } from '../views/components/EmptyState';
 import { ImageValidator } from '../utils/ImageValidator';
 import { FileSizeValidator } from '../utils/FileSizeValidator';
 import { ImageLoader } from '../utils/ImageLoader';
+import { IImmichConnection } from '../models/interfaces';
 
 export interface IGalleryProcessingOptions {
   errorDisplayMode?: 'full' | 'text' | 'hidden';
@@ -41,6 +43,21 @@ export interface IGalleryRenderResult {
  * Gallery processor for handling obs-gallery code blocks
  * Coordinates parsing, validation, and rendering of galleries
  */
+class GalleryRenderChild extends MarkdownRenderChild {
+    constructor(
+        containerEl: HTMLElement,
+        private readonly galleryId: string,
+        private readonly destroyCallback: (id: string) => void
+    ) {
+        super(containerEl);
+    }
+
+    onunload() {
+        this.destroyCallback(this.galleryId);
+        super.onunload();
+    }
+}
+
 export class GalleryProcessor {
     private contentScanner: IContentScanner;
     private viewFactory: ViewFactory;
@@ -61,12 +78,12 @@ export class GalleryProcessor {
         ,enableLifecycleLogging: false
     };
 
-    constructor(contentScanner: IContentScanner, viewFactory: ViewFactory) {
+    constructor(contentScanner: IContentScanner, viewFactory: ViewFactory, getConnections: () => IImmichConnection[]) {
         this.contentScanner = contentScanner;
         this.viewFactory = viewFactory;
         this.imageValidator = new ImageValidator();
         this.fileSizeValidator = new FileSizeValidator();
-        this.resolverRegistry = new SourceResolverRegistry(contentScanner);
+        this.resolverRegistry = new SourceResolverRegistry(contentScanner, getConnections);
     }
 
     /**
@@ -90,6 +107,7 @@ export class GalleryProcessor {
         };
 
         let loadingManager: LoadingManager | null = null;
+        let scannedImages: IImageSource[] = [];
 
         try {
             // Clear previous content (use safe clear for environments where `empty()` helper is unavailable)
@@ -112,18 +130,18 @@ export class GalleryProcessor {
             }
 
             // Step 2: Scan for images
-            const images = await this.scanForImages(config, result, opts, loadingManager);
-            if (images.length === 0) {
+            scannedImages = await this.scanForImages(config, result, opts, loadingManager);
+            if (scannedImages.length === 0) {
                 this.showProfessionalEmptyState(el, config, result);
                 result.processingTimeMs = Date.now() - startTime;
                 return result;
             }
 
             // Step 3: Validate images
-            const validImages = await this.validateImages(images, result, opts, loadingManager);
+            const validImages = await this.validateImages(scannedImages, result, opts, loadingManager);
             if (validImages.length === 0) {
                 // If there were external images but remote loading is disabled, show a friendly empty state
-                const hadExternal = images.some((img: IImageSource) => img.type === 'external');
+                const hadExternal = scannedImages.some((img: IImageSource) => img.type === 'external');
                 if (hadExternal && !opts.allowRemoteImages) {
                     const msg = 'No valid images: external URLs were present but remote image loading is disabled in plugin settings.';
                     result.errors.push(msg);
@@ -147,6 +165,26 @@ export class GalleryProcessor {
                 config, el, validImages, result, opts, loadingManager
             );
 
+            // Step 5: Render mixed-source inline error if needed
+            const sourceErrors = result.errors.filter(error =>
+                error.startsWith('Immich') ||
+                error.startsWith('Failed to fetch Immich') ||
+                error.startsWith('Error resolving Immich') ||
+                error.startsWith('Invalid URL in external source urls list:') ||
+                error.startsWith('Unsupported source type') ||
+                error.startsWith('Simulated source failure') || // For tests
+                error.startsWith('Simulated external source failure') // For tests
+            );
+
+            if (sourceErrors.length > 0) {
+                new InlineError(el, sourceErrors);
+            }
+
+            const child = new GalleryRenderChild(el, galleryInstance.id, (id) => {
+                this.destroyGallery(id);
+            });
+            ctx.addChild(child);
+
             result.success = true;
             result.galleryInstance = galleryInstance;
             result.processingTimeMs = Date.now() - startTime;
@@ -159,6 +197,11 @@ export class GalleryProcessor {
             return result;
 
         } catch (error) {
+            // Clean up any scanned images that haven't been safely handed off to a GalleryInstance
+            if (scannedImages.length > 0) {
+                scannedImages.forEach(img => img.destroy?.());
+            }
+
             const errorMessage = error instanceof Error ? error.message : String(error);
             result.errors.push(errorMessage);
             result.processingTimeMs = Date.now() - startTime;
@@ -234,12 +277,21 @@ export class GalleryProcessor {
             loadingManager.startLoading('scan', { type: 'dots', text: 'Scanning for images...' });
         }
 
+        let viewType = 'thumbnail';
+        if (config.view) {
+            if (typeof config.view === 'string') {
+                viewType = config.view;
+            } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
+                viewType = (config.view as { type: string }).type;
+            }
+        }
+
         try {
             let images: IImageSource[] = [];
 
             if (config.sources) {
                 for (const source of config.sources) {
-                    const resolveContext = { timeoutMs: options.timeoutMs };
+                    const resolveContext = { timeoutMs: options.timeoutMs, viewType };
                     const { images: resolvedImages, errors: resolveErrors } = await this.resolverRegistry.resolveSource(source, resolveContext);
 
                     if (resolveErrors.length > 0) {
@@ -355,6 +407,13 @@ export class GalleryProcessor {
             }
         }
 
+        // Clean up resources for any images that failed validation and were excluded
+        for (const image of images) {
+            if (!validImages.includes(image)) {
+                image.destroy?.();
+            }
+        }
+
         result.imagesValid = validImages.length;
         if (validationErrors.length > 0) {
             result.errors.push(...validationErrors);
@@ -413,10 +472,6 @@ export class GalleryProcessor {
             
             // Store active gallery
             this.activeGalleries.set(galleryInstance.id, galleryInstance);
-            
-            // Setup cleanup when container is removed (pass options so cleanup
-            // honors runtime-configurable grace period and logging)
-            this.setupGalleryCleanup(galleryInstance, options);
             
             // Render gallery with retry logic
             let retryCount = 0;
@@ -554,9 +609,6 @@ export class GalleryProcessor {
             // Store active gallery
             this.activeGalleries.set(gallery.id, gallery);
             
-            // Setup cleanup when container is removed
-            this.setupGalleryCleanup(gallery);
-            
             // Render gallery
             view.render();
             
@@ -586,7 +638,7 @@ export class GalleryProcessor {
 
         // Determine the type of empty state based on the errors
         const hasPathError = result.errors.some(error => 
-            error.includes('not found') || error.includes('Path not found')
+            error.startsWith('Path not found')
         );
         const hasValidationError = result.errors.some(error => 
             error.includes('validation') || error.includes('Validation')
@@ -597,8 +649,24 @@ export class GalleryProcessor {
         const hasExternalBlocked = result.errors.some(error => 
             error.includes('external URLs were present') || error.includes('External image blocked')
         );
+        const sourceErrors = result.errors.filter(error =>
+            error.startsWith('Immich') ||
+            error.startsWith('Failed to fetch Immich') ||
+            error.startsWith('Error resolving Immich') ||
+            error.startsWith('Invalid URL in external source urls list:') ||
+            error.startsWith('Unsupported source type') ||
+            error.startsWith('Simulated source failure') || // For tests
+            error.startsWith('Simulated external source failure') // For tests
+        );
 
-        if (hasPathError) {
+        if (sourceErrors.length > 0) {
+            EmptyState.createSourceError(
+                container,
+                config.path,
+                sourceErrors,
+                () => { void this.refreshGalleryByConfig(container, config); }
+            );
+        } else if (hasPathError) {
             EmptyState.createPathNotFound(container, config.path, [
                 'Check that the folder exists in your vault',
                 'Verify the path spelling and capitalization',
@@ -726,97 +794,6 @@ export class GalleryProcessor {
         if (out.sort) lines.push(`sort: ${out.sort as string}`);
 
         return lines.join('\n');
-    }
-
-    /**
-     * Setup gallery cleanup when container is removed from DOM
-     */
-    private setupGalleryCleanup(gallery: GalleryInstance, options: Required<IGalleryProcessingOptions> = this.DEFAULT_OPTIONS): void {
-        // Use MutationObserver to detect when gallery container is removed
-        const observer = new MutationObserver((mutations) => {
-            // If we see a removal, don't immediately destroy: Obsidian may transiently
-            // move or reparent nodes when toggling sidebars or changing layouts. Defer
-            // the actual destruction check by a short timeout and only destroy if the
-            // gallery container remains detached from the activeDocument.
-            let sawRemoval = false;
-            mutations.forEach((mutation) => {
-                mutation.removedNodes.forEach((node) => {
-                    if (node === gallery.container || (node.instanceOf(Element) && node.contains(gallery.container))) {
-                        sawRemoval = true;
-                    }
-                });
-            });
-
-            if (!sawRemoval) return;
-
-            // Defer checks to allow transient DOM moves (sidebar toggle, layout shifts)
-            // to settle. Use a few retries with exponential backoff before deciding
-            // the container is permanently gone.
-            // Retry schedule (ms) — extended to handle slower reattachment scenarios
-            const attempts = [200, 500, 1000, 2000, 5000, 10000];
-            let attemptIndex = 0;
-
-            const tryCheck = () => {
-                try {
-                    const doc = gallery.container?.ownerDocument;
-                    const stillAttached = !!(doc && doc.body && doc.body.contains(gallery.container));
-                    if (stillAttached) {
-                        // it's back — do nothing
-                        return;
-                    }
-
-                    attemptIndex++;
-                    if (attemptIndex >= attempts.length) {
-                        // final check failed — consider it removed for now but allow a grace
-                        // period to support Obsidian re-rendering cycles (e.g., switching
-                        // between editor/preview). Mark the gallery as detached and
-                        // schedule a final destruction after a longer grace period so
-                        // that the markdown post-processor can reattach a new container
-                        // without losing the opportunity to recreate the gallery.
-                        try { (gallery as unknown as { _detached?: boolean })._detached = true; } catch (error) { Logger.debug('Ignored error:', error); }
-
-                        const GRACE_PERIOD_MS = Math.max(0, options.gracePeriodMs || 30000);
-                        if (options.enableLifecycleLogging) {
-                            Logger.debug(`GalleryProcessor: gallery ${gallery.id} appears detached; marking detached and scheduling final destroy in ${GRACE_PERIOD_MS}ms.`);
-                        }
-
-                        window.setTimeout(() => {
-                            try {
-                                if ((gallery as unknown as { _detached?: boolean })._detached) {
-                                    if (options.enableLifecycleLogging) {
-                                        Logger.debug(`GalleryProcessor: gallery ${gallery.id} still detached after grace period; destroying.`);
-                                    }
-                                    this.destroyGallery(gallery.id);
-                                }
-                            } catch {
-                                try { this.destroyGallery(gallery.id); } catch (error) { Logger.debug('Ignored error:', error); }
-                            }
-                        }, GRACE_PERIOD_MS);
-
-                        try { observer.disconnect(); } catch (error) { Logger.debug('Ignored error:', error); }
-                        return;
-                    }
-
-                    // schedule next check
-                    window.setTimeout(tryCheck, attempts[attemptIndex]);
-                } catch {
-                    // If something unexpected happens, attempt a safe cleanup
-                    try { this.destroyGallery(gallery.id); } catch (error) { Logger.debug('Ignored error:', error); }
-                    try { observer.disconnect(); } catch (error) { Logger.debug('Ignored error:', error); }
-                }
-            };
-
-            // Start checks
-            window.setTimeout(tryCheck, attempts[0]);
-        });
-
-        // Observe the parent document for changes
-        if (gallery.container.ownerDocument) {
-            observer.observe(gallery.container.ownerDocument.body, {
-                childList: true,
-                subtree: true
-            });
-        }
     }
 
     /**

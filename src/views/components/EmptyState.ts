@@ -332,6 +332,39 @@ export class EmptyState {
   }
 
   /**
+   * Create a source-error empty state (e.g. Immich failures)
+   */
+  static createSourceError(
+    container: HTMLElement,
+    path: string,
+    errors: string[],
+    retryAction?: () => void
+  ): EmptyState {
+    const actions: IEmptyStateAction[] = [];
+
+    if (retryAction) {
+      actions.push({
+        label: 'Try Again',
+        action: retryAction,
+        type: 'primary',
+        icon: '🔄'
+      });
+    }
+
+    return new EmptyState(container, {
+      path,
+      customDetails: errors.join('\n')
+    }, {
+      type: 'custom',
+      title: 'Source Error',
+      message: 'One or more gallery sources failed to load.',
+      size: 'medium',
+      showActions: actions.length > 0,
+      actions
+    });
+  }
+
+  /**
    * Create a validation-failed empty state
    */
   static createValidationFailed(

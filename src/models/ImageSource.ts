@@ -1,4 +1,5 @@
 import { IImageSource } from './interfaces';
+import { ObjectUrlManager } from '../utils/immich/ObjectUrlManager';
 
 /**
  * Represents an individual image source within a gallery
@@ -7,7 +8,7 @@ import { IImageSource } from './interfaces';
 export class ImageSource implements IImageSource {
     public readonly path: string;
     public readonly resourceUrl?: string;
-    public readonly type: 'local' | 'external' | 'immich-share';
+    public readonly type: 'local' | 'external' | 'immich-share' | 'immich';
     public readonly displayName: string;
     public size?: number;
     public dimensions?: { width: number; height: number };
@@ -18,7 +19,7 @@ export class ImageSource implements IImageSource {
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    constructor(path: string, type: 'local' | 'external' | 'immich-share', displayName?: string, resourceUrl?: string) {
+    constructor(path: string, type: 'local' | 'external' | 'immich-share' | 'immich', displayName?: string, resourceUrl?: string) {
         this.path = path;
         this.resourceUrl = resourceUrl;
         this.type = type;
@@ -53,13 +54,14 @@ export class ImageSource implements IImageSource {
             } catch {
                 throw new Error(`Invalid URL format: ${this.path}`);
             }
-        } else {
+        } else if (this.type === 'local') {
             // Validate local file format
             const extension = this.getFileExtension().toLowerCase();
             if (!ImageSource.SUPPORTED_FORMATS.includes(extension)) {
                 throw new Error(`Unsupported image format: ${extension}. Supported formats: ${ImageSource.SUPPORTED_FORMATS.join(', ')}`);
             }
         }
+        // No strict path extension validation for immich or immich-share as they use logical paths or share links.
     }
 
     /**
@@ -107,7 +109,7 @@ export class ImageSource implements IImageSource {
      * Check if loading has timed out (10 seconds for external URLs)
      */
     hasTimedOut(): boolean {
-        if (this.type === 'local' || !this.loadStartTime) {
+        if (this.type === 'local' || this.type === 'immich' || !this.loadStartTime) {
             return false;
         }
         
@@ -187,11 +189,11 @@ export class ImageSource implements IImageSource {
 
     /**
      * Get the URL that should be used for loading in the browser
-     * For local files, returns resourceUrl if available, otherwise path
+     * For local files and authenticated immich assets, returns resourceUrl if available, otherwise path
      * For external files, returns path
      */
     getDisplayUrl(): string {
-        if (this.type === 'local' && this.resourceUrl) {
+        if ((this.type === 'local' || this.type === 'immich') && this.resourceUrl) {
             return this.resourceUrl;
         }
         return this.path;
@@ -218,5 +220,14 @@ export class ImageSource implements IImageSource {
             errorMessage: this.errorMessage,
             loadingDuration: this.getLoadingDuration()
         };
+    }
+
+    /**
+     * Destroys the image source, cleaning up any resources (like blob URLs)
+     */
+    destroy(): void {
+        if (this.type === 'immich' && this.resourceUrl) {
+            ObjectUrlManager.releaseByUrl(this.resourceUrl);
+        }
     }
 }

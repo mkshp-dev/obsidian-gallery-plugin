@@ -8,7 +8,7 @@ Create interactive image galleries in your Obsidian notes using simple code bloc
 
 - **Thumbnail galleries** — Display images in responsive grid layouts
 - **Modal viewer** — Click thumbnails to view full-size images
-- **Multiple Sources** — Load images from local folders, external URLs, or Immich shared links
+- **Multiple Sources** — Load images from local folders, external URLs, Immich shared links, or authenticated Immich albums
 - **Simple syntax** — Easy `obs-gallery` code blocks with `sources` + `view` schema
 - **Responsive design** — Works on desktop and mobile
 - **Performance** — Lazy loading for large image collections
@@ -126,6 +126,13 @@ For full details on configuring the plugin, usage examples, and available settin
 - **PNG** (`.png`)
 - **GIF** (`.gif`)
 - **WebP** (`.webp`)
+
+### Showcase Generator
+Gallery View includes a built-in command to generate a set of interactive demo notes inside your vault. This is the fastest way to see what the plugin can do and to learn the configuration syntax.
+
+1. Open the Obsidian command palette (`Ctrl+P` / `Cmd+P`)
+2. Run **Gallery View: Create showcase notes**
+3. Open the generated `GalleryDemo/` folder in your vault to explore working examples of local sources, external URLs, views, and template configurations for Immich shared links.
 
 ## Interface
 

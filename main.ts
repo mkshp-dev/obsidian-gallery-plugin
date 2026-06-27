@@ -1,118 +1,19 @@
+import { GalleryBuilderModal } from './src/ui/GalleryBuilderModal';
 import { Logger } from "./src/utils/Logger";
-import { Plugin, PluginSettingTab, Setting, App, MarkdownPostProcessorContext } from 'obsidian';
+import { Plugin, App, MarkdownPostProcessorContext } from 'obsidian';
 import { ContentScanner } from './src/services/ContentScanner';
 import { ViewFactory } from './src/views/ViewFactory';
 import { GalleryProcessor } from './src/processors/GalleryProcessor';
 import { VaultWatcher } from './src/utils/VaultWatcher';
 import { LazyLoader } from './src/utils/LazyLoader';
+import { ShowcaseGenerator } from './src/generators/ShowcaseGenerator';
+import { GallerySettingsTab } from './src/ui/GallerySettingsTab';
+import { GalleryPluginSettings, DEFAULT_SETTINGS } from './src/models/settings';
 
 interface AppWithCommands extends App {
     commands: {
         executeCommandById(id: string): boolean;
     };
-}
-
-/**
- * Plugin settings
- */
-interface GalleryPluginSettings {
-    errorDisplayMode?: 'full' | 'text' | 'hidden';
-    allowRemoteImages: boolean;
-    remoteLoadTimeoutMs: number;
-    validateRemoteContentType?: boolean;
-    // How long (ms) to wait before finally destroying a detached gallery
-    gracePeriodMs?: number;
-    // Enable verbose lifecycle logging to help debug detach/reattach behavior
-    enableLifecycleLogging?: boolean;
-}
-
-const DEFAULT_SETTINGS: GalleryPluginSettings = {
-    errorDisplayMode: 'full',
-    allowRemoteImages: false,
-    remoteLoadTimeoutMs: 30000
-    ,validateRemoteContentType: false
-    ,gracePeriodMs: 30000
-    ,enableLifecycleLogging: false
-};
-
-class GallerySettingsTab extends PluginSettingTab {
-    plugin: GalleryPlugin;
-    constructor(app: App, plugin: GalleryPlugin) {
-        super(app, plugin);
-        this.plugin = plugin;
-    }
-
-    display(): void {
-        const { containerEl } = this;
-        containerEl.empty();
-
-        new Setting(containerEl)
-            .setName('Error display mode')
-            .setDesc('How to display errors when the block processor encounters them.')
-            .addDropdown(dropdown => dropdown
-                .addOption('full', 'Full')
-                .addOption('text', 'Text only')
-                .addOption('hidden', 'Hidden')
-                .setValue(this.plugin.settings.errorDisplayMode || 'full')
-                .onChange(async (value) => {
-                    this.plugin.settings.errorDisplayMode = value as 'full' | 'text' | 'hidden';
-                    await this.plugin.saveSettings();
-                }));
-
-
-        new Setting(containerEl)
-            .setName('Allow remote images')
-            .setDesc('Enable loading images from external URLs listed in the `urls:` field of the gallery config. This is opt-in to protect privacy.')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.allowRemoteImages)
-                .onChange(async (value) => {
-                    this.plugin.settings.allowRemoteImages = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('Remote load timeout (ms)')
-            .setDesc('Timeout in milliseconds for loading remote images')
-            .addText(text => text
-                .setValue(String(this.plugin.settings.remoteLoadTimeoutMs))
-                .onChange(async (value) => {
-                    const n = parseInt(value, 10) || DEFAULT_SETTINGS.remoteLoadTimeoutMs;
-                    this.plugin.settings.remoteLoadTimeoutMs = n;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('Validate remote content type')
-            .setDesc('When enabled, the plugin will perform a lightweight HEAD request to verify the Content-Type of remote URLs is an image before attempting to load them. This may add a small network request per URL.')
-            .addToggle(toggle => toggle
-                .setValue(!!this.plugin.settings.validateRemoteContentType)
-                .onChange(async (value) => {
-                    this.plugin.settings.validateRemoteContentType = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('Detached gallery grace period (ms)')
-            .setDesc('How long (ms) to retain a detached gallery before final destruction. Useful to avoid losing galleries during editor/preview toggles.')
-            .addText(text => text
-                .setValue(String(this.plugin.settings.gracePeriodMs ?? DEFAULT_SETTINGS.gracePeriodMs))
-                .onChange(async (value) => {
-                    const n = parseInt(value, 10);
-                    this.plugin.settings.gracePeriodMs = isNaN(n) ? DEFAULT_SETTINGS.gracePeriodMs : n;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('Enable lifecycle logging')
-            .setDesc('Enable verbose lifecycle logs (debug) for gallery attach/detach events. Useful for troubleshooting mode toggles.')
-            .addToggle(toggle => toggle
-                .setValue(!!this.plugin.settings.enableLifecycleLogging)
-                .onChange(async (value) => {
-                    this.plugin.settings.enableLifecycleLogging = value;
-                    await this.plugin.saveSettings();
-                }));
-
-    }
 }
 
 export default class GalleryPlugin extends Plugin {
@@ -132,7 +33,7 @@ export default class GalleryPlugin extends Plugin {
         // Initialize core services
         this.contentScanner = new ContentScanner(this.app.vault);
         this.viewFactory = new ViewFactory();
-        this.galleryProcessor = new GalleryProcessor(this.contentScanner, this.viewFactory);
+        this.galleryProcessor = new GalleryProcessor(this.contentScanner, this.viewFactory, () => this.settings.immichConnections);
 
         // Initialize lazy loader
         this.lazyLoader = new LazyLoader({
@@ -159,6 +60,23 @@ export default class GalleryPlugin extends Plugin {
         this.vaultWatcher.start();
 
         // Register the obs-gallery code block processor with professional pipeline
+        // Register showcase generator command
+        this.addCommand({
+            id: 'create-showcase-notes',
+            name: 'Create showcase notes',
+            callback: async () => {
+                await new ShowcaseGenerator(this.app).generateShowcase();
+            }
+        });
+
+        this.addCommand({
+            id: 'insert-gallery',
+            name: 'Insert gallery',
+            editorCallback: (editor, ctx) => {
+                new GalleryBuilderModal(this.app, this, editor).open();
+            }
+        });
+
         this.registerMarkdownCodeBlockProcessor(
             'obs-gallery',
             async (source: string, el: HTMLElement, ctx) => {
@@ -183,6 +101,19 @@ export default class GalleryPlugin extends Plugin {
     async loadSettings() {
         const data = (await this.loadData()) as Partial<GalleryPluginSettings> | null;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, data || {});
+
+        // Migrate old Immich connection settings
+        if (this.settings.immichConnections && Array.isArray(this.settings.immichConnections)) {
+            this.settings.immichConnections = this.settings.immichConnections.map((connRaw) => {
+                const conn = connRaw as unknown as Record<string, string | undefined>;
+                // Remove internal ID and display name, ensure key is present
+                return {
+                    key: conn.key || conn.name || conn.id || `conn_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                    baseUrl: conn.baseUrl || '',
+                    apiKey: conn.apiKey || ''
+                };
+            });
+        }
     }
 
     async saveSettings() {

@@ -1065,3 +1065,37 @@
   transform: translateY(-10px);
   pointer-events: none;
 }.gallery-error-text { color: var(--text-error); font-size: var(--font-ui-small); padding: var(--size-4-2); }
+
+/* InlineError Component Styles */
+.gallery-inline-error-container {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: var(--background-modifier-error);
+  border-left: 3px solid var(--text-error);
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: var(--text-normal);
+}
+
+.gallery-inline-error-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-error);
+}
+
+.gallery-inline-error-icon {
+  margin-right: 0.5rem;
+  font-size: 1.1em;
+}
+
+.gallery-inline-error-list {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.gallery-inline-error-item {
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}

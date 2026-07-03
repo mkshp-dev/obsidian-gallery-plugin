@@ -78,7 +78,17 @@ jest.mock('obsidian', () => ({
     onload() {}
     onunload() {}
   },
-  Notice: class MockNotice {},
+  Modal: class MockModal {
+    app: any;
+    contentEl: HTMLElement;
+    constructor(app: any) {
+      this.app = app;
+      this.contentEl = document.createElement('div');
+    }
+    open() {}
+    close() {}
+  },
+  Notice: jest.fn(),
   Plugin: class MockPlugin {},
   PluginSettingTab: class MockPluginSettingTab {},
   Setting: class MockSetting {},

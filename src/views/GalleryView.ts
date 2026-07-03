@@ -15,6 +15,11 @@ export abstract class GalleryView implements IGalleryView {
     // Runtime options (common)
     public remoteLoadTimeoutMs: number = 10000;
     public allowRemoteImages: boolean = false;
+    
+    protected lastFocusedElement: HTMLElement | null = null;
+    protected activeModal: HTMLElement | null = null;
+    protected slideshowInterval: number | null = null;
+    protected slideshowPlaying: boolean = false;
 
     constructor(type: 'thumbnail' | 'carousel' | 'grid', container: HTMLElement) {
         this._type = type;
@@ -404,5 +409,436 @@ export abstract class GalleryView implements IGalleryView {
      */
     get isDestroyed(): boolean {
         return this._isDestroyed;
+    }
+
+    /**
+     * Format file size for display
+     */
+    protected formatFileSize(bytes: number): string {
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let size = bytes;
+        let unitIndex = 0;
+        
+        while (size >= 1024 && unitIndex < units.length - 1) {
+            size /= 1024;
+            unitIndex++;
+        }
+        
+        return `${size.toFixed(1)} ${units[unitIndex]}`;
+    }
+
+    /**
+     * Expand image in modal/lightbox with full control bar, transitions, slideshow, and zoom.
+     */
+    protected expandImage(image: IImageSource): void {
+        // Save the element that had focus so we can restore it later
+        const active = activeDocument.activeElement;
+        if (active && active.instanceOf(HTMLElement)) {
+            this.lastFocusedElement = active;
+        }
+
+        // Create modal overlay using ownerDocument for compatibility with different rendering contexts
+        const doc = this.container.ownerDocument || activeDocument;
+        const modal = doc.createElement('div');
+        modal.className = 'gallery-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', image.displayName || 'Image dialog');
+
+        this.activeModal = modal;
+        this.slideshowPlaying = false;
+        if (this.slideshowInterval) {
+            window.clearInterval(this.slideshowInterval);
+            this.slideshowInterval = null;
+        }
+
+        // Add class for open animation styling
+        window.setTimeout(() => {
+            modal.classList.add('gallery-modal-open');
+        }, 10);
+
+        let currentImage = image;
+
+        // Close logic
+        const closeOnEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                this.closeModal(modal);
+            }
+        };
+        modal.addEventListener('keydown', closeOnEscape);
+
+        const keepFocus = (e: Event) => {
+            if (!modal.contains(doc.activeElement)) {
+                const btn = modal.querySelector('.gallery-modal-close-btn');
+                if (btn && btn.instanceOf(HTMLElement)) btn.focus();
+            }
+        };
+        doc.addEventListener('focus', keepFocus, true);
+
+        // Keyboard handler for navigation (Left/Right)
+        const modalKeyHandler = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                navigate(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                navigate(1);
+            }
+        };
+        modal.addEventListener('keydown', modalKeyHandler);
+
+        // Cleanup handler
+        const cleanup = () => {
+            try {
+                modal.removeEventListener('keydown', closeOnEscape);
+                doc.removeEventListener('focus', keepFocus, true);
+                modal.removeEventListener('keydown', modalKeyHandler);
+                if (this.slideshowInterval) {
+                    window.clearInterval(this.slideshowInterval);
+                    this.slideshowInterval = null;
+                }
+            } catch (error) { Logger.debug('Ignored error:', error); }
+        };
+        (modal as unknown as { __cleanup?: () => void }).__cleanup = cleanup;
+
+        // Build HTML layout
+        const content = this.createElement(modal, 'div', { cls: 'gallery-modal-content' });
+
+        // TOOLBAR
+        const toolbar = this.createElement(content, 'div', { cls: 'gallery-modal-toolbar' });
+
+        // Play/Pause Slideshow Button
+        const playBtn = this.createElement(toolbar, 'button', {
+            cls: 'gallery-modal-tool-btn play-btn',
+            attr: { 'aria-label': 'Play slideshow' }
+        });
+        playBtn.textContent = '▶'; // play symbol
+
+        // Zoom Buttons
+        const zoomOutBtn = this.createElement(toolbar, 'button', {
+            cls: 'gallery-modal-tool-btn zoom-out-btn',
+            attr: { 'aria-label': 'Zoom out' }
+        });
+        zoomOutBtn.textContent = '➖';
+
+        const zoomInBtn = this.createElement(toolbar, 'button', {
+            cls: 'gallery-modal-tool-btn zoom-in-btn',
+            attr: { 'aria-label': 'Zoom in' }
+        });
+        zoomInBtn.textContent = '➕';
+
+        const zoomResetBtn = this.createElement(toolbar, 'button', {
+            cls: 'gallery-modal-tool-btn zoom-reset-btn',
+            attr: { 'aria-label': 'Reset zoom' }
+        });
+        zoomResetBtn.textContent = '🔄';
+
+        // Info Panel Button
+        const infoBtn = this.createElement(toolbar, 'button', {
+            cls: 'gallery-modal-tool-btn info-btn',
+            attr: { 'aria-label': 'Toggle info' }
+        });
+        infoBtn.textContent = 'ℹ️';
+
+        // Download/Open original Button
+        const downloadBtn = this.createElement(toolbar, 'button', {
+            cls: 'gallery-modal-tool-btn download-btn',
+            attr: { 'aria-label': 'Open original image' }
+        });
+        downloadBtn.textContent = '🔗';
+
+        // Close Button
+        const closeBtn = this.createElement(toolbar, 'button', {
+            cls: 'gallery-modal-close-btn',
+            attr: { 'aria-label': 'Close image dialog', 'role': 'button' }
+        });
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', () => this.closeModal(modal));
+
+        // Click to close modal when clicking outside content
+        modal.addEventListener('click', (e: MouseEvent) => {
+            if (e.target === modal) {
+                this.closeModal(modal);
+            }
+        });
+
+        // Set initial focus
+        modal.setAttribute('tabindex', '-1');
+        window.setTimeout(() => {
+            try { modal.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
+        }, 0);
+
+        // Prev/Next Nav elements
+        const prevBtn = this.createElement(content, 'button', {
+            cls: 'gallery-modal-nav prev',
+            text: '\u2039'
+        });
+        prevBtn.setAttribute('aria-label', 'Previous image');
+        prevBtn.addEventListener('click', () => navigate(-1));
+
+        const nextBtn = this.createElement(content, 'button', {
+            cls: 'gallery-modal-nav next',
+            text: '\u203A'
+        });
+        nextBtn.setAttribute('aria-label', 'Next image');
+        nextBtn.addEventListener('click', () => navigate(1));
+
+        // Main Viewer Workspace (holds image and info side-by-side or stacked)
+        const viewerArea = this.createElement(content, 'div', { cls: 'gallery-modal-viewer' });
+
+        // Image container & Zoom track
+        const imgContainer = this.createElement(viewerArea, 'div', { cls: 'gallery-modal-image-container gallery-modal-image' });
+        const img = this.createElement(imgContainer, 'img', {
+            attr: { 'alt': image.displayName }
+        }) as HTMLImageElement;
+
+        // Info / Metadata drawer
+        const infoPanel = this.createElement(viewerArea, 'div', { cls: 'gallery-modal-info-panel' });
+        
+        // Populate metadata function
+        const updateInfoPanel = (srcImage: IImageSource) => {
+            this.emptyElement(infoPanel);
+            
+            const title = infoPanel.createEl('h3', { text: srcImage.displayName || 'Gallery Image' });
+            title.className = 'info-title';
+
+            const grid = infoPanel.createEl('div', { cls: 'info-grid' });
+
+            const addRow = (label: string, val: string) => {
+                const row = grid.createEl('div', { cls: 'info-row' });
+                row.createEl('span', { cls: 'info-label', text: label });
+                row.createEl('span', { cls: 'info-value', text: val });
+            };
+
+            addRow('Path', srcImage.path || 'Unknown');
+            addRow('Type', srcImage.type || 'Unknown');
+
+            if (srcImage.dimensions) {
+                addRow('Dimensions', `${srcImage.dimensions.width} × ${srcImage.dimensions.height} px`);
+            }
+            if (srcImage.size) {
+                addRow('File Size', this.formatFileSize(srcImage.size));
+            }
+        };
+
+        // Zoom state variables
+        let currentScale = 1;
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let translateX = 0, translateY = 0;
+
+        const updateZoomTransform = () => {
+            img.setCssStyles({ transform: `translate(${translateX}px, ${translateY}px) scale(${currentScale})` });
+            if (currentScale > 1) {
+                img.setCssStyles({ cursor: isDragging ? 'grabbing' : 'grab' });
+            } else {
+                img.setCssStyles({ cursor: 'default' });
+                translateX = 0;
+                translateY = 0;
+                img.setCssStyles({ transform: 'scale(1)' });
+            }
+        };
+
+        // Zoom handlers
+        const zoom = (factor: number) => {
+            currentScale = Math.max(1, Math.min(8, currentScale * factor));
+            updateZoomTransform();
+        };
+
+        const resetZoom = () => {
+            currentScale = 1;
+            translateX = 0;
+            translateY = 0;
+            updateZoomTransform();
+        };
+
+        zoomInBtn.addEventListener('click', () => zoom(1.3));
+        zoomOutBtn.addEventListener('click', () => zoom(1 / 1.3));
+        zoomResetBtn.addEventListener('click', resetZoom);
+
+        // Zoom wheel handler
+        img.addEventListener('wheel', (e: WheelEvent) => {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                zoom(1.1);
+            } else {
+                zoom(1 / 1.1);
+            }
+        }, { passive: false });
+
+        // Pan/Drag handlers
+        img.addEventListener('mousedown', (e: MouseEvent) => {
+            if (currentScale <= 1) return;
+            e.preventDefault();
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            img.setCssStyles({ cursor: 'grabbing' });
+        });
+
+        doc.addEventListener('mousemove', (e: MouseEvent) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateZoomTransform();
+        });
+
+        doc.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                updateZoomTransform();
+            }
+        });
+
+        // Toggle info panel
+        let infoVisible = false;
+        infoBtn.addEventListener('click', () => {
+            infoVisible = !infoVisible;
+            infoBtn.classList.toggle('active', infoVisible);
+            infoPanel.classList.toggle('visible', infoVisible);
+        });
+
+        // Download/Open Original
+        downloadBtn.addEventListener('click', () => {
+            const displayUrl = currentImage.getDisplayUrl();
+            if (displayUrl) {
+                const a = doc.createElement('a');
+                a.href = displayUrl;
+                a.target = '_blank';
+                a.download = currentImage.displayName || 'image';
+                a.click();
+            }
+        });
+
+        // Image loader helper
+        const loadModalImage = (imgEl: HTMLImageElement, srcImage: IImageSource) => {
+            resetZoom();
+            updateInfoPanel(srcImage);
+
+            if (srcImage.type === 'external' && !this.allowRemoteImages) {
+                imgEl.alt = 'External image blocked';
+                imgEl.src = '';
+                imgEl.classList.add('gallery-external-blocked');
+                return;
+            }
+
+            imgEl.classList.remove('gallery-external-blocked');
+            imgEl.setCssStyles({
+                transition: 'opacity 0.2s ease-in-out',
+                opacity: '0'
+            });
+
+            const temp = new Image();
+            let timeoutHandle: number | undefined = undefined;
+
+            const onLoad = () => {
+                window.clearTimeout(timeoutHandle);
+                try {
+                    imgEl.src = temp.src;
+                    imgEl.setCssStyles({ opacity: '1' });
+                } catch (error) { Logger.debug('Ignored error:', error); }
+                cleanup();
+            };
+
+            const onError = () => {
+                window.clearTimeout(timeoutHandle);
+                imgEl.alt = 'Failed to load';
+                imgEl.src = '';
+                imgEl.setCssStyles({ opacity: '1' });
+                cleanup();
+            };
+
+            const cleanup = () => {
+                temp.onload = null;
+                temp.onerror = null;
+            };
+
+            temp.onload = onLoad;
+            temp.onerror = onError;
+
+            timeoutHandle = window.setTimeout(() => {
+                onError();
+            }, this.remoteLoadTimeoutMs ?? 10000);
+
+            try { temp.src = srcImage.getDisplayUrl(); } catch { onError(); }
+        };
+
+        // Initial Load
+        loadModalImage(img, image);
+
+        // Slideshow Toggle function
+        const toggleSlideshow = () => {
+            this.slideshowPlaying = !this.slideshowPlaying;
+            playBtn.classList.toggle('playing', this.slideshowPlaying);
+            playBtn.textContent = this.slideshowPlaying ? '⏸' : '▶';
+            
+            if (this.slideshowPlaying) {
+                this.slideshowInterval = window.setInterval(() => {
+                    navigate(1, true);
+                }, 4000);
+            } else {
+                if (this.slideshowInterval) {
+                    window.clearInterval(this.slideshowInterval);
+                    this.slideshowInterval = null;
+                }
+            }
+        };
+        playBtn.addEventListener('click', toggleSlideshow);
+
+        // Navigation function
+        const navigate = (delta: number, isSlideshow = false) => {
+            // Pause slideshow if manually triggered navigation, or keep it going if slideshow triggered
+            if (!isSlideshow && this.slideshowPlaying) {
+                toggleSlideshow();
+            }
+
+            const currentIndex = this._images.findIndex(imgSrc => imgSrc.path === currentImage.path);
+            if (currentIndex === -1) return;
+
+            let nextIndex = currentIndex + delta;
+            if (nextIndex < 0) {
+                nextIndex = this._images.length - 1; // loop around
+            } else if (nextIndex >= this._images.length) {
+                nextIndex = 0; // loop around
+            }
+
+            const nextImage = this._images[nextIndex];
+            if (nextImage) {
+                currentImage = nextImage;
+                loadModalImage(img, nextImage);
+            }
+        };
+
+        // Append modal to body
+        try {
+            doc.body.appendChild(modal);
+        } catch (appendErr) {
+            Logger.warn('Failed to append modal to document body, falling back to activeDocument.body:', appendErr);
+            activeDocument.body.appendChild(modal);
+        }
+    }
+
+    /**
+     * Close modal safely
+     */
+    protected closeModal(modal: HTMLElement): void {
+        modal.classList.remove('gallery-modal-open');
+        modal.classList.add('gallery-modal-closing');
+        
+        try {
+            const cleanup = (modal as unknown as { __cleanup?: () => void }).__cleanup;
+            if (cleanup) cleanup();
+        } catch (error) { Logger.debug('Ignored error:', error); }
+
+        window.setTimeout(() => {
+            modal.remove();
+            if (this.activeModal === modal) {
+                this.activeModal = null;
+            }
+            if (this.lastFocusedElement) {
+                try { this.lastFocusedElement.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
+                this.lastFocusedElement = null;
+            }
+        }, 200);
     }
 }

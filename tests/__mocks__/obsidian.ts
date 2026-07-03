@@ -170,3 +170,26 @@ export async function requestUrl(request: any) {
     arrayBuffer: async () => response.arrayBuffer()
   };
 }
+
+export class Modal {
+  app: any;
+  contentEl: HTMLElement;
+  constructor(app: any) {
+    this.app = app;
+    this.contentEl = document.createElement('div');
+  }
+  open() {}
+  close() {}
+}
+
+export const Notice = jest.fn();
+export class TFolder {}
+export class FileSystemAdapter {}
+export class MarkdownRenderChild {
+  containerEl: HTMLElement;
+  constructor(containerEl: HTMLElement) {
+    this.containerEl = containerEl;
+  }
+  onload() {}
+  onunload() {}
+}

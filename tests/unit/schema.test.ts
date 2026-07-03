@@ -360,16 +360,12 @@ view: thumbnail`;
             expect(result.imagesFound).toBe(1);
             expect(result.errors).toContain('Simulated external source failure');
 
-            // The inline error container should be created in the DOM
-            const inlineErrorContainer = Array.from(container.children).find(
-                (child: any) => child.className === 'gallery-inline-error-container'
+            // The compact error should be created in the DOM
+            const errorElement = Array.from(container.children).find(
+                (child: any) => child.className === 'gallery-error-compact'
             );
-            expect(inlineErrorContainer).toBeDefined();
-
-            const errorList = (inlineErrorContainer as any).children[1]; // ul
-            expect(errorList.className).toBe('gallery-inline-error-list');
-            const errorItem = errorList.children[0]; // li
-            expect(errorItem.textContent).toBe('Simulated external source failure');
+            expect(errorElement).toBeDefined();
+            expect((errorElement as any).textContent).toBe('⚠️ gallery: Simulated external source failure');
         });
 
         test('empty-state block renders source error when all sources fail', async () => {
@@ -408,18 +404,12 @@ view: thumbnail`;
             expect(result.imagesFound).toBe(0);
             expect(result.errors).toContain('Simulated source failure (e.g. Immich connection missing)');
 
-            // The empty state source error container should be created
-            // The class used by EmptyState is gallery-error-custom
-            const emptyStateContainer = Array.from(container.children).find(
-                (child: any) => child.className?.includes('gallery-empty-custom')
+            // The compact error should be created in the DOM
+            const errorElement = Array.from(container.children).find(
+                (child: any) => child.className === 'gallery-error-compact'
             );
-            expect(emptyStateContainer).toBeDefined();
-
-            const detailsElement = Array.from((emptyStateContainer as any).children).find(
-                (child: any) => child.className === 'gallery-empty-info'
-            );
-            expect(detailsElement).toBeDefined();
-            expect((detailsElement as any).textContent).toContain('Simulated source failure (e.g. Immich connection missing)');
+            expect(errorElement).toBeDefined();
+            expect((errorElement as any).textContent).toBe('⚠️ gallery: Simulated source failure (e.g. Immich connection missing)');
         });
     });
 });

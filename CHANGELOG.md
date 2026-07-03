@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- Collapsed/folded the details of Immich providers in settings tab to keep the interface compact, while allowing dynamic header updates and auto-expansion for new entries.
 - Fixed multi-gallery rendering issue where only one gallery would display properly when a note contained multiple galleries pointing to the same folder path.
 - Replaced all gallery error and empty-state blocks with a compact single-line message (`⚠️ gallery: …`) so errors are unobtrusive and don't push note content around.
 

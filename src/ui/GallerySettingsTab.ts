@@ -140,15 +140,45 @@ export class GallerySettingsTab extends PluginSettingTab {
         const immichContainer = containerEl.createDiv('immich-connections-container');
 
         this.plugin.settings.immichConnections.forEach((conn, index) => {
-            const connDiv = immichContainer.createDiv('immich-connection-item');
-            connDiv.setCssStyles({
+            const connDetails = immichContainer.createEl('details', {
+                cls: 'immich-connection-item'
+            });
+            connDetails.setCssStyles({
                 border: '1px solid var(--background-modifier-border)',
                 padding: '10px',
                 marginBottom: '10px',
                 borderRadius: '5px'
             });
 
-            new Setting(connDiv)
+            // Expand by default if it's a new / empty connection
+            if (!conn.key && !conn.baseUrl && !conn.apiKey) {
+                connDetails.setAttribute('open', 'true');
+            }
+
+            const summary = connDetails.createEl('summary');
+            summary.setCssStyles({
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                outline: 'none',
+                userSelect: 'none',
+                padding: '4px 0'
+            });
+
+            const titleSpan = summary.createEl('span');
+            const getTitle = (key: string) => key ? `Immich: ${key}` : 'New Immich connection';
+            titleSpan.setText(getTitle(conn.key));
+            titleSpan.setCssStyles({
+                marginLeft: '8px'
+            });
+
+            const contentDiv = connDetails.createDiv();
+            contentDiv.setCssStyles({
+                marginTop: '10px',
+                paddingTop: '10px',
+                borderTop: '1px solid var(--background-modifier-border)'
+            });
+
+            new Setting(contentDiv)
                 .setName('Connection key')
                 .setDesc('A stable reference used in gallery blocks (e.g. Home).')
                 .addText(text => text
@@ -157,10 +187,11 @@ export class GallerySettingsTab extends PluginSettingTab {
                     .onChange(async (value) => {
                         this.plugin.settings.immichConnections[index].key = value;
                         await this.plugin.saveSettings();
+                        titleSpan.setText(getTitle(value));
                     })
                 );
 
-            new Setting(connDiv)
+            new Setting(contentDiv)
                 .setName('Base URL')
                 .setDesc('The base URL of your immich server (e.g. Https://immich.example.com).')
                 .addText(text => text
@@ -172,7 +203,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     })
                 );
 
-            new Setting(connDiv)
+            new Setting(contentDiv)
                 .setName('Api key')
                 .setDesc('Your personal immich api key.')
                 .addText(text => text
@@ -184,7 +215,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     })
                 );
 
-            new Setting(connDiv)
+            new Setting(contentDiv)
                 .addButton(btn => btn
                     .setButtonText('Test connection')
                     .onClick(async () => {

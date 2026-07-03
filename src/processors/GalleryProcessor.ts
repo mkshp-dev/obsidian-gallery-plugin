@@ -433,18 +433,20 @@ export class GalleryProcessor {
         }
 
         try {
-            // If there's an existing gallery for the same path, remove it first to
-            // avoid duplicate instances when the markdown post-processor runs
-            // multiple times during mode toggles. Matching by config.path is a
-            // reasonable heuristic for the same code block instance.
+            // Clean up existing gallery instances if:
+            // 1. They are rendering in the exact same container (re-render of the same block)
+            // 2. The container is no longer in the DOM (zombie instance from note changes)
             try {
-                const existing = Array.from(this.activeGalleries.values()).find(g => g.config.path === config.path && g.id !== undefined);
+                const existing = Array.from(this.activeGalleries.values()).find(g => 
+                    (g.container === container || !g.container.ownerDocument.body.contains(g.container)) && 
+                    g.id !== undefined
+                );
                 if (existing) {
-                    Logger.debug(`GalleryProcessor: found existing gallery for path ${config.path} (id=${existing.id}), destroying before creating new instance.`);
+                    Logger.debug(`GalleryProcessor: cleaning up existing gallery instance (id=${existing.id}) before creating new one.`);
                     this.destroyGallery(existing.id);
                 }
-            } catch {
-                // swallow errors to avoid breaking rendering
+            } catch (err) {
+                Logger.debug('Ignored error during duplicate cleanup:', err);
             }
 
             // Create view

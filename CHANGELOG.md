@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- Fixed multi-gallery rendering issue where only one gallery would display properly when a note contained multiple galleries pointing to the same folder path.
 - Replaced all gallery error and empty-state blocks with a compact single-line message (`⚠️ gallery: …`) so errors are unobtrusive and don't push note content around.
 
 ## 2.2.2 - 2026-06-27

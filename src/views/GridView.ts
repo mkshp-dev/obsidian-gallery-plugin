@@ -46,7 +46,23 @@ export class GridView extends GalleryView {
     this.gridContainer = this.createElement(this.container, 'div', { cls: 'gallery-grid' });
 
     this._images.forEach((img, idx) => {
-      const wrapper = this.createElement(this.gridContainer!, 'div', { cls: 'gallery-grid-item', attr: { 'data-image-path': img.path } });
+      const wrapper = this.createElement(this.gridContainer!, 'div', {
+        cls: 'gallery-grid-item',
+        attr: {
+          'data-image-path': img.path,
+          'role': 'button',
+          'aria-label': img.displayName || 'Gallery image',
+          'tabindex': '0'
+        }
+      });
+
+      wrapper.addEventListener('click', () => this.expandImage(img));
+      wrapper.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.expandImage(img);
+        }
+      });
 
       // Create img element; LazyLoader will set src when observing
       const el = this.createElement(wrapper, 'img', { cls: 'gallery-grid-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;

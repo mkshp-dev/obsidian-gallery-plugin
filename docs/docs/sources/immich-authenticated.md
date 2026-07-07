@@ -64,8 +64,8 @@ view:
 | `sort.by` | `createdAt` | No | Sort field. Currently only `createdAt` is supported. |
 | `sort.order` | `asc` or `desc` | No | Sort direction. `desc` = newest first. |
 
-> [!NOTE]
-> Filters can be combined freely. For example, you can filter by `albumIds` **and** `isFavorite` **and** `assetType` in the same source block.
+> [!IMPORTANT]
+> Filters are combined using **AND** logic as per Immich API rules. For example, if you filter by `albumIds` **and** `isFavorite` **and** `assetType` in the same source block, only assets that meet *all* specified criteria will be returned.
 
 ---
 

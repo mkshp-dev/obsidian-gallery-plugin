@@ -2,11 +2,14 @@
 
 ## In-progress
 
+## 2.2.3 - 2026-07-03
+
 - Collapsed/folded the details of Immich providers in settings tab to keep the interface compact, while allowing dynamic header updates and auto-expansion for new entries.
 - Upgraded the gallery lightbox modal overlay with a premium glassmorphic blurred backdrop, centralized slideshow autoplay, interactive zoom/pan controls, and a detailed metadata side drawer.
 - Added click-to-expand and keyboard accessibility support for images in the Grid View layout.
 - Fixed multi-gallery rendering issue where only one gallery would display properly when a note contained multiple galleries pointing to the same folder path.
 - Replaced all gallery error and empty-state blocks with a compact single-line message (`⚠️ gallery: …`) so errors are unobtrusive and don't push note content around.
+
 
 ## 2.2.2 - 2026-06-27
 

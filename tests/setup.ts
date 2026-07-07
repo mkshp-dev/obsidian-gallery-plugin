@@ -66,6 +66,12 @@ if (typeof UIEvent !== 'undefined' && !UIEvent.prototype.instanceOf) {
   };
 }
 
+if (typeof Element !== 'undefined' && !Element.prototype.setCssStyles) {
+  Element.prototype.setCssStyles = function (styles: any) {
+    Object.assign(this.style, styles);
+  };
+}
+
 // Mock Obsidian MarkdownRenderChild
 jest.mock('obsidian', () => ({
   EditorSuggest: class MockEditorSuggest { constructor() {} },

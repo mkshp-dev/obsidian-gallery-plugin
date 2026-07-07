@@ -41,84 +41,9 @@ view:
 > [!NOTE]
 > The plugin fully supports the legacy v1 syntax (e.g., `path: Images/Screenshots`) for backward compatibility, but the v2 nested `sources` schema is preferred.
 
-## Usage examples
-
-### Folder Gallery
-Display all images from a folder:
-````markdown
-```obs-gallery
-sources:
-  - type: local
-    path: Photos/Vacation2024
-view:
-  type: thumbnail
-```
-````
-
-![Thumbnail View](docs/docs/views/Thumb.png)
-
-### Carousel View
-Horizontal scrolling carousel with controls:
-````markdown
-```obs-gallery
-sources:
-  - type: local
-    path: Images/Screenshots
-view:
-  type: carousel
-```
-````
-
-![Carousel View](docs/docs/views/Carousel.png)
-
-### Masonry Grid
-Pinterest-style layout with variable heights:
-````markdown
-```obs-gallery
-sources:
-  - type: local
-    path: Projects/WebDev
-    recursive: true
-view:
-  type: grid
-```
-````
-
-![Grid View](docs/docs/views/Grid.png)
-
-### With Immich Shared Links
-Include images directly from an Immich public share:
-````markdown
-```obs-gallery
-sources:
-  - type: immich-share
-    url: https://photos.example.com/share/abc1234
-view:
-  type: grid
-```
-````
-
-### With External Images
-Include remote images (requires enabling in settings):
-````markdown
-```obs-gallery
-sources:
-  - type: external
-    urls:
-      - https://picsum.photos/800/600?random=1
-      - https://picsum.photos/800/600?random=2
-      - https://picsum.photos/800/600?random=3
-      - https://picsum.photos/800/600?random=4
-view:
-  type: grid
-```
-````
-
-![External URLs](docs/docs/views/External-linksOnly.png)
-
 ## Documentation
 
-For full details on configuring the plugin, usage examples, and available settings, please refer to the [Gallery View documentation](https://mkshp-dev.github.io/obsidian-gallery-plugin/).
+For full details on configuring the plugin, usage examples, and available settings, please refer to the [Gallery View documentation](https://mkshp-dev.github.io/obsidian-gallery-plugin/docs/what-is-gallery-view).
 
 ## Supported formats
 
@@ -133,21 +58,6 @@ Gallery View includes a built-in command to generate a set of interactive demo n
 1. Open the Obsidian command palette (`Ctrl+P` / `Cmd+P`)
 2. Run **Gallery View: Create showcase notes**
 3. Open the generated `GalleryDemo/` folder in your vault to explore working examples of local sources, external URLs, views, and template configurations for Immich shared links.
-
-## Interface
-
-### Thumbnail Grid
-- Responsive grid layout adapts to screen size
-- Hover effects for better interactivity
-- Lazy loading for performance
-
-### Modal Viewer
-- Full-size image display
-- Multiple ways to close:
-  - Click the **×** button
-  - Press **Escape** key
-  - Click outside the image
-- Image name displayed at bottom
 
 ## Development
 
@@ -184,27 +94,7 @@ obsidian-gallery-plugin/
     └── processors/      # Content processing
 ```
 
-## Troubleshooting
-
-### Gallery Not Appearing
-- Check that the path exists and has correct case sensitivity
-- Verify images are in supported formats
-- Use exact folder names (e.g., `Images` not `images` if capitalized)
-
-### Modal Not Opening
-- Ensure `styles.css` is properly loaded
-- Check browser console for JavaScript errors
-- Try refreshing Obsidian or restarting the plugin
-
-### Path Issues
-- Use relative paths from vault root
-- Don't include leading or trailing slashes
-- Example: `Images/Photos` not `/Images/Photos/`
-
-### Performance with Many Images
-- Plugin uses lazy loading automatically
-- Consider organizing large collections into subfolders
-- Modal loads full-resolution images on demand
+## Contributing
 
 Contributions are welcome! Please feel free to:
 
@@ -249,4 +139,4 @@ If this project helps your workflow, consider supporting its development with a 
 
 - **Bug reports**: [GitHub Issues](../../issues)
 - **Feature requests**: [GitHub Discussions](../../discussions)
-- **Documentation**: [Plugin docs](https://mkshp-dev.github.io/obsidian-gallery-plugin)
+- **Documentation**: [Plugin docs](https://mkshp-dev.github.io/obsidian-gallery-plugin/docs/what-is-gallery-view)

@@ -30,6 +30,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Copy CHANGELOG to docs
+        run: |
+          cat << 'EOF' > docs/docs/changelog.md
+          ---
+          sidebar_position: 7
+          ---
+
+          EOF
+          cat CHANGELOG.md >> docs/docs/changelog.md
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

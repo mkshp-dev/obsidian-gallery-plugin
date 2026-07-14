@@ -77,7 +77,8 @@ export class ContentScanner implements IContentScanner {
             if (abstractFile instanceof TFile) {
                 // Single file - check if it's an image or extract links
                 if (this.isImageFile(abstractFile.path)) {
-                    images = [ImageSource.fromLocalPath(abstractFile.path)];
+                    const resourcePath = this.vault.adapter.getResourcePath(abstractFile.path);
+                    images = [ImageSource.fromLocalPath(abstractFile.path, abstractFile.basename, resourcePath)];
                 } else {
                     // Extract image links from markdown file
                     images = await this.extractLinksFromFile(abstractFile);
@@ -163,11 +164,12 @@ export class ContentScanner implements IContentScanner {
                 const cleanPath = imagePath.trim();
                 
                 if (this.isValidImageLink(cleanPath)) {
-                    const imageSource = this.isExternalUrl(cleanPath)
-                        ? ImageSource.fromUrl(cleanPath, alt || undefined)
-                        : ImageSource.fromLocalPath(cleanPath, alt || undefined);
-                    
-                    images.push(imageSource);
+                    if (this.isExternalUrl(cleanPath)) {
+                        images.push(ImageSource.fromUrl(cleanPath, alt || undefined));
+                    } else {
+                        const resolved = this.resolveLocalPath(cleanPath, file);
+                        images.push(ImageSource.fromLocalPath(resolved.path, alt || resolved.displayName, resolved.resourceUrl));
+                    }
                 }
             }
             
@@ -179,8 +181,8 @@ export class ContentScanner implements IContentScanner {
                 const cleanPath = linkPath.trim();
                 
                 if (this.isImageFile(cleanPath)) {
-                    const imageSource = ImageSource.fromLocalPath(cleanPath, displayName || undefined);
-                    images.push(imageSource);
+                    const resolved = this.resolveLocalPath(cleanPath, file);
+                    images.push(ImageSource.fromLocalPath(resolved.path, displayName || resolved.displayName, resolved.resourceUrl));
                 }
             }
             
@@ -189,8 +191,8 @@ export class ContentScanner implements IContentScanner {
             
             while ((match = attachmentRegex.exec(content)) !== null) {
                 const [, attachmentPath, , displayName] = match;
-                const imageSource = ImageSource.fromLocalPath(attachmentPath, displayName || undefined);
-                images.push(imageSource);
+                const resolved = this.resolveLocalPath(attachmentPath, file);
+                images.push(ImageSource.fromLocalPath(resolved.path, displayName || resolved.displayName, resolved.resourceUrl));
             }
             
             // Remove duplicates based on path (O(N) performance optimization)
@@ -210,6 +212,53 @@ export class ContentScanner implements IContentScanner {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to extract links from "${file.path}": ${errorMessage}`);
         }
+    }
+
+    /**
+     * Resolve a local link path to a vault TFile and get its browser-loadable resource path
+     */
+    private resolveLocalPath(linkPath: string, sourceFile: TFile): { path: string; displayName: string; resourceUrl?: string } {
+        // Try direct path first
+        let file = this.vault.getAbstractFileByPath(linkPath);
+        
+        // Try relative path in the same folder
+        if (!file) {
+            const parentPath = sourceFile.parent ? sourceFile.parent.path : '';
+            if (parentPath) {
+                let relativePath = parentPath + '/' + linkPath;
+                if (linkPath.startsWith('./')) {
+                    relativePath = parentPath + '/' + linkPath.substring(2);
+                }
+                file = this.vault.getAbstractFileByPath(relativePath);
+            }
+        }
+        
+        // Try general search as fallback for short/wiki links
+        if (!file && (linkPath.indexOf('/') === -1 || !linkPath.includes('/'))) {
+            // Find file by name
+            const filename = linkPath.split('/').pop();
+            if (filename) {
+                const found = this.vault.getFiles().find(f => f.name === filename);
+                if (found) {
+                    file = found;
+                }
+            }
+        }
+
+        if (file instanceof TFile) {
+            return {
+                path: file.path,
+                displayName: file.basename,
+                resourceUrl: this.vault.adapter.getResourcePath(file.path)
+            };
+        }
+
+        // Fallback to extracting name from path
+        const displayName = linkPath.split('/').pop()?.replace(/\.[^/.]+$/, '') || linkPath;
+        return {
+            path: linkPath,
+            displayName
+        };
     }
 
     /**

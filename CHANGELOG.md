@@ -2,6 +2,8 @@
 
 ## In-progress
 
+## 2.2.4 - 2026-07-14
+
 ## 2.2.3 - 2026-07-03
 
 - Collapsed/folded the details of Immich providers in settings tab to keep the interface compact, while allowing dynamic header updates and auto-expansion for new entries.

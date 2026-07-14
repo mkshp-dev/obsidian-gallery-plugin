@@ -107,4 +107,29 @@ jest.mock('obsidian', () => ({
         throw new Error('YAML parsing error');
     }
   }),
+  TFile: class MockTFile {
+    path: string;
+    name: string;
+    extension: string;
+    basename: string;
+    parent?: any;
+    constructor(path: string, name: string) {
+      this.path = path;
+      this.name = name;
+      const dotIndex = name.lastIndexOf('.');
+      this.extension = dotIndex !== -1 ? name.substring(dotIndex) : '';
+      this.basename = dotIndex !== -1 ? name.substring(0, dotIndex) : name;
+    }
+  },
+  TFolder: class MockTFolder {
+    path: string;
+    name: string;
+    parent?: any;
+    children: any[];
+    constructor(path: string, name: string = '') {
+      this.path = path;
+      this.name = name;
+      this.children = [];
+    }
+  },
 }));

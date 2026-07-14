@@ -183,7 +183,29 @@ export class Modal {
 }
 
 export const Notice = jest.fn();
-export class TFolder {}
+export class TFile {
+  path: string;
+  name: string;
+  extension: string;
+  basename: string;
+  parent?: TFolder;
+  constructor(path: string, name: string) {
+    this.path = path;
+    this.name = name;
+    const dotIndex = name.lastIndexOf('.');
+    this.extension = dotIndex !== -1 ? name.substring(dotIndex) : '';
+    this.basename = dotIndex !== -1 ? name.substring(0, dotIndex) : name;
+  }
+}
+export class TFolder {
+  path: string;
+  name: string;
+  parent?: TFolder;
+  constructor(path: string, name: string = '') {
+    this.path = path;
+    this.name = name;
+  }
+}
 export class FileSystemAdapter {}
 export class MarkdownRenderChild {
   containerEl: HTMLElement;

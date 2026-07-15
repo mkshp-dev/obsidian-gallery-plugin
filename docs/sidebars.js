@@ -4,6 +4,7 @@ const sidebars = {
     'what-is-gallery-view',
     'installation',
     'gallery-block-syntax',
+    'gallery-builder',
     {
       type: 'category',
       label: 'Sources',

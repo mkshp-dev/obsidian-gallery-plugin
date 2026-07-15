@@ -6,7 +6,7 @@
 const config = {
   title: 'Gallery View',
   tagline: 'Create interactive image galleries in your Obsidian notes.',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.png',
 
   url: 'https://mkshp-dev.github.io',
   baseUrl: '/obsidian-gallery-plugin/',

@@ -1,5 +1,5 @@
 import { App, PluginManifest } from 'obsidian';
-import GalleryPlugin from '../../main';
+import GalleryPlugin from '../../src/main';
 
 // Mock obsidian classes properly based on how main.ts uses it
 jest.mock('obsidian', () => ({

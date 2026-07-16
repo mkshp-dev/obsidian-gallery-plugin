@@ -4,21 +4,23 @@ import globals from 'globals';
 import { globalIgnores } from 'eslint/config';
 
 export default tseslint.config(
-	globalIgnores([
-		'node_modules',
-		'dist',
-		'docs-site',
-		'scripts',
-		'tests',
-		'esbuild.config.mjs',
-		'jest.config.js',
-		'version-bump.mjs',
-		'versions.json',
-		'main.js',
-		'package.json',
-		'package-lock.json',
-		'tsconfig.json',
-	]),
+	{
+		ignores: [
+			'node_modules/**',
+			'dist/**',
+			'docs-site/**',
+			'scripts/**',
+			'tests/**',
+			'esbuild.config.mjs',
+			'jest.config.js',
+			'version-bump.mjs',
+			'versions.json',
+			'main.js',
+			'package.json',
+			'package-lock.json',
+			'tsconfig.json',
+		],
+	},
 	{
 		languageOptions: {
 			globals: {

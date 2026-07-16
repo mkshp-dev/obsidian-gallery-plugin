@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import { ImmichClient } from '../services/immich/ImmichClient';
-import type GalleryPlugin from '../../main';
+import type GalleryPlugin from '../main';
 import { DEFAULT_SETTINGS } from '../models/settings';
 
 export class GallerySettingsTab extends PluginSettingTab {

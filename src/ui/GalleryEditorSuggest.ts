@@ -1,5 +1,5 @@
 import { App, Editor, EditorPosition, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo, TFile } from 'obsidian';
-import GalleryPlugin from '../../main';
+import GalleryPlugin from '../main';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { IImmichConnection } from '../models/interfaces';
 

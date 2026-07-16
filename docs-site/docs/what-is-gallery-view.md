@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # What is Gallery View
 
-**Gallery View** is an Obsidian plugin that lets you create interactive image galleries directly in your notes using `obs-gallery` code blocks.
+**Gallery View** is an Obsidian plugin that lets you create interactive image galleries directly in your vault notes using `obs-gallery` code blocks.
 
 ## Features
 

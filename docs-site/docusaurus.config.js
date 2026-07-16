@@ -29,7 +29,7 @@ const config = {
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          editUrl: 'https://github.com/mkshp-dev/obsidian-gallery-plugin/tree/Dev/docs/',
+          editUrl: 'https://github.com/mkshp-dev/obsidian-gallery-plugin/tree/Dev/docs-site/',
         },
         blog: false,
         theme: {

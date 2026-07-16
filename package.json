@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build-mvp": "tsc -noEmit -skipLibCheck && esbuild src/main.ts --bundle --minify --sourcemap --platform=node --external:obsidian --outfile=main.js",
     "version": "node scripts/bump-manifest.mjs",
     "test": "jest",
     "test:watch": "jest --watch",

@@ -1,6 +1,6 @@
 import { App, Editor, EditorPosition } from 'obsidian';
 import { GalleryEditorSuggest } from '../../src/ui/GalleryEditorSuggest';
-import GalleryPlugin from '../../main';
+import GalleryPlugin from '../../src/main';
 
 // Basic sanity tests for suggestion trigger
 describe('GalleryEditorSuggest', () => {

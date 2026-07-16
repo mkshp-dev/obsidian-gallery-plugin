@@ -1,14 +1,14 @@
-import { GalleryBuilderModal } from './src/ui/GalleryBuilderModal';
-import { Logger } from "./src/utils/Logger";
+import { GalleryBuilderModal } from './ui/GalleryBuilderModal';
+import { Logger } from "./utils/Logger";
 import { Plugin, App, MarkdownPostProcessorContext } from 'obsidian';
-import { ContentScanner } from './src/services/ContentScanner';
-import { ViewFactory } from './src/views/ViewFactory';
-import { GalleryProcessor } from './src/processors/GalleryProcessor';
-import { VaultWatcher } from './src/utils/VaultWatcher';
-import { LazyLoader } from './src/utils/LazyLoader';
-import { ShowcaseGenerator } from './src/generators/ShowcaseGenerator';
-import { GallerySettingsTab } from './src/ui/GallerySettingsTab';
-import { GalleryPluginSettings, DEFAULT_SETTINGS } from './src/models/settings';
+import { ContentScanner } from './services/ContentScanner';
+import { ViewFactory } from './views/ViewFactory';
+import { GalleryProcessor } from './processors/GalleryProcessor';
+import { VaultWatcher } from './utils/VaultWatcher';
+import { LazyLoader } from './utils/LazyLoader';
+import { ShowcaseGenerator } from './generators/ShowcaseGenerator';
+import { GallerySettingsTab } from './ui/GallerySettingsTab';
+import { GalleryPluginSettings, DEFAULT_SETTINGS } from './models/settings';
 
 interface AppWithCommands extends App {
     commands: {

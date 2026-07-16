@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Editor, Notice } from 'obsidian';
-import type GalleryPlugin from '../../main';
+import type GalleryPlugin from '../main';
 import { ISourceConfig } from '../models/interfaces';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';

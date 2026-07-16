@@ -81,13 +81,13 @@ npm run build-mvp
 
 ```
 obsidian-gallery-plugin/
-├── main.ts              # Main plugin code
 ├── main.js              # Compiled plugin
 ├── manifest.json        # Plugin metadata
 ├── styles.css           # Gallery styling
 ├── package.json         # Dependencies
 ├── tsconfig.json        # TypeScript config
-└── src/                 # Advanced architecture (future)
+└── src/                 # Source code
+    ├── main.ts          # Main plugin code, lifecycle management
     ├── models/          # Data models
     ├── views/           # View components
     ├── services/        # Core services

@@ -1,3 +1,4 @@
+import { posthog } from '../analytics';
 import { App, Modal, Setting, Editor, Notice } from 'obsidian';
 import type GalleryPlugin from '../main';
 import { ISourceConfig } from '../models/interfaces';
@@ -19,6 +20,7 @@ export class GalleryBuilderModal extends Modal {
     }
 
     onOpen() {
+        posthog.capture('gallery_builder_opened');
         const { contentEl } = this;
         contentEl.empty();
         contentEl.addClass('gallery-builder-modal');
@@ -163,6 +165,7 @@ export class GalleryBuilderModal extends Modal {
                 break;
         }
 
+        posthog.capture('gallery_source_added', { source_type: type });
         this.sources.push(newSource);
         this.renderSources(container);
                 this.refreshLivePreview();
@@ -589,6 +592,11 @@ export class GalleryBuilderModal extends Modal {
         try {
             const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType);
             this.editor.replaceSelection(yaml);
+            posthog.capture('gallery_inserted', {
+                view_type: this.viewType,
+                source_count: this.sources.length,
+                source_types: this.sources.map(s => s.type).filter(Boolean),
+            });
             this.close();
         } catch (e) {
             new Notice(`Failed to generate gallery: ${e instanceof Error ? e.message : String(e)}`);

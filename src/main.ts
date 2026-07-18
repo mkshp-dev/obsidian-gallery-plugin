@@ -1,3 +1,4 @@
+import { initPostHog, posthog } from './analytics';
 import { GalleryBuilderModal } from './ui/GalleryBuilderModal';
 import { Logger } from "./utils/Logger";
 import { Plugin, App, MarkdownPostProcessorContext } from 'obsidian';
@@ -27,6 +28,9 @@ export default class GalleryPlugin extends Plugin {
     
     async onload() {
         Logger.setDebugEnabled(true);
+
+        initPostHog();
+        posthog.capture('plugin_loaded');
 
         await this.loadSettings();
 

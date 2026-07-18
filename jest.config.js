@@ -25,6 +25,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^obsidian$': '<rootDir>/tests/__mocks__/obsidian.ts',
-    '^yaml$': '<rootDir>/node_modules/yaml/dist/index.js'
+    '^yaml$': '<rootDir>/node_modules/yaml/dist/index.js',
+    '^posthog-js/dist/module\\.full\\.no-external$': '<rootDir>/tests/__mocks__/posthog.ts'
   }
 };

@@ -35,3 +35,4 @@ data.json
 .cache/
 .nyc_output/
 patch_immich4.sh
+.env

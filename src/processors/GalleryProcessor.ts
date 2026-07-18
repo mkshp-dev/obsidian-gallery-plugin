@@ -1,3 +1,4 @@
+import { posthog } from '../analytics';
 import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
@@ -180,6 +181,14 @@ export class GalleryProcessor {
             result.galleryInstance = galleryInstance;
             result.processingTimeMs = Date.now() - startTime;
 
+            posthog.capture('gallery_rendered', {
+                view_type: galleryInstance.view.type,
+                images_found: result.imagesFound,
+                images_valid: result.imagesValid,
+                images_loaded: result.imagesLoaded,
+                processing_time_ms: result.processingTimeMs,
+            });
+
             // Clean up loading state
             if (loadingManager) {
                 loadingManager.stopAllLoading();
@@ -196,6 +205,11 @@ export class GalleryProcessor {
             const errorMessage = error instanceof Error ? error.message : String(error);
             result.errors.push(errorMessage);
             result.processingTimeMs = Date.now() - startTime;
+
+            posthog.capture('gallery_render_failed', {
+                images_found: result.imagesFound,
+                processing_time_ms: result.processingTimeMs,
+            });
 
             Logger.error('Error processing gallery code block:', error);
             this.handleProcessingError(error as Error, el, opts);

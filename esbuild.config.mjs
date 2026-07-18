@@ -1,6 +1,27 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from "module";
+import { readFileSync, existsSync } from "fs";
+
+function loadEnv() {
+	const path = ".env";
+	if (!existsSync(path)) return {};
+	const vars = {};
+	for (const line of readFileSync(path, "utf8").split("\n")) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) continue;
+		const eq = trimmed.indexOf("=");
+		if (eq === -1) continue;
+		const key = trimmed.slice(0, eq).trim();
+		const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+		vars[key] = val;
+	}
+	return vars;
+}
+
+const env = loadEnv();
+const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY || env.POSTHOG_API_KEY || "";
+const POSTHOG_HOST = process.env.POSTHOG_HOST || env.POSTHOG_HOST || "";
 
 const banner =
 `/*
@@ -38,6 +59,10 @@ const context = await esbuild.context({
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: "main.js",
+	define: {
+		"__POSTHOG_TOKEN__": JSON.stringify(POSTHOG_API_KEY),
+		"__POSTHOG_HOST__": JSON.stringify(POSTHOG_HOST),
+	},
 });
 
 if (prod) {

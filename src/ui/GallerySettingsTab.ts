@@ -1,3 +1,4 @@
+import { posthog } from '../analytics';
 import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import type GalleryPlugin from '../main';
@@ -76,6 +77,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.errorDisplayMode = value as 'full' | 'text' | 'hidden';
                     await this.plugin.saveSettings();
+                    posthog.capture('setting_changed', { setting_name: 'error_display_mode', setting_value: value });
                 }));
 
         new Setting(containerEl)
@@ -86,6 +88,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.allowRemoteImages = value;
                     await this.plugin.saveSettings();
+                    posthog.capture('setting_changed', { setting_name: 'allow_remote_images', setting_value: value });
                 }));
 
         new Setting(containerEl)
@@ -107,6 +110,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.validateRemoteContentType = value;
                     await this.plugin.saveSettings();
+                    posthog.capture('setting_changed', { setting_name: 'validate_remote_content_type', setting_value: value });
                 }));
 
         new Setting(containerEl)
@@ -128,6 +132,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.enableLifecycleLogging = value;
                     await this.plugin.saveSettings();
+                    posthog.capture('setting_changed', { setting_name: 'enable_lifecycle_logging', setting_value: value });
                 }));
     }
 
@@ -221,6 +226,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     .onClick(async () => {
                         const client = new ImmichClient(conn);
                         const result = await client.validateConnection();
+                        posthog.capture('immich_connection_tested', { success: result.success });
                         new Notice(result.message);
                     })
                 )
@@ -246,6 +252,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                         apiKey: ''
                     });
                     await this.plugin.saveSettings();
+                    posthog.capture('immich_connection_added');
                     this.display(); // Refresh UI
                 })
             );

@@ -1,3 +1,4 @@
+import { posthog } from '../analytics';
 import { Logger } from "../utils/Logger";
 import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
@@ -431,6 +432,7 @@ export abstract class GalleryView implements IGalleryView {
      * Expand image in modal/lightbox with full control bar, transitions, slideshow, and zoom.
      */
     protected expandImage(image: IImageSource): void {
+        posthog.capture('image_expanded', { image_type: image.type });
         // Save the element that had focus so we can restore it later
         const active = activeDocument.activeElement;
         if (active && active.instanceOf(HTMLElement)) {
@@ -702,6 +704,7 @@ export abstract class GalleryView implements IGalleryView {
         downloadBtn.addEventListener('click', () => {
             const displayUrl = currentImage.getDisplayUrl();
             if (displayUrl) {
+                posthog.capture('image_opened_original', { image_type: currentImage.type });
                 const a = doc.createElement('a');
                 a.href = displayUrl;
                 a.target = '_blank';
@@ -771,8 +774,9 @@ export abstract class GalleryView implements IGalleryView {
             this.slideshowPlaying = !this.slideshowPlaying;
             playBtn.classList.toggle('playing', this.slideshowPlaying);
             playBtn.textContent = this.slideshowPlaying ? '⏸' : '▶';
-            
+
             if (this.slideshowPlaying) {
+                posthog.capture('slideshow_started');
                 this.slideshowInterval = window.setInterval(() => {
                     navigate(1, true);
                 }, 4000);

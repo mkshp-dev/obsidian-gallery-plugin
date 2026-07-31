@@ -40,8 +40,15 @@ export class CarouselView extends GalleryView {
             // `allowRemoteImages` and `remoteLoadTimeoutMs` settings.
             this.loadImageElement(el as HTMLImageElement, img);
 
+            // Render caption below carousel image
+            this.renderCaption(item, img);
+
             // Click to expand
-            item.addEventListener('click', () => this.expandImage(img));
+            item.addEventListener('click', (e: MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.expandImage(img);
+            });
         });
         // Prev/Next controls (visual)
         const prev = this.createElement(this.containerEl, 'button', { cls: 'gallery-carousel-nav prev', text: '‹' });

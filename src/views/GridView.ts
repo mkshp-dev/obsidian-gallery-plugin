@@ -13,7 +13,7 @@ export class GridView extends GalleryView {
   private loader: LazyLoader | null = null;
   // Runtime options are provided by GalleryView.setOptions (remoteLoadTimeoutMs, allowRemoteImages)
 
-  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean } = {}): void {
+  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number } = {}): void {
     // Apply base options
     super.setOptions(options);
     // If loader exists, propagate timeout change
@@ -56,10 +56,15 @@ export class GridView extends GalleryView {
         }
       });
 
-      wrapper.addEventListener('click', () => this.expandImage(img));
+      wrapper.addEventListener('click', (e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.expandImage(img);
+      });
       wrapper.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          e.stopPropagation();
           this.expandImage(img);
         }
       });
@@ -81,6 +86,9 @@ export class GridView extends GalleryView {
         el.addEventListener('load', () => this.handleImageLoad(img));
         el.addEventListener('error', () => this.handleImageError(img, new Error('Failed to load')));
       }
+
+      // Render caption below image
+      this.renderCaption(wrapper, img);
     });
 
     // Use LazyLoader to observe images (observe existing img elements)

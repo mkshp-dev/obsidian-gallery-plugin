@@ -71,4 +71,22 @@ describe('ImageSource', () => {
             expect(img.hasTimedOut()).toBe(true);
         });
     });
+
+    describe('caption', () => {
+        it('should support caption property in constructor and factory methods', () => {
+            const img = new ImageSource('images/pic.jpg', 'local', 'pic', undefined, 'A custom caption');
+            expect(img.caption).toBe('A custom caption');
+
+            const localImg = ImageSource.fromLocalPath('images/pic.jpg', 'pic', 'app://pic', 'Local caption');
+            expect(localImg.caption).toBe('Local caption');
+
+            const extImg = ImageSource.fromUrl('https://example.com/pic.jpg', 'pic', 'External caption');
+            expect(extImg.caption).toBe('External caption');
+        });
+
+        it('should default caption to undefined if omitted', () => {
+            const img = new ImageSource('images/pic.jpg', 'local', 'pic');
+            expect(img.caption).toBeUndefined();
+        });
+    });
 });

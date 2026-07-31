@@ -104,3 +104,57 @@ describe('Gallery Views - getStats', () => {
     expect(stats.totalImages).toBe(2);
   });
 });
+
+describe('Gallery Views - Caption Rendering', () => {
+  function makeImageWithCaption(path: string, displayName: string, caption?: string): IImageSource {
+    return {
+      path,
+      type: 'local',
+      displayName,
+      caption,
+      loadState: 'loaded',
+      getDisplayUrl() { return path; }
+    } as unknown as IImageSource;
+  }
+
+  test('renders .gallery-caption when showCaptions is true', () => {
+    const container = createMockContainer();
+    const view = new GridView(container as any);
+    view.setOptions({ showCaptions: true, captionMaxLines: 2 });
+
+    const img = makeImageWithCaption('photo.jpg', 'Photo Title', 'Scenic mountain view');
+    view.update([img]);
+    view.render();
+
+    const captionEl = container.querySelector('.gallery-caption');
+    expect(captionEl).not.toBeNull();
+    expect(captionEl.textContent).toBe('Scenic mountain view');
+  });
+
+  test('does not render .gallery-caption when showCaptions is false', () => {
+    const container = createMockContainer();
+    const view = new GridView(container as any);
+    view.setOptions({ showCaptions: false });
+
+    const img = makeImageWithCaption('photo.jpg', 'Photo Title', 'Scenic mountain view');
+    view.update([img]);
+    view.render();
+
+    const captionEl = container.querySelector('.gallery-caption');
+    expect(captionEl).toBeNull();
+  });
+
+  test('falls back to displayName if caption is undefined', () => {
+    const container = createMockContainer();
+    const view = new GridView(container as any);
+    view.setOptions({ showCaptions: true });
+
+    const img = makeImageWithCaption('photo.jpg', 'Photo Title');
+    view.update([img]);
+    view.render();
+
+    const captionEl = container.querySelector('.gallery-caption');
+    expect(captionEl).not.toBeNull();
+    expect(captionEl.textContent).toBe('Photo Title');
+  });
+});

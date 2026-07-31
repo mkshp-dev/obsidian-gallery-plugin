@@ -1,6 +1,6 @@
 import { GalleryBuilderModal } from './ui/GalleryBuilderModal';
 import { Logger } from "./utils/Logger";
-import { Plugin, App, MarkdownPostProcessorContext } from 'obsidian';
+import { Plugin, App, MarkdownPostProcessorContext, MarkdownView, Notice } from 'obsidian';
 import { ContentScanner } from './services/ContentScanner';
 import { ViewFactory } from './views/ViewFactory';
 import { GalleryProcessor } from './processors/GalleryProcessor';
@@ -33,7 +33,12 @@ export default class GalleryPlugin extends Plugin {
         // Initialize core services
         this.contentScanner = new ContentScanner(this.app.vault);
         this.viewFactory = new ViewFactory();
-        this.galleryProcessor = new GalleryProcessor(this.contentScanner, this.viewFactory, () => this.settings.immichConnections);
+        this.galleryProcessor = new GalleryProcessor(
+            this.contentScanner,
+            this.viewFactory,
+            () => this.settings.immichConnections,
+            () => this.getProcessingOptions()
+        );
 
         // Initialize lazy loader
         this.lazyLoader = new LazyLoader({
@@ -72,8 +77,13 @@ export default class GalleryPlugin extends Plugin {
         this.addCommand({
             id: 'insert-gallery',
             name: 'Insert gallery',
-            editorCallback: (editor, ctx) => {
-                new GalleryBuilderModal(this.app, this, editor).open();
+            callback: () => {
+                const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (markdownView && markdownView.editor) {
+                    new GalleryBuilderModal(this.app, this, markdownView.editor).open();
+                } else {
+                    new Notice('Please open a note to insert a gallery.');
+                }
             }
         });
 
@@ -161,9 +171,28 @@ export default class GalleryPlugin extends Plugin {
     }
 
     /**
-     * Refresh all active galleries when vault files change (professional version)
+     * Get current processing options derived from plugin settings
      */
-    private refreshGalleries(): void {
+    public getProcessingOptions() {
+        return {
+            errorDisplayMode: this.settings.errorDisplayMode,
+            showLoadingFeedback: true,
+            enableValidation: true,
+            maxRetries: 3,
+            timeoutMs: this.settings.remoteLoadTimeoutMs || 30000,
+            allowRemoteImages: !!this.settings.allowRemoteImages,
+            validateRemoteContentType: !!this.settings.validateRemoteContentType,
+            gracePeriodMs: this.settings.gracePeriodMs || DEFAULT_SETTINGS.gracePeriodMs,
+            enableLifecycleLogging: !!this.settings.enableLifecycleLogging,
+            showCaptions: this.settings.showCaptions ?? DEFAULT_SETTINGS.showCaptions,
+            captionMaxLines: this.settings.captionMaxLines ?? DEFAULT_SETTINGS.captionMaxLines
+        };
+    }
+
+    /**
+     * Refresh all active galleries (professional version)
+     */
+    public refreshGalleries(): void {
         if (!this.galleryProcessor) {
             return;
         }
@@ -193,17 +222,7 @@ export default class GalleryPlugin extends Plugin {
 
         try {
             // Use the comprehensive gallery processor with professional features
-            const result = await this.galleryProcessor.processCodeBlock(source, el, ctx, {
-                errorDisplayMode: this.settings.errorDisplayMode,
-                showLoadingFeedback: true,
-                enableValidation: true,
-                maxRetries: 3,
-                    timeoutMs: this.settings.remoteLoadTimeoutMs || 30000,
-                    allowRemoteImages: !!this.settings.allowRemoteImages,
-                    validateRemoteContentType: !!this.settings.validateRemoteContentType
-            ,gracePeriodMs: this.settings.gracePeriodMs || DEFAULT_SETTINGS.gracePeriodMs
-            ,enableLifecycleLogging: !!this.settings.enableLifecycleLogging
-            });
+            const result = await this.galleryProcessor.processCodeBlock(source, el, ctx, this.getProcessingOptions());
 
             if (!result.success) {
                 console.error('Gallery processing failed:', result.errors);

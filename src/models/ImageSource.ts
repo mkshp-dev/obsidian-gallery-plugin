@@ -10,6 +10,7 @@ export class ImageSource implements IImageSource {
     public readonly resourceUrl?: string;
     public readonly type: 'local' | 'external' | 'immich-share' | 'immich';
     public readonly displayName: string;
+    public caption?: string;
     public size?: number;
     public dimensions?: { width: number; height: number };
     public loadState: 'pending' | 'loading' | 'loaded' | 'error';
@@ -19,13 +20,14 @@ export class ImageSource implements IImageSource {
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    constructor(path: string, type: 'local' | 'external' | 'immich-share' | 'immich', displayName?: string, resourceUrl?: string) {
+    constructor(path: string, type: 'local' | 'external' | 'immich-share' | 'immich', displayName?: string, resourceUrl?: string, caption?: string) {
         this.path = path;
         this.resourceUrl = resourceUrl;
         this.type = type;
         this.displayName = displayName || this.extractDisplayName(path);
+        this.caption = caption;
         this.loadState = 'pending';
-        
+
         // Validate path format
         this.validatePath();
     }
@@ -90,7 +92,7 @@ export class ImageSource implements IImageSource {
         this.loadState = 'loaded';
         this.loadStartTime = undefined;
         this.errorMessage = undefined;
-        
+
         if (dimensions) {
             this.dimensions = dimensions;
         }
@@ -112,7 +114,7 @@ export class ImageSource implements IImageSource {
         if (this.type === 'local' || this.type === 'immich' || !this.loadStartTime) {
             return false;
         }
-        
+
         const timeoutMs = 10 * 1000; // 10 seconds
         return Date.now() - this.loadStartTime > timeoutMs;
     }
@@ -124,7 +126,7 @@ export class ImageSource implements IImageSource {
         if (!this.loadStartTime) {
             return null;
         }
-        
+
         return Date.now() - this.loadStartTime;
     }
 
@@ -151,31 +153,31 @@ export class ImageSource implements IImageSource {
      */
     getFormattedSize(): string | null {
         if (!this.size) return null;
-        
+
         const units = ['B', 'KB', 'MB', 'GB'];
         let size = this.size;
         let unitIndex = 0;
-        
+
         while (size >= 1024 && unitIndex < units.length - 1) {
             size /= 1024;
             unitIndex++;
         }
-        
+
         return `${size.toFixed(1)} ${units[unitIndex]}`;
     }
 
     /**
      * Create ImageSource from local file path
      */
-    static fromLocalPath(path: string, displayName?: string, resourceUrl?: string): ImageSource {
-        return new ImageSource(path, 'local', displayName, resourceUrl);
+    static fromLocalPath(path: string, displayName?: string, resourceUrl?: string, caption?: string): ImageSource {
+        return new ImageSource(path, 'local', displayName, resourceUrl, caption);
     }
 
     /**
      * Create ImageSource from external URL
      */
-    static fromUrl(url: string, displayName?: string): ImageSource {
-        return new ImageSource(url, 'external', displayName);
+    static fromUrl(url: string, displayName?: string, caption?: string): ImageSource {
+        return new ImageSource(url, 'external', displayName, undefined, caption);
     }
 
     /**

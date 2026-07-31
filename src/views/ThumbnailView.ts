@@ -105,11 +105,16 @@ export class ThumbnailView extends GalleryView {
         itemEl.setAttribute('aria-label', image.displayName || 'Gallery image');
 
         // Add click handler for image expansion
-        itemEl.addEventListener('click', () => this.expandImage(image));
+        itemEl.addEventListener('click', (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.expandImage(image);
+        });
         itemEl.addEventListener('keydown', (e) => {
             // Activate on Enter or Space
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
+                e.stopPropagation();
                 this.expandImage(image);
                 return;
             }
@@ -139,9 +144,14 @@ export class ThumbnailView extends GalleryView {
             }
         });
 
-        // Caption overlay (visible on hover/focus)
-        const caption = itemEl.createEl('div', { cls: 'gallery-thumbnail-caption' });
-        caption.textContent = image.displayName || '';
+        // Caption overlay (visible on hover/focus only when persistent captions are disabled)
+        if (!this.showCaptions) {
+            const caption = itemEl.createEl('div', { cls: 'gallery-thumbnail-caption' });
+            caption.textContent = image.displayName || '';
+        }
+
+        // Persistent subtitle caption (always visible when enabled)
+        this.renderCaption(itemEl, image);
 
         // Set initial opacity to 0 for fade-in effect
         imgEl.setCssStyles({ opacity: '0' });

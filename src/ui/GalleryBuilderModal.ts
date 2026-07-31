@@ -1,4 +1,4 @@
-import { App, Modal, Setting, Editor, Notice } from 'obsidian';
+import { App, Modal, Setting, Editor, Notice, TFolder } from 'obsidian';
 import type GalleryPlugin from '../main';
 import { ISourceConfig } from '../models/interfaces';
 import { ImmichClient } from '../services/immich/ImmichClient';
@@ -19,21 +19,35 @@ export class GalleryBuilderModal extends Modal {
     }
 
     onOpen() {
+        this.modalEl.addClass('gallery-builder-modal-container');
         const { contentEl } = this;
         contentEl.empty();
         contentEl.addClass('gallery-builder-modal');
 
-        new Setting(contentEl).setName('Gallery view builder').setHeading();
+        // Header Section
+        const header = contentEl.createDiv('gallery-builder-header');
+        const titleDiv = header.createDiv('gallery-builder-header-title');
+        titleDiv.createSpan({ cls: 'gallery-builder-header-icon', text: '🎨' });
+        titleDiv.createEl('h2', { text: 'Gallery view builder' });
+        header.createEl('p', {
+            cls: 'gallery-builder-header-desc',
+            text: 'Configure sources and view layout to insert interactive galleries into your note.'
+        });
 
-        // View selector
-        new Setting(contentEl)
+        // 1. Layout & View Section
+        const viewSection = contentEl.createDiv('gallery-builder-section');
+        const viewTitle = viewSection.createDiv('gallery-builder-section-title');
+        viewTitle.createSpan({ cls: 'gallery-builder-badge', text: '1' });
+        viewTitle.createEl('h3', { text: 'Layout & view' });
+
+        new Setting(viewSection)
             .setName('View type')
-            .setDesc('Select the layout for your gallery.')
+            .setDesc('Select the rendering layout for your gallery.')
             .addDropdown(dropdown => dropdown
                 .addOptions({
-                    'grid': 'Grid',
-                    'thumbnail': 'Thumbnail',
-                    'carousel': 'Carousel'
+                    'grid': 'Grid (Masonry)',
+                    'thumbnail': 'Thumbnail Grid',
+                    'carousel': 'Carousel (Slideshow)'
                 })
                 .setValue(this.viewType)
                 .onChange(value => {
@@ -42,57 +56,66 @@ export class GalleryBuilderModal extends Modal {
                 })
             );
 
-        // Sources container
-        new Setting(contentEl).setName('Sources').setHeading();
-        const sourcesContainer = contentEl.createDiv('gallery-builder-sources');
+        // 2. Sources Section
+        const sourcesSection = contentEl.createDiv('gallery-builder-section');
+        const sourcesHeader = sourcesSection.createDiv('gallery-builder-section-header');
+
+        const sourcesTitle = sourcesHeader.createDiv('gallery-builder-section-title');
+        sourcesTitle.createSpan({ cls: 'gallery-builder-badge', text: '2' });
+        sourcesTitle.createEl('h3', { text: 'Image sources' });
+
+        // Quick add pills
+        const quickAdd = sourcesHeader.createDiv('gallery-builder-quick-add');
+        const quickOptions: Array<{ type: ISourceConfig['type']; label: string }> = [
+            { type: 'local', label: '+ Local vault' },
+            { type: 'external', label: '+ External URLs' },
+            { type: 'immich-share', label: '+ Immich share' },
+            { type: 'immich', label: '+ Immich auth' }
+        ];
+
+        const sourcesContainer = sourcesSection.createDiv('gallery-builder-sources-list');
+
+        quickOptions.forEach(opt => {
+            const btn = quickAdd.createEl('button', {
+                cls: 'gallery-builder-pill',
+                text: opt.label
+            });
+            btn.addEventListener('click', () => {
+                this.addSource(opt.type, sourcesContainer);
+            });
+        });
 
         this.renderSources(sourcesContainer);
 
-        // Add source Dropdown
-        new Setting(contentEl)
-            .setName('Add source')
-            .setDesc('Add a new source to the gallery.')
-            .addDropdown(dropdown => {
-                dropdown.addOptions({
-                    '': 'Select source type...',
-                    'local': 'Local Vault',
-                    'external': 'External URLs',
-                    'immich-share': 'Immich Share Link',
-                    'immich': 'Immich Authenticated'
-                });
-                dropdown.onChange(async value => {
-                    if (value) {
-                        this.addSource(value as ISourceConfig['type'], sourcesContainer);
-                        dropdown.setValue('');
-                    }
-                });
-            });
+        // 3. Live Preview Section
+        const previewSection = contentEl.createDiv('gallery-builder-section');
+        const previewTitle = previewSection.createDiv('gallery-builder-section-title');
+        previewTitle.createSpan({ cls: 'gallery-builder-badge', text: '3' });
+        previewTitle.createEl('h3', { text: 'Generated codeblock' });
 
-        // Live preview
-        new Setting(contentEl).setName('Live preview').setHeading();
-        this.livePreviewContainer = contentEl.createDiv('gallery-builder-live-preview');
-        this.livePreviewContainer.setCssStyles({
-            marginTop: '20px',
-            marginBottom: '20px',
-            backgroundColor: 'var(--background-secondary)',
-            padding: '10px',
-            borderRadius: '5px',
-            whiteSpace: 'pre-wrap',
-            fontFamily: 'var(--font-monospace)',
-            fontSize: 'var(--font-ui-smaller)',
-            maxHeight: '300px',
-            overflowY: 'auto'
+        const previewBox = previewSection.createDiv('gallery-builder-preview-box');
+        const previewHeader = previewBox.createDiv('gallery-builder-preview-header');
+        previewHeader.createSpan({ cls: 'gallery-builder-preview-lang', text: 'obs-gallery' });
+
+        const copyBtn = previewHeader.createEl('button', { cls: 'gallery-builder-copy-btn', text: 'Copy code' });
+        copyBtn.addEventListener('click', () => {
+            const codeText = this.livePreviewContainer?.innerText || '';
+            if (codeText) {
+                void navigator.clipboard.writeText(codeText);
+                new Notice('Gallery yaml copied to clipboard!');
+            }
         });
 
-        // Insert Button
-        new Setting(contentEl)
-            .addButton(btn => btn
-                .setButtonText('Insert gallery')
-                .setCta()
-                .onClick(() => {
-                    this.insertGallery();
-                })
-            );
+        const pre = previewBox.createEl('pre', { cls: 'gallery-builder-preview-code' });
+        this.livePreviewContainer = pre.createEl('code');
+
+        // Modal Footer Buttons
+        const footer = contentEl.createDiv('gallery-builder-footer');
+        const cancelBtn = footer.createEl('button', { cls: 'gallery-builder-cancel-btn', text: 'Cancel' });
+        cancelBtn.addEventListener('click', () => this.close());
+
+        const insertBtn = footer.createEl('button', { cls: 'gallery-builder-insert-btn mod-cta', text: 'Insert gallery block' });
+        insertBtn.addEventListener('click', () => this.insertGallery());
 
         this.refreshLivePreview();
     }
@@ -101,14 +124,14 @@ export class GalleryBuilderModal extends Modal {
         if (!this.livePreviewContainer) return;
         this.livePreviewContainer.empty();
         if (this.sources.length === 0) {
-            this.livePreviewContainer.setText('Add at least one source to see the preview.');
+            this.livePreviewContainer.setText('# Add at least one source above to generate gallery configuration.');
             return;
         }
         try {
             const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType);
             this.livePreviewContainer.setText(yaml);
         } catch (e) {
-            this.livePreviewContainer.setText(`Cannot generate preview: ${e instanceof Error ? e.message : String(e)}`);
+            this.livePreviewContainer.setText(`# Cannot generate preview: ${e instanceof Error ? e.message : String(e)}`);
         }
     }
 
@@ -121,28 +144,51 @@ export class GalleryBuilderModal extends Modal {
         container.empty();
 
         if (this.sources.length === 0) {
-            container.createEl('p', { text: 'No sources added yet.', cls: 'setting-item-description' });
+            const emptyState = container.createDiv('gallery-builder-empty-state');
+            emptyState.createDiv({ cls: 'gallery-builder-empty-icon', text: '🖼️' });
+            emptyState.createEl('h4', { text: 'No image sources added yet' });
+            emptyState.createEl('p', { text: 'Click one of the buttons above to add local files, external URLs, or immich albums.' });
             return;
         }
 
+        const iconMap: Record<string, string> = {
+            'local': '📁',
+            'external': '🌐',
+            'immich-share': '🔗',
+            'immich': '🔐'
+        };
+
+        const nameMap: Record<string, string> = {
+            'local': 'Local Vault',
+            'external': 'External URLs',
+            'immich-share': 'Immich Share Link',
+            'immich': 'Immich Authenticated'
+        };
+
         this.sources.forEach((source, index) => {
             const sourceCard = container.createDiv('gallery-builder-source-card');
-            // Basic styling for the card
-            sourceCard.setCssStyles({ border: '1px solid var(--background-modifier-border)', padding: '10px', marginBottom: '10px', borderRadius: '5px' });
 
-            const headerRow = sourceCard.createDiv('gallery-builder-source-header');
-            headerRow.setCssStyles({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' });
+            const headerRow = sourceCard.createDiv('gallery-builder-source-card-header');
+            const titleDiv = headerRow.createDiv('gallery-builder-source-title');
+            const icon = iconMap[source.type || 'local'] || '📁';
+            const name = nameMap[source.type || 'local'] || source.type;
 
-            headerRow.createEl('strong', { text: `${index + 1}. ${source.type}` });
+            titleDiv.createSpan({ text: icon });
+            titleDiv.createSpan({ text: `Source #${index + 1}: ${name}` });
 
-            const removeBtn = headerRow.createEl('button', { text: 'Remove' });
+            const removeBtn = headerRow.createEl('button', {
+                cls: 'gallery-builder-remove-icon-btn',
+                title: 'Remove source'
+            });
+            removeBtn.textContent = '✕';
             removeBtn.addEventListener('click', () => {
                 this.sources.splice(index, 1);
                 this.renderSources(container);
                 this.refreshLivePreview();
             });
 
-            this.renderSourceConfig(sourceCard, source, index, container);
+            const bodyDiv = sourceCard.createDiv('gallery-builder-source-card-body');
+            this.renderSourceConfig(bodyDiv, source, index, container);
         });
     }
 
@@ -165,21 +211,42 @@ export class GalleryBuilderModal extends Modal {
 
         this.sources.push(newSource);
         this.renderSources(container);
-                this.refreshLivePreview();
+        this.refreshLivePreview();
     }
 
     private renderSourceConfig(container: HTMLElement, source: Partial<ISourceConfig>, index: number, rootContainer: HTMLElement) {
         if (source.type === 'local') {
+            const folders = this.app.vault.getAllLoadedFiles()
+                .filter((f): f is TFolder => f instanceof TFolder)
+                .sort((a, b) => a.path.localeCompare(b.path));
+
+            const folderOptions: Record<string, string> = {
+                '/': '/ (Vault root)'
+            };
+            folders.forEach(f => {
+                if (f.path && f.path !== '/') {
+                    folderOptions[f.path] = f.path;
+                }
+            });
+
+            if (source.path && !(source.path in folderOptions)) {
+                folderOptions[source.path] = source.path;
+            }
+
+            const currentPath = source.path || '/';
+
             new Setting(container)
                 .setName('Path')
-                .setDesc('Folder path relative to vault root.')
-                .addText(text => text
-                    .setValue(source.path || '')
-                    .onChange(value => {
+                .setDesc('Select vault folder.')
+                .addDropdown(dropdown => {
+                    dropdown.addOptions(folderOptions);
+                    dropdown.setValue(currentPath);
+                    dropdown.onChange(value => {
                         source.path = value;
                         this.refreshLivePreview();
-                    })
-                );
+                    });
+                    dropdown.selectEl.addClass('gallery-builder-wide-select');
+                });
 
             new Setting(container)
                 .setName('Recursive')
@@ -199,23 +266,57 @@ export class GalleryBuilderModal extends Modal {
 
                 if (!source.urls) source.urls = [''];
 
-                source.urls.forEach((url, urlIndex) => {
+                source.urls.forEach((item, urlIndex) => {
+                    const urlVal = typeof item === 'string' ? item : (item?.url || '');
+                    const captionVal = typeof item === 'object' && item !== null ? (item.caption || '') : '';
+
                     new Setting(urlsContainer)
                         .setName(`URL ${urlIndex + 1}`)
                         .addText(text => text
-                            .setValue(url)
+                            .setPlaceholder('https://example.com/image.jpg')
+                            .setValue(urlVal)
                             .onChange(value => {
-                                source.urls![urlIndex] = value;
+                                const currentItem = source.urls![urlIndex];
+                                const currentCaption = typeof currentItem === 'object' && currentItem !== null
+                                    ? currentItem.caption
+                                    : undefined;
+
+                                if (currentCaption && currentCaption.trim()) {
+                                    source.urls![urlIndex] = { url: value, caption: currentCaption };
+                                } else {
+                                    source.urls![urlIndex] = value;
+                                }
+                                this.refreshLivePreview();
+                            })
+                        )
+                        .addText(text => text
+                            .setPlaceholder('Caption (optional)')
+                            .setValue(captionVal)
+                            .onChange(captionValue => {
+                                const currentItem = source.urls![urlIndex];
+                                const currentUrl = typeof currentItem === 'string'
+                                    ? currentItem
+                                    : (currentItem?.url || '');
+
+                                if (captionValue && captionValue.trim()) {
+                                    source.urls![urlIndex] = { url: currentUrl, caption: captionValue.trim() };
+                                } else {
+                                    source.urls![urlIndex] = currentUrl;
+                                }
                                 this.refreshLivePreview();
                             })
                         )
                         .addButton(btn => btn
-                            .setButtonText('Remove')
+                            .setButtonText('✕')
                             .onClick(() => {
                                 source.urls!.splice(urlIndex, 1);
                                 if (source.urls!.length === 0) source.urls = [''];
                                 renderUrls();
                                 this.refreshLivePreview();
+                            })
+                            .then(b => {
+                                b.buttonEl.addClass('gallery-builder-remove-icon-btn');
+                                b.buttonEl.setAttribute('title', 'Remove URL');
                             })
                         );
                 });

@@ -171,6 +171,23 @@ export class ImmichClient {
         return `${this.baseUrl}/api/assets/${assetId}/original`;
     }
 
+    public async getAssetInfo(assetId: string): Promise<ImmichAsset | null> {
+        const url = `${this.baseUrl}/api/assets/${assetId}`;
+        try {
+            const response = await requestUrl({
+                url,
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            if (response.status === 200) {
+                return response.json as ImmichAsset;
+            }
+            return null;
+        } catch {
+            return null;
+        }
+    }
+
         public async getTags(forceRefresh: boolean = false): Promise<ImmichTag[]> {
         const key = this.connection.key;
         const now = Date.now();

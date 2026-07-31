@@ -76,6 +76,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.errorDisplayMode = value as 'full' | 'text' | 'hidden';
                     await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
                 }));
 
         new Setting(containerEl)
@@ -86,6 +87,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.allowRemoteImages = value;
                     await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
                 }));
 
         new Setting(containerEl)
@@ -97,6 +99,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     const n = parseInt(value, 10) || DEFAULT_SETTINGS.remoteLoadTimeoutMs;
                     this.plugin.settings.remoteLoadTimeoutMs = n;
                     await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
                 }));
 
         new Setting(containerEl)
@@ -107,6 +110,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.validateRemoteContentType = value;
                     await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
                 }));
 
         new Setting(containerEl)
@@ -118,6 +122,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     const n = parseInt(value, 10);
                     this.plugin.settings.gracePeriodMs = isNaN(n) ? DEFAULT_SETTINGS.gracePeriodMs : n;
                     await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
                 }));
 
         new Setting(containerEl)
@@ -128,6 +133,37 @@ export class GallerySettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.enableLifecycleLogging = value;
                     await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
+                }));
+
+        // Captions section
+        new Setting(containerEl)
+            .setName('Captions')
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName('Show captions')
+            .setDesc('Display image captions below gallery images. For external URLs, captions can be defined per-image. For local images, the filename is used. For immich sources, the image description is used.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showCaptions ?? DEFAULT_SETTINGS.showCaptions)
+                .onChange(async (value) => {
+                    this.plugin.settings.showCaptions = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
+                }));
+
+        new Setting(containerEl)
+            .setName('Caption max lines')
+            .setDesc('Maximum number of lines to display before truncating with ellipsis.')
+            .addDropdown(dropdown => dropdown
+                .addOption('1', '1 Line')
+                .addOption('2', '2 Lines')
+                .addOption('3', '3 Lines')
+                .setValue(String(this.plugin.settings.captionMaxLines ?? DEFAULT_SETTINGS.captionMaxLines))
+                .onChange(async (value) => {
+                    this.plugin.settings.captionMaxLines = parseInt(value, 10);
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
                 }));
     }
 

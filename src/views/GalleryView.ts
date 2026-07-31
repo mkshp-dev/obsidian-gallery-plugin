@@ -15,7 +15,9 @@ export abstract class GalleryView implements IGalleryView {
     // Runtime options (common)
     public remoteLoadTimeoutMs: number = 10000;
     public allowRemoteImages: boolean = false;
-    
+    public showCaptions: boolean = true;
+    public captionMaxLines: number = 1;
+
     protected lastFocusedElement: HTMLElement | null = null;
     protected activeModal: HTMLElement | null = null;
     protected slideshowInterval: number | null = null;
@@ -137,9 +139,28 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Apply runtime options to the view. Subclasses may override to react immediately.
      */
-    setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean } = {}): void {
+    setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number } = {}): void {
         if (typeof options.remoteLoadTimeoutMs === 'number') this.remoteLoadTimeoutMs = options.remoteLoadTimeoutMs;
         if (typeof options.allowRemoteImages === 'boolean') this.allowRemoteImages = options.allowRemoteImages;
+        if (typeof options.showCaptions === 'boolean') this.showCaptions = options.showCaptions;
+        if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
+    }
+
+    /**
+     * Render caption element for image if showCaptions is true
+     */
+    protected renderCaption(parent: HTMLElement, image: IImageSource): HTMLElement | null {
+        if (!this.showCaptions) return null;
+
+        const captionText = image.caption ?? image.displayName;
+        if (!captionText) return null;
+
+        const captionEl = this.createElement(parent, 'div', {
+            cls: 'gallery-caption',
+            text: captionText
+        });
+        captionEl.style.setProperty('--gallery-caption-max-lines', String(this.captionMaxLines));
+        return captionEl;
     }
 
     /**
@@ -165,11 +186,11 @@ export abstract class GalleryView implements IGalleryView {
         this._observers.forEach(observer => observer.disconnect());
         this._observers = [];
 
-    // Clear container
-    this.emptyElement(this.container);
-    this.safeRemoveClass(this.container, 'gallery-view');
-    this.safeRemoveClass(this.container, `gallery-${this._type}`);
-    this.container.removeAttribute('data-view-type');
+        // Clear container
+        this.emptyElement(this.container);
+        this.safeRemoveClass(this.container, 'gallery-view');
+        this.safeRemoveClass(this.container, `gallery-${this._type}`);
+        this.container.removeAttribute('data-view-type');
 
         // Clear references
         this._images = [];
@@ -208,8 +229,8 @@ export abstract class GalleryView implements IGalleryView {
         }
 
         // Trigger error event
-        this.triggerImageEvent('image:error', { 
-            source: image, 
+        this.triggerImageEvent('image:error', {
+            source: image,
             error: {
                 type: 'load',
                 source: image,
@@ -225,12 +246,12 @@ export abstract class GalleryView implements IGalleryView {
      */
     protected getErrorReason(error: Error): 'timeout' | 'not_found' | 'invalid_format' | 'network_error' | 'too_large' {
         const message = error.message.toLowerCase();
-        
+
         if (message.includes('timeout')) return 'timeout';
         if (message.includes('not found') || message.includes('404')) return 'not_found';
         if (message.includes('format') || message.includes('invalid')) return 'invalid_format';
         if (message.includes('too large') || message.includes('size')) return 'too_large';
-        
+
         return 'network_error';
     }
 
@@ -286,7 +307,7 @@ export abstract class GalleryView implements IGalleryView {
 
         // Add new state class
         this.safeAddClass(element, `image-${state}`);
-        
+
         switch (state) {
             case 'loading':
                 this.showLoadingState(element);
@@ -354,12 +375,12 @@ export abstract class GalleryView implements IGalleryView {
     protected retryImageLoad(image: IImageSource): void {
         image.reset();
         image.startLoading();
-        
+
         // Find element and update to loading state
         const element = this.findImageElement(image.path);
         if (element) {
             this.updateImageElement(element, image, 'loading');
-            
+
             // Trigger actual reload (implementation depends on view type)
             this.reloadImage(element, image);
         }
@@ -392,7 +413,7 @@ export abstract class GalleryView implements IGalleryView {
             rootMargin: '50px', // Start loading 50px before image enters viewport
             threshold: 0.1
         });
-        
+
         this._observers.push(observer);
         return observer;
     }
@@ -418,12 +439,12 @@ export abstract class GalleryView implements IGalleryView {
         const units = ['B', 'KB', 'MB', 'GB'];
         let size = bytes;
         let unitIndex = 0;
-        
+
         while (size >= 1024 && unitIndex < units.length - 1) {
             size /= 1024;
             unitIndex++;
         }
-        
+
         return `${size.toFixed(1)} ${units[unitIndex]}`;
     }
 
@@ -462,6 +483,8 @@ export abstract class GalleryView implements IGalleryView {
         // Close logic
         const closeOnEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
                 this.closeModal(modal);
             }
         };
@@ -510,54 +533,60 @@ export abstract class GalleryView implements IGalleryView {
         // Play/Pause Slideshow Button
         const playBtn = this.createElement(toolbar, 'button', {
             cls: 'gallery-modal-tool-btn play-btn',
-            attr: { 'aria-label': 'Play slideshow' }
+            attr: { 'aria-label': 'Play slideshow', 'title': 'Play slideshow' }
         });
         playBtn.textContent = '▶'; // play symbol
 
         // Zoom Buttons
         const zoomOutBtn = this.createElement(toolbar, 'button', {
             cls: 'gallery-modal-tool-btn zoom-out-btn',
-            attr: { 'aria-label': 'Zoom out' }
+            attr: { 'aria-label': 'Zoom out', 'title': 'Zoom out' }
         });
         zoomOutBtn.textContent = '➖';
 
         const zoomInBtn = this.createElement(toolbar, 'button', {
             cls: 'gallery-modal-tool-btn zoom-in-btn',
-            attr: { 'aria-label': 'Zoom in' }
+            attr: { 'aria-label': 'Zoom in', 'title': 'Zoom in' }
         });
         zoomInBtn.textContent = '➕';
 
         const zoomResetBtn = this.createElement(toolbar, 'button', {
             cls: 'gallery-modal-tool-btn zoom-reset-btn',
-            attr: { 'aria-label': 'Reset zoom' }
+            attr: { 'aria-label': 'Reset zoom', 'title': 'Reset zoom' }
         });
         zoomResetBtn.textContent = '🔄';
 
         // Info Panel Button
         const infoBtn = this.createElement(toolbar, 'button', {
             cls: 'gallery-modal-tool-btn info-btn',
-            attr: { 'aria-label': 'Toggle info' }
+            attr: { 'aria-label': 'Toggle info', 'title': 'Toggle info' }
         });
         infoBtn.textContent = 'ℹ️';
 
         // Download/Open original Button
         const downloadBtn = this.createElement(toolbar, 'button', {
             cls: 'gallery-modal-tool-btn download-btn',
-            attr: { 'aria-label': 'Open original image' }
+            attr: { 'aria-label': 'Open original image', 'title': 'Open original image' }
         });
         downloadBtn.textContent = '🔗';
 
         // Close Button
         const closeBtn = this.createElement(toolbar, 'button', {
             cls: 'gallery-modal-close-btn',
-            attr: { 'aria-label': 'Close image dialog', 'role': 'button' }
+            attr: { 'aria-label': 'Close image dialog', 'title': 'Close', 'role': 'button' }
         });
         closeBtn.textContent = '×';
-        closeBtn.addEventListener('click', () => this.closeModal(modal));
+        closeBtn.addEventListener('click', (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closeModal(modal);
+        });
 
         // Click to close modal when clicking outside content
         modal.addEventListener('click', (e: MouseEvent) => {
             if (e.target === modal) {
+                e.preventDefault();
+                e.stopPropagation();
                 this.closeModal(modal);
             }
         });
@@ -574,6 +603,7 @@ export abstract class GalleryView implements IGalleryView {
             text: '\u2039'
         });
         prevBtn.setAttribute('aria-label', 'Previous image');
+        prevBtn.setAttribute('title', 'Previous image');
         prevBtn.addEventListener('click', () => navigate(-1));
 
         const nextBtn = this.createElement(content, 'button', {
@@ -581,6 +611,7 @@ export abstract class GalleryView implements IGalleryView {
             text: '\u203A'
         });
         nextBtn.setAttribute('aria-label', 'Next image');
+        nextBtn.setAttribute('title', 'Next image');
         nextBtn.addEventListener('click', () => navigate(1));
 
         // Main Viewer Workspace (holds image and info side-by-side or stacked)
@@ -594,11 +625,11 @@ export abstract class GalleryView implements IGalleryView {
 
         // Info / Metadata drawer
         const infoPanel = this.createElement(viewerArea, 'div', { cls: 'gallery-modal-info-panel' });
-        
+
         // Populate metadata function
         const updateInfoPanel = (srcImage: IImageSource) => {
             this.emptyElement(infoPanel);
-            
+
             const title = infoPanel.createEl('h3', { text: srcImage.displayName || 'Gallery Image' });
             title.className = 'info-title';
 
@@ -612,6 +643,10 @@ export abstract class GalleryView implements IGalleryView {
 
             addRow('Path', srcImage.path || 'Unknown');
             addRow('Type', srcImage.type || 'Unknown');
+
+            if (srcImage.caption) {
+                addRow('Caption', srcImage.caption);
+            }
 
             if (srcImage.dimensions) {
                 addRow('Dimensions', `${srcImage.dimensions.width} × ${srcImage.dimensions.height} px`);
@@ -771,7 +806,10 @@ export abstract class GalleryView implements IGalleryView {
             this.slideshowPlaying = !this.slideshowPlaying;
             playBtn.classList.toggle('playing', this.slideshowPlaying);
             playBtn.textContent = this.slideshowPlaying ? '⏸' : '▶';
-            
+            const playTitle = this.slideshowPlaying ? 'Pause slideshow' : 'Play slideshow';
+            playBtn.setAttribute('title', playTitle);
+            playBtn.setAttribute('aria-label', playTitle);
+
             if (this.slideshowPlaying) {
                 this.slideshowInterval = window.setInterval(() => {
                     navigate(1, true);
@@ -824,21 +862,20 @@ export abstract class GalleryView implements IGalleryView {
     protected closeModal(modal: HTMLElement): void {
         modal.classList.remove('gallery-modal-open');
         modal.classList.add('gallery-modal-closing');
-        
+        modal.setCssStyles({ display: 'none' });
+
         try {
             const cleanup = (modal as unknown as { __cleanup?: () => void }).__cleanup;
             if (cleanup) cleanup();
         } catch (error) { Logger.debug('Ignored error:', error); }
 
-        window.setTimeout(() => {
-            modal.remove();
-            if (this.activeModal === modal) {
-                this.activeModal = null;
-            }
-            if (this.lastFocusedElement) {
-                try { this.lastFocusedElement.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
-                this.lastFocusedElement = null;
-            }
-        }, 200);
+        modal.remove();
+        if (this.activeModal === modal) {
+            this.activeModal = null;
+        }
+        if (this.lastFocusedElement) {
+            try { this.lastFocusedElement.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
+            this.lastFocusedElement = null;
+        }
     }
 }

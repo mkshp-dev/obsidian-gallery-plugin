@@ -22,17 +22,26 @@ export class GalleryYamlGenerator {
                         yaml += `    recursive: ${source.recursive}\n`;
                     }
                     break;
-                case 'external':
-                    if (!source.urls || source.urls.length === 0 || source.urls.every(u => !u.trim())) {
+                case 'external': {
+                    const validUrls = source.urls ? source.urls.filter(u => typeof u === 'string' ? u.trim() : (u && typeof u.url === 'string' && u.url.trim())) : [];
+                    if (!source.urls || source.urls.length === 0 || validUrls.length === 0) {
                         throw new Error('External source requires at least one URL.');
                     }
                     yaml += `    urls:\n`;
-                    for (const url of source.urls) {
-                        if (url.trim()) {
-                            yaml += `      - ${url.trim()}\n`;
+                    for (const item of source.urls) {
+                        if (typeof item === 'string') {
+                            if (item.trim()) {
+                                yaml += `      - ${item.trim()}\n`;
+                            }
+                        } else if (typeof item === 'object' && item !== null && item.url && item.url.trim()) {
+                            yaml += `      - url: ${item.url.trim()}\n`;
+                            if (item.caption && item.caption.trim()) {
+                                yaml += `        caption: "${item.caption.trim().replace(/"/g, '\\"')}"\n`;
+                            }
                         }
                     }
                     break;
+                }
                 case 'immich-share':
                     if (!source.url) throw new Error('Immich share source requires a URL.');
                     yaml += `    url: ${source.url.trim()}\n`;

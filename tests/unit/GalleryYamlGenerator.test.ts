@@ -32,6 +32,25 @@ describe('GalleryYamlGenerator', () => {
         expect(result).toContain('type: carousel');
     });
 
+    it('should generate valid yaml for external sources with custom captions', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            {
+                type: 'external',
+                urls: [
+                    { url: 'https://example.com/1.jpg', caption: 'Custom Caption' },
+                    'https://example.com/2.jpg'
+                ]
+            }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
+
+        expect(result).toContain('- type: external');
+        expect(result).toContain('- url: https://example.com/1.jpg');
+        expect(result).toContain('caption: "Custom Caption"');
+        expect(result).toContain('- https://example.com/2.jpg');
+    });
+
     it('should generate valid yaml for an immich-share source with password', () => {
         const sources: Partial<ISourceConfig>[] = [
             { type: 'immich-share', url: 'https://immich.example.com/share/abc', password: 'secretpassword' }

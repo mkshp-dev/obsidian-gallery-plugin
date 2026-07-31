@@ -3,6 +3,34 @@ import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySou
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
+import { ImmichAsset } from '../models/immich/ImmichTypes';
+
+export function extractImmichCaption(asset: ImmichAsset | Record<string, unknown>): string | undefined {
+    if (!asset || typeof asset !== 'object') return undefined;
+
+    // 1. Direct description property on asset (edited in Immich UI)
+    if (typeof asset.description === 'string' && asset.description.trim()) {
+        return asset.description.trim();
+    }
+    // 2. Direct caption property on asset
+    if (typeof asset.caption === 'string' && asset.caption.trim()) {
+        return asset.caption.trim();
+    }
+    // 3. EXIF info description, caption, or title
+    if (asset.exifInfo && typeof asset.exifInfo === 'object' && asset.exifInfo !== null) {
+        const exif = asset.exifInfo as Record<string, unknown>;
+        if (typeof exif.description === 'string' && exif.description.trim()) {
+            return exif.description.trim();
+        }
+        if (typeof exif.caption === 'string' && exif.caption.trim()) {
+            return exif.caption.trim();
+        }
+        if (typeof exif.title === 'string' && exif.title.trim()) {
+            return exif.title.trim();
+        }
+    }
+    return undefined;
+}
 
 export class ImmichSourceResolver implements GallerySourceResolver<IImmichSourceConfig> {
     readonly type = 'immich';
@@ -116,11 +144,23 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                 try {
                     const blobUrl = await client.getAssetBlobUrl(asset.id, representation);
                     const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
+                    
+                    let description = extractImmichCaption(asset);
+                    if (!description && asset.id) {
+                        try {
+                            const detailedAsset = await client.getAssetInfo(asset.id);
+                            if (detailedAsset) {
+                                description = extractImmichCaption(detailedAsset);
+                            }
+                        } catch {
+                            // ignore fallback error
+                        }
+                    }
 
                     // The path is logical, resourceUrl is the blob Object URL
                     const logicalPath = `immich://${connection.key}/search/asset/${asset.id}`;
 
-                    return new ImageSource(logicalPath, 'immich', originalFileName, blobUrl);
+                    return new ImageSource(logicalPath, 'immich', originalFileName, blobUrl, description);
                 } catch (e) {
                     Logger.warn(`Failed to load asset ${asset.id} for Immich source: ${e instanceof Error ? e.message : String(e)}`);
                     // We don't necessarily want to fail the whole album if one asset fails

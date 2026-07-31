@@ -207,8 +207,8 @@ export class GalleryInstance implements IGalleryInstance {
     /**
      * Helper to create an element into a parent supporting Obsidian helpers or plain DOM
      */
-    private createElement(parent: HTMLElement, tag: string = 'div', options?: { cls?: string; text?: string; attr?: Record<string, unknown> }): HTMLElement {
-        return parent.createEl(tag, options || {});
+    private createElement(parent: HTMLElement, tag: string = 'div', options?: { cls?: string; text?: string }): HTMLElement {
+        return parent.createEl(tag as keyof HTMLElementTagNameMap, options);
     }
 
     private addClass(el: HTMLElement, cls: string) {

@@ -100,18 +100,20 @@ export abstract class GalleryView implements IGalleryView {
 
     protected createElement(parent: HTMLElement, tag: string, props?: CreateElementOptions): HTMLElement {
         const obsParent = parent as unknown as ObsidianDOMExtensions;
-        if (obsParent.createEl && typeof obsParent.createEl === 'function') {
+        if (obsParent?.createEl && typeof obsParent.createEl === 'function') {
             return obsParent.createEl(tag, props || {});
         }
-        const doc = parent.ownerDocument || activeDocument;
-        const makeEl = 'create' + 'Element';
-        const el = (doc as unknown as Record<string, (t: string) => HTMLElement>)[makeEl](tag);
+        // Fallback for test environments where createEl is not available
+        const el = parent.ownerDocument?.createElement(tag) || activeDocument.createElement(tag);
         if (props) {
             if (props.cls) el.className = props.cls;
             if (props.text) el.textContent = props.text;
             if (props.attr && typeof props.attr === 'object') {
-                const attrObj = props.attr;
-                Object.keys(attrObj).forEach(k => el.setAttribute(k, String(attrObj[k])));
+                Object.entries(props.attr).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined) {
+                        el.setAttribute(key, String(value));
+                    }
+                });
             }
         }
         parent.appendChild(el);
@@ -448,14 +450,28 @@ export abstract class GalleryView implements IGalleryView {
 
         // Create modal overlay using ownerDocument for compatibility with different rendering contexts
         const doc = this.container.ownerDocument || activeDocument;
-        const modal = doc.body.createDiv({
-            cls: 'gallery-modal',
-            attr: {
-                'role': 'dialog',
-                'aria-modal': 'true',
-                'aria-label': image.displayName || 'Image dialog'
-            }
-        });
+        const body = doc.body;
+        const obsBody = body as unknown as { createDiv?: (options?: Record<string, unknown>) => HTMLElement };
+        
+        let modal: HTMLElement;
+        if (obsBody?.createDiv && typeof obsBody.createDiv === 'function') {
+          modal = obsBody.createDiv({
+              cls: 'gallery-modal',
+              attr: {
+                  'role': 'dialog',
+                  'aria-modal': 'true',
+                  'aria-label': image.displayName || 'Image dialog'
+              }
+          });
+        } else {
+          // Fallback for test environments
+          modal = doc.createElement('div');
+          modal.className = 'gallery-modal';
+          modal.setAttribute('role', 'dialog');
+          modal.setAttribute('aria-modal', 'true');
+          modal.setAttribute('aria-label', image.displayName || 'Image dialog');
+          body.appendChild(modal);
+        }
 
         this.activeModal = modal;
         this.slideshowPlaying = false;
@@ -621,15 +637,15 @@ export abstract class GalleryView implements IGalleryView {
         const updateInfoPanel = (srcImage: IImageSource) => {
             this.emptyElement(infoPanel);
 
-            const title = infoPanel.createEl('h3', { text: srcImage.displayName || 'Gallery Image' });
+            const title = this.createElement(infoPanel, 'h3', { text: srcImage.displayName || 'Gallery Image' });
             title.className = 'info-title';
 
-            const grid = infoPanel.createEl('div', { cls: 'info-grid' });
+            const grid = this.createElement(infoPanel, 'div', { cls: 'info-grid' });
 
             const addRow = (label: string, val: string) => {
-                const row = grid.createEl('div', { cls: 'info-row' });
-                row.createEl('span', { cls: 'info-label', text: label });
-                row.createEl('span', { cls: 'info-value', text: val });
+                const row = this.createElement(grid, 'div', { cls: 'info-row' });
+                this.createElement(row, 'span', { cls: 'info-label', text: label });
+                this.createElement(row, 'span', { cls: 'info-value', text: val });
             };
 
             addRow('Path', srcImage.path || 'Unknown');
@@ -728,11 +744,20 @@ export abstract class GalleryView implements IGalleryView {
         downloadBtn.addEventListener('click', () => {
             const displayUrl = currentImage.getDisplayUrl();
             if (displayUrl) {
-                const a = doc.body.createEl('a', {
-                    href: displayUrl,
-                    attr: { target: '_blank', download: currentImage.displayName || 'image' }
-                });
-                a.click();
+                const obsBody = doc.body as unknown as { createEl?: (tag: string, options?: Record<string, unknown>) => HTMLElement };
+                let a: HTMLElement;
+                if (obsBody?.createEl && typeof obsBody.createEl === 'function') {
+                  a = obsBody.createEl('a', {
+                      href: displayUrl,
+                      attr: { target: '_blank', download: currentImage.displayName || 'image' }
+                  });
+                } else {
+                  a = doc.createElement('a');
+                  a.setAttribute('href', displayUrl);
+                  a.setAttribute('target', '_blank');
+                  a.setAttribute('download', currentImage.displayName || 'image');
+                }
+                (a as HTMLAnchorElement).click();
                 a.remove();
             }
         });

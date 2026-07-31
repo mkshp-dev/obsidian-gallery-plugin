@@ -93,12 +93,12 @@ export class LoadingSpinner {
     const spinnerIcon = this.createDiv(this.spinnerElement!, 'gallery-spinner-icon');
     const size = this.getSizePixels().toString();
 
-    const svg = spinnerIcon.createSvg('svg', {
+    const svg = this.createSvg(spinnerIcon, 'svg', {
       cls: 'gallery-spinner-rotating',
       attr: { width: size, height: size, viewBox: '0 0 24 24' }
     });
 
-    svg.createSvg('circle', {
+    this.createSvg(svg, 'circle', {
       attr: {
         cx: '12',
         cy: '12',
@@ -229,7 +229,42 @@ export class LoadingSpinner {
    */
   private createDiv(parent: HTMLElement, arg?: string | { cls?: string }): HTMLElement {
     const target = parent || activeDocument.body;
-    return target.createDiv(typeof arg === 'string' ? { cls: arg } : (arg || {}));
+    const obsTarget = target as unknown as { createDiv?: (options?: Record<string, unknown>) => HTMLElement };
+    const options = typeof arg === 'string' ? { cls: arg } : (arg || {});
+    
+    if (obsTarget?.createDiv && typeof obsTarget.createDiv === 'function') {
+      return obsTarget.createDiv(options);
+    }
+    
+    // Fallback for test environments where createDiv is not available
+    const ownerDoc = target.ownerDocument ?? activeDocument;
+    const div = ownerDoc.createElement('div');
+    if (options.cls) div.className = options.cls;
+    target.appendChild(div);
+    return div;
+  }
+
+  /**
+   * Create an SVG element. Supports Obsidian helper API when present.
+   */
+  private createSvg(parent: Element, tag: string, options?: { cls?: string; attr?: Record<string, string | number> }): SVGElement {
+    const obsParent = parent as unknown as { createSvg?: (tag: string, options?: Record<string, unknown>) => SVGElement };
+    
+    if (obsParent?.createSvg && typeof obsParent.createSvg === 'function') {
+      return obsParent.createSvg(tag, options);
+    }
+    
+    // Fallback for test environments where createSvg is not available
+    const ownerDoc = parent.ownerDocument ?? activeDocument;
+    const svgElement = ownerDoc.createElementNS('http://www.w3.org/2000/svg', tag);
+    if (options?.cls) svgElement.setAttribute('class', options.cls);
+    if (options?.attr) {
+      Object.entries(options.attr).forEach(([key, value]) => {
+        svgElement.setAttribute(key, String(value));
+      });
+    }
+    parent.appendChild(svgElement);
+    return svgElement;
   }
 
   private addClass(el: HTMLElement, cls: string) {

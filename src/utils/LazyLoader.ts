@@ -408,7 +408,7 @@ export class LazyLoader {
     images.forEach(({ src, alt }, index) => {
       const img = container.createEl('img', {
         attr: { alt: alt || `Gallery image ${index + 1}` }
-      }) as HTMLImageElement;
+      });
       img.dataset.src = src;
       
       loader.observe(img, src);

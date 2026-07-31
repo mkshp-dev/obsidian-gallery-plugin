@@ -1,5 +1,5 @@
 import { Logger } from "./Logger";
-import { IConfigError, ILoadError, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
+import { IConfigError, ILoadError, IImageSource, CreateElementOptions } from '../models/interfaces';
 
 interface WindowWithProcess extends Window {
     process?: {
@@ -24,8 +24,9 @@ export class ErrorHandler {
      */
     private static createElement(parent: HTMLElement, tag: string | { tag?: string } = 'div', options?: string | CreateElementOptions): HTMLElement {
         const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
-        const opts = typeof options === 'string' ? { cls: options } : (options || {});
-        return parent.createEl(tagName, opts);
+        const opts: CreateElementOptions = typeof options === 'string' ? { cls: options } : (options || {});
+        // Safe to cast: undefined values in attr are safe with createEl
+        return parent.createEl(tagName as keyof HTMLElementTagNameMap, opts as Parameters<typeof parent.createEl>[1]);
     }
 
     /**

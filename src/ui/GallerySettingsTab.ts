@@ -200,7 +200,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                 padding: '4px 0'
             });
 
-            const titleSpan = summary.createEl('span');
+            const titleSpan = summary.createSpan();
             const getTitle = (key: string) => key ? `Immich: ${key}` : 'New Immich connection';
             titleSpan.setText(getTitle(conn.key));
             titleSpan.setCssStyles({

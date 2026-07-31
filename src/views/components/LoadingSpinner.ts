@@ -90,28 +90,27 @@ export class LoadingSpinner {
    * Render spinning circle loader
    */
   private renderSpinner(): void {
-  const spinnerIcon = this.createDiv(this.spinnerElement!, 'gallery-spinner-icon');
-    
-    // Create SVG spinner using standard DOM API
-    const svg = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', this.getSizePixels().toString());
-    svg.setAttribute('height', this.getSizePixels().toString());
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('class', 'gallery-spinner-rotating');
+    const spinnerIcon = this.createDiv(this.spinnerElement!, 'gallery-spinner-icon');
+    const size = this.getSizePixels().toString();
 
-    const circle = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', '12');
-    circle.setAttribute('cy', '12');
-    circle.setAttribute('r', '10');
-    circle.setAttribute('fill', 'none');
-    circle.setAttribute('stroke', 'currentColor');
-    circle.setAttribute('stroke-width', '2');
-    circle.setAttribute('stroke-linecap', 'round');
-    circle.setAttribute('stroke-dasharray', '31.416');
-    circle.setAttribute('stroke-dashoffset', '31.416');
+    const svg = spinnerIcon.createSvg('svg', {
+      cls: 'gallery-spinner-rotating',
+      attr: { width: size, height: size, viewBox: '0 0 24 24' }
+    });
 
-    svg.appendChild(circle);
-    spinnerIcon.appendChild(svg);
+    svg.createSvg('circle', {
+      attr: {
+        cx: '12',
+        cy: '12',
+        r: '10',
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': '2',
+        'stroke-linecap': 'round',
+        'stroke-dasharray': '31.416',
+        'stroke-dashoffset': '31.416'
+      }
+    });
   }
 
   /**
@@ -229,23 +228,8 @@ export class LoadingSpinner {
    * Create a div element appended to parent. Supports Obsidian helper API when present.
    */
   private createDiv(parent: HTMLElement, arg?: string | { cls?: string }): HTMLElement {
-    if (!parent) {
-      return activeDocument.createElement('div');
-    }
-
-    // If parent provides createDiv, use it
-    const obsParent = parent as unknown as ObsidianDOMExtensions;
-    if (obsParent.createDiv && typeof obsParent.createDiv === 'function') {
-      if (typeof arg === 'string') return obsParent.createDiv(arg);
-      return obsParent.createDiv(arg || {});
-    }
-
-    // Fallback to standard DOM
-    const el = activeDocument.createElement('div');
-    if (typeof arg === 'string') el.className = arg;
-    else if (arg && arg.cls) el.className = arg.cls;
-    parent.appendChild(el);
-    return el;
+    const target = parent || activeDocument.body;
+    return target.createDiv(typeof arg === 'string' ? { cls: arg } : (arg || {}));
   }
 
   private addClass(el: HTMLElement, cls: string) {

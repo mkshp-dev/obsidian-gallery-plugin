@@ -212,7 +212,7 @@ export default class GalleryPlugin extends Plugin {
     ): Promise<void> {
         if (!this.galleryProcessor) {
             if (this.settings.errorDisplayMode !== 'hidden') {
-                el.createEl('div', {
+                el.createDiv({
                     text: '⚠️ gallery: processor not initialized',
                     cls: 'gallery-error-compact'
                 });
@@ -231,7 +231,7 @@ export default class GalleryPlugin extends Plugin {
         } catch (error) {
             console.error('Unexpected error in gallery processing:', error);
             if (this.settings.errorDisplayMode !== 'hidden') {
-                el.createEl('div', {
+                el.createDiv({
                     text: `⚠️ gallery: ${error instanceof Error ? error.message : String(error)}`,
                     cls: 'gallery-error-compact'
                 });

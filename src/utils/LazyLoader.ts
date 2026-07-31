@@ -335,7 +335,7 @@ export class LazyLoader {
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
 
     try {
-      const canvas = activeDocument.createElement('canvas');
+      const canvas = activeDocument.body.createEl('canvas');
       canvas.width = width;
       canvas.height = height;
 
@@ -406,11 +406,11 @@ export class LazyLoader {
     const loader = new LazyLoader(options);
     
     images.forEach(({ src, alt }, index) => {
-      const img = activeDocument.createElement('img');
-      img.alt = alt || `Gallery image ${index + 1}`;
+      const img = container.createEl('img', {
+        attr: { alt: alt || `Gallery image ${index + 1}` }
+      }) as HTMLImageElement;
       img.dataset.src = src;
       
-      container.appendChild(img);
       loader.observe(img, src);
     });
     

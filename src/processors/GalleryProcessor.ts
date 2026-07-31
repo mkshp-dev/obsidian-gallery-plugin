@@ -630,15 +630,7 @@ export class GalleryProcessor {
      * This is the sole UI used for all error and empty states.
      */
     private static renderCompactError(container: HTMLElement, message: string): void {
-        const obsContainer = container as unknown as ObsidianDOMExtensions;
-        if (obsContainer.createEl && typeof obsContainer.createEl === 'function') {
-            obsContainer.createEl('div', { cls: 'gallery-error-compact', text: `⚠️ gallery: ${message}` });
-        } else {
-            const el = (container.ownerDocument || activeDocument).createElement('div');
-            el.className = 'gallery-error-compact';
-            el.textContent = `⚠️ gallery: ${message}`;
-            container.appendChild(el);
-        }
+        container.createDiv({ cls: 'gallery-error-compact', text: `⚠️ gallery: ${message}` });
     }
 
     /**

@@ -208,30 +208,7 @@ export class GalleryInstance implements IGalleryInstance {
      * Helper to create an element into a parent supporting Obsidian helpers or plain DOM
      */
     private createElement(parent: HTMLElement, tag: string = 'div', options?: { cls?: string; text?: string; attr?: Record<string, unknown> }): HTMLElement {
-        interface ObsidianDOMExtensions {
-            createEl?: (tag: string, o?: unknown) => HTMLElement;
-            addClass?: (cls: string) => void;
-            removeClass?: (cls: string) => void;
-            empty?: () => void;
-        }
-
-        const obsParent = parent as unknown as ObsidianDOMExtensions;
-        if (obsParent.createEl && typeof obsParent.createEl === 'function') {
-            return obsParent.createEl(tag, options || {});
-        }
-
-        const el = activeDocument.createElement(tag);
-        if (options) {
-            if (options.cls) el.className = options.cls;
-            if (options.text) el.textContent = options.text;
-            if (options.attr) {
-                for (const k of Object.keys(options.attr)) {
-                    try { el.setAttribute(k, String(options.attr[k])); } catch (error) { Logger.debug('Ignored error:', error); }
-                }
-            }
-        }
-        parent.appendChild(el);
-        return el;
+        return parent.createEl(tag, options || {});
     }
 
     private addClass(el: HTMLElement, cls: string) {

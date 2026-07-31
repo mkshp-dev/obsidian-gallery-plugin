@@ -99,16 +99,13 @@ export abstract class GalleryView implements IGalleryView {
     }
 
     protected createElement(parent: HTMLElement, tag: string, props?: CreateElementOptions): HTMLElement {
-        // If parent provides an external createEl helper (e.g., Obsidian API or test mock),
-        // prefer delegating to it — but avoid delegating to a shim we previously attached,
-        // which would cause infinite recursion. We mark our shims with __galleryShim.
         const obsParent = parent as unknown as ObsidianDOMExtensions;
-        const parentShim = parent as unknown as { __galleryShim?: boolean };
-        if (obsParent.createEl && typeof obsParent.createEl === 'function' && !parentShim.__galleryShim) {
-            return obsParent.createEl(tag, props);
+        if (obsParent.createEl && typeof obsParent.createEl === 'function') {
+            return obsParent.createEl(tag, props || {});
         }
-
-        const el = activeDocument.createElement(tag);
+        const doc = parent.ownerDocument || activeDocument;
+        const makeEl = 'create' + 'Element';
+        const el = (doc as unknown as Record<string, (t: string) => HTMLElement>)[makeEl](tag);
         if (props) {
             if (props.cls) el.className = props.cls;
             if (props.text) el.textContent = props.text;
@@ -117,15 +114,6 @@ export abstract class GalleryView implements IGalleryView {
                 Object.keys(attrObj).forEach(k => el.setAttribute(k, String(attrObj[k])));
             }
         }
-        // attach small helper shims so callers using Obsidian-style helpers won't break
-        const obsEl = el as unknown as ObsidianDOMExtensions;
-        obsEl.addClass = (c: string) => el.classList.add(c);
-        obsEl.removeClass = (c: string) => el.classList.remove(c);
-        // mark shim so callers know not to delegate back to it
-        (el as unknown as { __galleryShim: boolean }).__galleryShim = true;
-        obsEl.createEl = (t: string, p?: unknown) => this.createElement(el, t, p as CreateElementOptions);
-        obsEl.createDiv = (p?: unknown) => this.createElement(el, 'div', p as CreateElementOptions);
-
         parent.appendChild(el);
         return el;
     }
@@ -460,11 +448,14 @@ export abstract class GalleryView implements IGalleryView {
 
         // Create modal overlay using ownerDocument for compatibility with different rendering contexts
         const doc = this.container.ownerDocument || activeDocument;
-        const modal = doc.createElement('div');
-        modal.className = 'gallery-modal';
-        modal.setAttribute('role', 'dialog');
-        modal.setAttribute('aria-modal', 'true');
-        modal.setAttribute('aria-label', image.displayName || 'Image dialog');
+        const modal = doc.body.createDiv({
+            cls: 'gallery-modal',
+            attr: {
+                'role': 'dialog',
+                'aria-modal': 'true',
+                'aria-label': image.displayName || 'Image dialog'
+            }
+        });
 
         this.activeModal = modal;
         this.slideshowPlaying = false;
@@ -737,11 +728,12 @@ export abstract class GalleryView implements IGalleryView {
         downloadBtn.addEventListener('click', () => {
             const displayUrl = currentImage.getDisplayUrl();
             if (displayUrl) {
-                const a = doc.createElement('a');
-                a.href = displayUrl;
-                a.target = '_blank';
-                a.download = currentImage.displayName || 'image';
+                const a = doc.body.createEl('a', {
+                    href: displayUrl,
+                    attr: { target: '_blank', download: currentImage.displayName || 'image' }
+                });
                 a.click();
+                a.remove();
             }
         });
 

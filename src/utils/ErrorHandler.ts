@@ -23,36 +23,9 @@ export class ErrorHandler {
      * Create an element into parent, supporting Obsidian helpers or plain DOM
      */
     private static createElement(parent: HTMLElement, tag: string | { tag?: string } = 'div', options?: string | CreateElementOptions): HTMLElement {
-        const obsParent = parent as unknown as ObsidianDOMExtensions;
-
-        // Support Obsidian's createEl/createDiv
-        if (obsParent.createEl && typeof obsParent.createEl === 'function') {
-            const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
-            return obsParent.createEl(tagName, options || {});
-        }
-
-        // Plain DOM fallback
         const tagName = typeof tag === 'string' ? tag : (tag.tag || 'div');
-        const el = activeDocument.createElement(tagName);
-        if (options) {
-            if (typeof options === 'string') {
-                el.className = options;
-            } else {
-                const opts = options;
-                if (opts.cls) el.className = opts.cls;
-                if (opts.text) el.textContent = opts.text;
-                if (opts.attr) {
-                    for (const k of Object.keys(opts.attr)) {
-                        try { el.setAttribute(k, String(opts.attr[k])); } catch (error) { Logger.debug('Ignored error:', error); }
-                    }
-                }
-                if (opts.href && el.instanceOf(HTMLAnchorElement)) {
-                    el.href = opts.href;
-                }
-            }
-        }
-        parent.appendChild(el);
-        return el;
+        const opts = typeof options === 'string' ? { cls: options } : (options || {});
+        return parent.createEl(tagName, opts);
     }
 
     /**

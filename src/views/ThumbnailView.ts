@@ -51,7 +51,7 @@ export class ThumbnailView extends GalleryView {
         }
 
         // Create grid container
-        const gridContainer = this.container.createEl('div', {
+        const gridContainer = this.container.createDiv({
             cls: 'gallery-thumbnail-grid'
         });
 
@@ -67,12 +67,12 @@ export class ThumbnailView extends GalleryView {
      * Render empty state
      */
     private renderEmptyState(): void {
-        const emptyEl = this.container.createEl('div', { cls: 'gallery-empty' });
-        emptyEl.createEl('div', { 
+        const emptyEl = this.container.createDiv({ cls: 'gallery-empty' });
+        emptyEl.createDiv({ 
             cls: 'gallery-empty-icon',
             text: '🖼️'
         });
-        emptyEl.createEl('div', { 
+        emptyEl.createDiv({ 
             cls: 'gallery-empty-message',
             text: 'No images found'
         });
@@ -82,7 +82,7 @@ export class ThumbnailView extends GalleryView {
      * Render individual thumbnail item
      */
     private renderThumbnailItem(container: HTMLElement, image: IImageSource, idx: number): void {
-        const itemEl = container.createEl('div', {
+        const itemEl = container.createDiv({
             cls: 'gallery-thumbnail-item',
             attr: {
                 'data-image-path': image.path,
@@ -146,8 +146,7 @@ export class ThumbnailView extends GalleryView {
 
         // Caption overlay (visible on hover/focus only when persistent captions are disabled)
         if (!this.showCaptions) {
-            const caption = itemEl.createEl('div', { cls: 'gallery-thumbnail-caption' });
-            caption.textContent = image.displayName || '';
+            itemEl.createDiv({ cls: 'gallery-thumbnail-caption', text: image.displayName || '' });
         }
 
         // Persistent subtitle caption (always visible when enabled)

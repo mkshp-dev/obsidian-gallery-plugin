@@ -103,8 +103,15 @@ export abstract class GalleryView implements IGalleryView {
         if (obsParent?.createEl && typeof obsParent.createEl === 'function') {
             return obsParent.createEl(tag, props || {});
         }
-        // Fallback for test environments where createEl is not available
-        const el = parent.ownerDocument?.createElement(tag) || activeDocument.createElement(tag);
+        // If parent doesn't have createEl, try using the container's createEl method
+        const obsContainer = this.container as unknown as ObsidianDOMExtensions;
+        if (obsContainer?.createEl && typeof obsContainer.createEl === 'function') {
+            const el = obsContainer.createEl(tag, props || {});
+            parent.appendChild(el);
+            return el;
+        }
+        // Last resort: use createElement on parent and manually set properties
+        const el = parent.ownerDocument?.createElement(tag) || new Document().createElement(tag);
         if (props) {
             if (props.cls) el.className = props.cls;
             if (props.text) el.textContent = props.text;
@@ -253,8 +260,8 @@ export abstract class GalleryView implements IGalleryView {
         if (!imageElement) return false;
 
         const rect = imageElement.getBoundingClientRect();
-        const windowHeight = window.innerHeight || activeDocument.documentElement.clientHeight;
-        const windowWidth = window.innerWidth || activeDocument.documentElement.clientWidth;
+        const windowHeight = window.innerHeight || (typeof window !== 'undefined' ? window.document.documentElement.clientHeight : 0);
+        const windowWidth = window.innerWidth || (typeof window !== 'undefined' ? window.document.documentElement.clientWidth : 0);
 
         return (
             rect.top < windowHeight &&
@@ -443,13 +450,13 @@ export abstract class GalleryView implements IGalleryView {
      */
     protected expandImage(image: IImageSource): void {
         // Save the element that had focus so we can restore it later
-        const active = activeDocument.activeElement;
+        const doc = this.container.ownerDocument || (typeof window !== 'undefined' ? window.document : new Document());
+        const active = doc.activeElement;
         if (active && active.instanceOf(HTMLElement)) {
             this.lastFocusedElement = active;
         }
 
         // Create modal overlay using ownerDocument for compatibility with different rendering contexts
-        const doc = this.container.ownerDocument || activeDocument;
         const body = doc.body;
         const obsBody = body as unknown as { createDiv?: (options?: Record<string, unknown>) => HTMLElement };
         
@@ -464,13 +471,26 @@ export abstract class GalleryView implements IGalleryView {
               }
           });
         } else {
-          // Fallback for test environments
-          modal = doc.createElement('div');
-          modal.className = 'gallery-modal';
-          modal.setAttribute('role', 'dialog');
-          modal.setAttribute('aria-modal', 'true');
-          modal.setAttribute('aria-label', image.displayName || 'Image dialog');
-          body.appendChild(modal);
+          // Fallback: use container's createEl if available
+          const obsContainer = this.container as unknown as ObsidianDOMExtensions;
+          if (obsContainer?.createEl && typeof obsContainer.createEl === 'function') {
+            modal = obsContainer.createEl('div', {
+              cls: 'gallery-modal',
+              attr: {
+                'role': 'dialog',
+                'aria-modal': 'true',
+                'aria-label': image.displayName || 'Image dialog'
+              }
+            });
+            body.appendChild(modal);
+          } else {
+            modal = doc.createElement('div');
+            modal.className = 'gallery-modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-label', image.displayName || 'Image dialog');
+            body.appendChild(modal);
+          }
         }
 
         this.activeModal = modal;
@@ -752,10 +772,19 @@ export abstract class GalleryView implements IGalleryView {
                       attr: { target: '_blank', download: currentImage.displayName || 'image' }
                   });
                 } else {
-                  a = doc.createElement('a');
-                  a.setAttribute('href', displayUrl);
-                  a.setAttribute('target', '_blank');
-                  a.setAttribute('download', currentImage.displayName || 'image');
+                  // Use container's createEl if body doesn't have it
+                  const obsContainer = this.container as unknown as ObsidianDOMExtensions;
+                  if (obsContainer?.createEl && typeof obsContainer.createEl === 'function') {
+                    a = obsContainer.createEl('a', {
+                      href: displayUrl,
+                      attr: { target: '_blank', download: currentImage.displayName || 'image' }
+                    });
+                  } else {
+                    a = doc.createElement('a');
+                    a.setAttribute('href', displayUrl);
+                    a.setAttribute('target', '_blank');
+                    a.setAttribute('download', currentImage.displayName || 'image');
+                  }
                 }
                 (a as HTMLAnchorElement).click();
                 a.remove();
@@ -868,8 +897,12 @@ export abstract class GalleryView implements IGalleryView {
         try {
             doc.body.appendChild(modal);
         } catch (appendErr) {
-            Logger.warn('Failed to append modal to document body, falling back to activeDocument.body:', appendErr);
-            activeDocument.body.appendChild(modal);
+            Logger.warn('Failed to append modal to document body, falling back to alternative:', appendErr);
+            if (doc.body) {
+                doc.body.appendChild(modal);
+            } else if (typeof window !== 'undefined' && window.document.body) {
+                window.document.body.appendChild(modal);
+            }
         }
     }
 

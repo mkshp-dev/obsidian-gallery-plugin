@@ -243,7 +243,7 @@ export class ErrorPlaceholder {
     }
     
     // Fallback for test environments where createDiv is not available
-    const div = parent.ownerDocument?.createElement('div') || activeDocument.createElement('div');
+    const div = parent.ownerDocument?.createElement('div') || new Document().createElement('div');
     if (options.cls) div.className = options.cls;
     parent.appendChild(div);
     return div;
@@ -260,7 +260,7 @@ export class ErrorPlaceholder {
     }
     
     // Fallback for test environments where createEl is not available
-    const el = parent.ownerDocument?.createElement(tag) || activeDocument.createElement(tag);
+    const el = parent.ownerDocument?.createElement(tag) || new Document().createElement(tag);
     if (options?.cls) el.className = options.cls;
     if (options?.text) el.textContent = options.text;
     parent.appendChild(el);

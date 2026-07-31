@@ -237,7 +237,7 @@ export class LoadingSpinner {
     }
     
     // Fallback for test environments where createDiv is not available
-    const ownerDoc = target.ownerDocument ?? activeDocument;
+    const ownerDoc = target.ownerDocument ?? new Document();
     const div = ownerDoc.createElement('div');
     if (options.cls) div.className = options.cls;
     target.appendChild(div);
@@ -255,7 +255,7 @@ export class LoadingSpinner {
     }
     
     // Fallback for test environments where createSvg is not available
-    const ownerDoc = parent.ownerDocument ?? activeDocument;
+    const ownerDoc = parent.ownerDocument ?? new Document();
     const svgElement = ownerDoc.createElementNS('http://www.w3.org/2000/svg', tag);
     if (options?.cls) svgElement.setAttribute('class', options.cls);
     if (options?.attr) {

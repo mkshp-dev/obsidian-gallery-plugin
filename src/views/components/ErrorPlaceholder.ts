@@ -91,7 +91,7 @@ export class ErrorPlaceholder {
     const config = ErrorPlaceholder.ERROR_CONFIGS[this.options.type];
 
     // Create main error container
-    this.placeholderElement = this.container.createDiv({
+    this.placeholderElement = this.createDiv(this.container, {
       cls: [
         'gallery-error-placeholder',
         `gallery-error-${this.options.type}`,
@@ -104,21 +104,21 @@ export class ErrorPlaceholder {
 
     // Add icon if enabled
     if (this.options.showIcon) {
-      const iconElement = this.placeholderElement.createDiv('gallery-error-icon');
+      const iconElement = this.createDiv(this.placeholderElement, 'gallery-error-icon');
       iconElement.textContent = config.icon;
     }
 
     // Add main error message
-    const messageElement = this.placeholderElement.createDiv('gallery-error-message');
+    const messageElement = this.createDiv(this.placeholderElement, 'gallery-error-message');
     messageElement.textContent = this.options.customMessage || this.errorInfo.message || config.defaultMessage;
 
     // Add title/type information
-    const titleElement = this.placeholderElement.createDiv('gallery-error-title');
+    const titleElement = this.createDiv(this.placeholderElement, 'gallery-error-title');
     titleElement.textContent = config.title;
 
     // Add details if enabled and available
     if (this.options.showDetails && this.errorInfo.details) {
-      const detailsElement = this.placeholderElement.createDiv('gallery-error-details');
+      const detailsElement = this.createDiv(this.placeholderElement, 'gallery-error-details');
       detailsElement.textContent = this.errorInfo.details;
       
       // Make details collapsible for longer error messages
@@ -141,13 +141,13 @@ export class ErrorPlaceholder {
 
     // Add timestamp for debugging
     if (this.options.showDetails && this.errorInfo.timestamp) {
-      const timestampElement = this.placeholderElement.createDiv('gallery-error-timestamp');
+      const timestampElement = this.createDiv(this.placeholderElement, 'gallery-error-timestamp');
       timestampElement.textContent = `Error occurred at: ${this.errorInfo.timestamp.toLocaleString()}`;
     }
 
     // Add error code if available
     if (this.options.showDetails && this.errorInfo.code) {
-      const codeElement = this.placeholderElement.createDiv('gallery-error-code');
+      const codeElement = this.createDiv(this.placeholderElement, 'gallery-error-code');
       codeElement.textContent = `Error code: ${this.errorInfo.code}`;
     }
   }
@@ -156,12 +156,12 @@ export class ErrorPlaceholder {
    * Render retry button
    */
   private renderRetryButton(): void {
-    const retryContainer = this.placeholderElement!.createDiv('gallery-error-retry');
+    const retryContainer = this.createDiv(this.placeholderElement!, 'gallery-error-retry');
     
-    const retryButton = retryContainer.createEl('button', {
+    const retryButton = this.createElement(retryContainer, 'button', {
       cls: 'gallery-retry-button',
       text: 'Try Again'
-    });
+    }) as HTMLButtonElement;
         // Accessibility: label and role
         retryButton.setAttribute('aria-label', 'Retry action');
         retryButton.setAttribute('role', 'button');
@@ -229,6 +229,21 @@ export class ErrorPlaceholder {
       this.placeholderElement.remove();
       this.placeholderElement = null;
     }
+  }
+
+  /**
+   * Create a div element. Supports Obsidian helper API when present.
+   */
+  private createDiv(parent: HTMLElement, arg?: string | { cls?: string }): HTMLElement {
+    const options = typeof arg === 'string' ? { cls: arg } : (arg || {});
+    return parent.createDiv(options);
+  }
+
+  /**
+   * Create an element. Supports Obsidian helper API.
+   */
+  private createElement(parent: HTMLElement, tag: string, options?: { cls?: string; text?: string }): HTMLElement {
+    return parent.createEl(tag as keyof HTMLElementTagNameMap, options);
   }
 
   /**

@@ -92,6 +92,25 @@ describe('Resolvers', () => {
             expect(result.errors[0]).toContain('Invalid URL in external source urls list: invalid-url');
         });
 
+        it('should resolve object url entries with captions', async () => {
+            const resolver = new ExternalSourceResolver();
+            const source: IExternalSourceConfig = {
+                type: 'external',
+                urls: [
+                    { url: 'http://example.com/pic1.jpg', caption: 'Sunset view' },
+                    'http://example.com/pic2.jpg'
+                ]
+            };
+
+            const result = await resolver.resolve(source, {});
+
+            expect(result.images.length).toBe(2);
+            expect(result.images[0].path).toBe('http://example.com/pic1.jpg');
+            expect(result.images[0].caption).toBe('Sunset view');
+            expect(result.images[1].path).toBe('http://example.com/pic2.jpg');
+            expect(result.images[1].caption).toBeUndefined();
+        });
+
     });
 
     describe('SourceResolverRegistry', () => {

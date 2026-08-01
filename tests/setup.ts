@@ -72,6 +72,87 @@ if (typeof Element !== 'undefined' && !Element.prototype.setCssStyles) {
   };
 }
 
+if (typeof Element !== 'undefined') {
+  if (!Element.prototype.createEl) {
+    Element.prototype.createEl = function (tag: string, o?: any) {
+      const el = this.ownerDocument.createElement(tag);
+      if (typeof o === 'string') {
+        el.className = o;
+      } else if (o) {
+        if (o.cls) el.className = Array.isArray(o.cls) ? o.cls.join(' ') : o.cls;
+        if (o.text !== undefined) el.textContent = String(o.text);
+        if (o.attr) {
+          Object.entries(o.attr).forEach(([k, v]) => {
+            if (v !== null && v !== undefined) el.setAttribute(k, String(v));
+          });
+        }
+        if (o.title) el.title = o.title;
+        if (o.value) el.value = o.value;
+        if (o.type) el.type = o.type;
+        if (o.href) el.href = o.href;
+      }
+      if (o && o.prepend) {
+        this.insertBefore(el, this.firstChild);
+      } else {
+        this.appendChild(el);
+      }
+      return el as any;
+    };
+  }
+  if (!Element.prototype.createDiv) {
+    Element.prototype.createDiv = function (o?: any) {
+      return this.createEl('div', o);
+    };
+  }
+  if (!Element.prototype.createSpan) {
+    Element.prototype.createSpan = function (o?: any) {
+      return this.createEl('span', o);
+    };
+  }
+  if (!Element.prototype.createSvg) {
+    Element.prototype.createSvg = function (tag: string, o?: any) {
+      const el = this.ownerDocument.createElementNS('http://www.w3.org/2000/svg', tag);
+      if (typeof o === 'string') {
+        el.setAttribute('class', o);
+      } else if (o) {
+        if (o.cls) el.setAttribute('class', Array.isArray(o.cls) ? o.cls.join(' ') : o.cls);
+        if (o.attr) {
+          Object.entries(o.attr).forEach(([k, v]) => {
+            if (v !== null && v !== undefined) el.setAttribute(k, String(v));
+          });
+        }
+      }
+      if (o && o.prepend) {
+        this.insertBefore(el, this.firstChild);
+      } else {
+        this.appendChild(el);
+      }
+      return el as any;
+    };
+  }
+}
+
+if (typeof Document !== 'undefined' && !Document.prototype.createEl) {
+  Document.prototype.createEl = function (tag: string, o?: any) {
+    const el = this.createElement(tag);
+    if (typeof o === 'string') {
+      el.className = o;
+    } else if (o) {
+      if (o.cls) el.className = Array.isArray(o.cls) ? o.cls.join(' ') : o.cls;
+      if (o.text !== undefined) el.textContent = String(o.text);
+      if (o.attr) {
+        Object.entries(o.attr).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) el.setAttribute(k, String(v));
+        });
+      }
+    }
+    if (o && o.parent) {
+      o.parent.appendChild(el);
+    }
+    return el as any;
+  };
+}
+
 // Mock Obsidian MarkdownRenderChild
 jest.mock('obsidian', () => ({
   EditorSuggest: class MockEditorSuggest { constructor() {} },

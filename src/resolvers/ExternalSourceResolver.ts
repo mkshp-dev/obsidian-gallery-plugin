@@ -13,12 +13,27 @@ export class ExternalSourceResolver implements GallerySourceResolver<IExternalSo
             return { images, errors };
         }
 
-        for (const url of source.urls) {
+        for (const item of source.urls) {
+            let urlStr: string;
+            let captionStr: string | undefined = undefined;
+
+            if (typeof item === 'string') {
+                urlStr = item;
+            } else if (typeof item === 'object' && item !== null && typeof (item as { url?: unknown }).url === 'string') {
+                urlStr = (item as { url: string }).url;
+                if (typeof (item as { caption?: unknown }).caption === 'string' && (item as { caption: string }).caption.trim()) {
+                    captionStr = (item as { caption: string }).caption.trim();
+                }
+            } else {
+                errors.push(`Invalid URL entry in external source urls list: ${JSON.stringify(item)}`);
+                continue;
+            }
+
             try {
-                const external = ImageSource.fromUrl(url);
+                const external = ImageSource.fromUrl(urlStr, undefined, captionStr);
                 images.push(external);
             } catch {
-                errors.push(`Invalid URL in external source urls list: ${url}`);
+                errors.push(`Invalid URL in external source urls list: ${urlStr}`);
             }
         }
 

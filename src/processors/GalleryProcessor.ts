@@ -22,6 +22,9 @@ export interface IGalleryProcessingOptions {
         gracePeriodMs?: number;
         // Enable verbose lifecycle logging for debugging mode toggles
         enableLifecycleLogging?: boolean;
+        // Caption settings
+        showCaptions?: boolean;
+        captionMaxLines?: number;
 }
 
 export interface IGalleryRenderResult {
@@ -58,6 +61,7 @@ export class GalleryProcessor {
     private viewFactory: ViewFactory;
     private activeGalleries: Map<string, GalleryInstance> = new Map();
     private resolverRegistry: SourceResolverRegistry;
+    private getOptions?: () => IGalleryProcessingOptions;
 
     private readonly DEFAULT_OPTIONS: Required<IGalleryProcessingOptions> = {
         errorDisplayMode: 'full',
@@ -69,11 +73,14 @@ export class GalleryProcessor {
         ,validateRemoteContentType: false
         ,gracePeriodMs: 30000
         ,enableLifecycleLogging: false
+        ,showCaptions: true
+        ,captionMaxLines: 1
     };
 
-    constructor(contentScanner: IContentScanner, viewFactory: ViewFactory, getConnections: () => IImmichConnection[]) {
+    constructor(contentScanner: IContentScanner, viewFactory: ViewFactory, getConnections: () => IImmichConnection[], getOptions?: () => IGalleryProcessingOptions) {
         this.contentScanner = contentScanner;
         this.viewFactory = viewFactory;
+        this.getOptions = getOptions;
         this.resolverRegistry = new SourceResolverRegistry(contentScanner, getConnections);
     }
 
@@ -474,7 +481,12 @@ export class GalleryProcessor {
                     try {
                         // Preferred: view has a setOptions API
                         if (view.setOptions) {
-                            view.setOptions({ remoteLoadTimeoutMs: options.timeoutMs, allowRemoteImages: options.allowRemoteImages });
+                            view.setOptions({
+                                remoteLoadTimeoutMs: options.timeoutMs,
+                                allowRemoteImages: options.allowRemoteImages,
+                                showCaptions: options.showCaptions,
+                                captionMaxLines: options.captionMaxLines
+                            });
                         }
                     } catch (error) { Logger.debug('Ignored error:', error); }
 
@@ -618,15 +630,7 @@ export class GalleryProcessor {
      * This is the sole UI used for all error and empty states.
      */
     private static renderCompactError(container: HTMLElement, message: string): void {
-        const obsContainer = container as unknown as ObsidianDOMExtensions;
-        if (obsContainer.createEl && typeof obsContainer.createEl === 'function') {
-            obsContainer.createEl('div', { cls: 'gallery-error-compact', text: `⚠️ gallery: ${message}` });
-        } else {
-            const el = (container.ownerDocument || activeDocument).createElement('div');
-            el.className = 'gallery-error-compact';
-            el.textContent = `⚠️ gallery: ${message}`;
-            container.appendChild(el);
-        }
+        container.createDiv({ cls: 'gallery-error-compact', text: `⚠️ gallery: ${message}` });
     }
 
     /**
@@ -779,7 +783,7 @@ export class GalleryProcessor {
     }
 
     /**
-     * Refresh gallery by re-scanning content
+     * Refresh gallery by re-scanning content and updating view settings
      */
     async refreshGallery(galleryId: string): Promise<void> {
         const gallery = this.activeGalleries.get(galleryId);
@@ -789,20 +793,38 @@ export class GalleryProcessor {
         }
 
         try {
-            // Clear cache for this path
-            this.contentScanner.invalidateCache(gallery.config.path);
-            
-            // Re-scan for images
-            const images = await this.contentScanner.scanPath(
-                gallery.config.path, 
-                gallery.config.recursive
-            );
-            
-            // Update gallery
+            const currentOpts = { ...this.DEFAULT_OPTIONS, ...(this.getOptions ? this.getOptions() : {}) };
+
+            if (gallery.view.setOptions) {
+                gallery.view.setOptions({
+                    remoteLoadTimeoutMs: currentOpts.timeoutMs,
+                    allowRemoteImages: currentOpts.allowRemoteImages,
+                    showCaptions: currentOpts.showCaptions,
+                    captionMaxLines: currentOpts.captionMaxLines
+                });
+            }
+
+            // Re-resolve sources for all configured sources (local, external, immich)
+            let images: IImageSource[] = [];
+            if (gallery.config.sources) {
+                for (const source of gallery.config.sources) {
+                    const { images: resolvedImages } = await this.resolverRegistry.resolveSource(source, {
+                        timeoutMs: currentOpts.timeoutMs,
+                        viewType: gallery.view.type
+                    });
+                    for (const img of resolvedImages) {
+                        if (!images.find(existing => existing.path === img.path)) {
+                            images.push(img);
+                        }
+                    }
+                }
+            }
+
+            // Update gallery view
             gallery.update(images);
-            
+
             Logger.debug(`Gallery refreshed: ${galleryId} with ${images.length} images`);
-            
+
         } catch (error) {
             Logger.error('Error refreshing gallery:', error);
             GalleryProcessor.renderCompactError(gallery.container, `Refresh failed: ${error instanceof Error ? error.message : String(error)}`);

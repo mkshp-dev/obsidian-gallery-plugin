@@ -70,7 +70,7 @@ export class ViewFactory implements IViewFactory {
         
         // Test that the view class is valid by creating a temporary instance
         try {
-            const testContainer = activeDocument.createElement('div');
+            const testContainer = activeDocument.body.createDiv();
             const testInstance = new viewClass(testContainer);
             
             // Verify required interface
@@ -80,6 +80,7 @@ export class ViewFactory implements IViewFactory {
             
             // Cleanup test instance
             testInstance.destroy();
+            testContainer.remove();
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Invalid view class for type "${type}": ${errorMessage}`);
@@ -227,7 +228,7 @@ export class ViewFactory implements IViewFactory {
         
         for (const type of types) {
             try {
-                const viewContainer = container.createEl('div', { cls: `gallery-view-${type}` });
+                const viewContainer = container.createDiv({ cls: `gallery-view-${type}` });
                 const view = this.createView(type, viewContainer);
                 views.push(view);
             } catch (error) {

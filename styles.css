@@ -62,8 +62,9 @@
     captions and titles appear consistently at the bottom of the tile */
   min-height: 120px;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   padding: 6px 6px 8px 6px;
   background: var(--background-primary);
 }
@@ -121,6 +122,22 @@
 .gallery-thumbnail-item:focus-visible .gallery-thumbnail-caption {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Image caption (subtitle) - rendered below images when enabled */
+.gallery-caption {
+  --gallery-caption-max-lines: 1;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 4px 6px 2px;
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--gallery-caption-max-lines);
+  line-clamp: var(--gallery-caption-max-lines);
+  word-break: break-word;
+  width: 100%;
 }
 
 /* Size variation utility classes */
@@ -187,17 +204,24 @@
 
 .gallery-carousel-item {
   flex: 0 0 100%;
-  max-height: 400px;
+  max-height: 440px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
 .gallery-carousel-image {
   max-width: 100%;
-  max-height: 100%;
+  max-height: 380px;
   object-fit: contain;
   border-radius: 4px;
+}
+
+.gallery-carousel-item .gallery-caption {
+  margin-top: 8px;
+  text-align: center;
+  width: 100%;
 }
 
 .gallery-carousel-nav {
@@ -1264,4 +1288,441 @@
 .gallery-inline-error-item {
   margin-bottom: 0.25rem;
   word-break: break-word;
+}
+
+/* ==========================================================================
+   Gallery Builder Modal Styles
+   ========================================================================== */
+
+body .modal-container .modal.gallery-builder-modal-container {
+  width: 860px;
+  max-width: 90vw;
+}
+
+body .modal-container .modal-content.gallery-builder-modal {
+  width: 100%;
+  max-width: none;
+  padding: 24px 28px;
+}
+
+.gallery-builder-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.gallery-builder-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.gallery-builder-header-title h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.gallery-builder-header-icon {
+  font-size: 1.4rem;
+}
+
+.gallery-builder-header-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.gallery-builder-section {
+  margin-bottom: 22px;
+}
+
+.gallery-builder-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gallery-builder-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gallery-builder-section-title h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.gallery-builder-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Quick add pills */
+.gallery-builder-quick-add {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gallery-builder-pill {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-weight: 500;
+}
+
+.gallery-builder-pill:hover {
+  background: var(--interactive-hover);
+  border-color: var(--interactive-accent);
+  color: var(--interactive-accent);
+  transform: translateY(-1px);
+}
+
+/* Empty State */
+.gallery-builder-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+  border: 2px dashed var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-primary-alt);
+  text-align: center;
+}
+
+.gallery-builder-empty-icon {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+.gallery-builder-empty-state h4 {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.gallery-builder-empty-state p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Source Card */
+.gallery-builder-source-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-primary);
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gallery-builder-source-card:hover {
+  border-color: var(--background-modifier-border-hover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.gallery-builder-source-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.gallery-builder-source-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-normal);
+}
+
+.modal-content button.gallery-builder-remove-icon-btn,
+button.gallery-builder-remove-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-error, #e53935);
+  border: 1px solid var(--background-modifier-border);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  line-height: 1;
+}
+
+.modal-content button.gallery-builder-remove-icon-btn:hover,
+button.gallery-builder-remove-icon-btn:hover {
+  background: var(--background-modifier-error-hover, #e53935);
+  color: #ffffff;
+  border-color: var(--background-modifier-error-border, #e53935);
+  box-shadow: 0 2px 6px rgba(229, 57, 53, 0.25);
+}
+
+.gallery-builder-wide-select {
+  min-width: 280px;
+  max-width: 100%;
+}
+
+.gallery-builder-source-card-body {
+  padding: 12px 14px;
+}
+
+.gallery-builder-source-card-body .setting-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--background-modifier-border-focus);
+}
+
+.gallery-builder-source-card-body .setting-item:last-child {
+  border-bottom: none;
+}
+
+/* Preview Box */
+.gallery-builder-preview-box {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--background-primary-alt);
+}
+
+.gallery-builder-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.gallery-builder-preview-lang {
+  font-family: var(--font-monospace);
+  font-weight: 600;
+  color: var(--interactive-accent);
+}
+
+.gallery-builder-copy-btn {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.gallery-builder-copy-btn:hover {
+  background: var(--interactive-hover);
+}
+
+.gallery-builder-preview-code {
+  margin: 0;
+  padding: 14px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-family: var(--font-monospace);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-normal);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Modal Footer */
+.gallery-builder-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.gallery-builder-cancel-btn {
+  font-size: 0.88rem;
+}
+
+.gallery-builder-insert-btn {
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 6px 16px;
+}
+
+/* ==========================================================================
+   Gallery Plugin Settings Tabs (Minimal Underline Style with Icons)
+   ========================================================================== */
+
+.setting-item.gallery-settings-tab-header-setting {
+  border: none;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.gallery-settings-tab-header {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 0;
+  width: 100%;
+}
+
+.gallery-settings-tab-btn,
+button.gallery-settings-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 8px 4px 10px 4px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  margin-bottom: -1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.gallery-settings-tab-btn:hover,
+button.gallery-settings-tab-btn:hover {
+  color: var(--text-normal);
+  background: transparent;
+  box-shadow: none;
+}
+
+.gallery-settings-tab-btn.is-active,
+button.gallery-settings-tab-btn.is-active {
+  color: var(--text-accent, var(--interactive-accent));
+  border-bottom: 3px solid var(--interactive-accent);
+  font-weight: 600;
+  background: transparent;
+  box-shadow: none;
+}
+
+.gallery-settings-tab-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  display: inline-block;
+}
+
+.gallery-settings-tab-title {
+  line-height: 1;
+  font-size: 0.95rem;
+}
+
+/* ==========================================================================
+   Full-Width Immich Connections Layout (Providers Tab)
+   ========================================================================== */
+
+.setting-item.gallery-immich-connections-setting {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  border-top: none;
+  padding-top: 4px;
+}
+
+.setting-item.gallery-immich-connections-setting .setting-item-info {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 4px;
+}
+
+.setting-item.gallery-immich-connections-setting .setting-item-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.setting-item.gallery-immich-connections-setting .setting-item-control {
+  width: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.immich-connections-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.immich-connection-item {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 0;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.immich-connection-item:hover {
+  border-color: var(--background-modifier-border-hover);
+}
+
+.immich-connection-summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  outline: none;
+  user-select: none;
+  padding: 4px 0;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+}
+
+.immich-connection-title {
+  margin-left: 8px;
+}
+
+.immich-connection-content {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--background-modifier-border);
 }

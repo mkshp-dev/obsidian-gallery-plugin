@@ -11,7 +11,7 @@ export interface ILocalSourceConfig {
 
 export interface IExternalSourceConfig {
   type: 'external';
-  urls: string[];
+  urls: (string | { url: string; caption?: string })[];
 }
 
 export interface IImmichShareSourceConfig {
@@ -57,15 +57,15 @@ export interface IViewConfig {
 export interface IGalleryConfig {
   /** Target folder or file path */
   path: string;
-  
+
   /** Display view type */
   view?: 'thumbnail' | 'carousel' | 'grid' | IViewConfig;
-  
+
   /** Include subdirectories (default: true) */
   recursive?: boolean;
-  
+
   /** Optional list of external image URLs */
-  urls?: string[];
+  urls?: (string | { url: string; caption?: string })[];
 
   /** Sources to fetch images from */
   sources?: ISourceConfig[];
@@ -80,31 +80,34 @@ export interface IGalleryConfig {
 export interface IImageSource {
   /** Vault-relative path to image file */
   path: string;
-  
+
   /** Browser-compatible resource URL for loading */
   resourceUrl?: string;
-  
+
   /** Source type */
   type: 'local' | 'external' | 'immich-share' | 'immich';
-  
+
+  /** Optional image caption */
+  caption?: string;
+
   /** Display name for user */
   displayName: string;
-  
+
   /** File size in bytes (local files only) */
   size?: number;
-  
+
   /** Image dimensions when available */
   dimensions?: {
     width: number;
     height: number;
   };
-  
+
   /** Current loading state */
   loadState: 'pending' | 'loading' | 'loaded' | 'error';
-  
+
   /** Error message if loading failed */
   errorMessage?: string;
-  
+
   /** Loading timestamp for timeout tracking */
   loadStartTime?: number;
 
@@ -136,33 +139,33 @@ export interface IImageSource {
 export interface IGalleryView {
   /** View type identifier */
   readonly type: 'thumbnail' | 'carousel' | 'grid';
-  
+
   /** DOM container element */
   readonly container: HTMLElement;
-  
+
   /** Current images being displayed */
   readonly images: IImageSource[];
-  
+
   /** Render initial gallery */
   render(): void;
-  
+
   /** Update with new image list */
   update(images: IImageSource[]): void;
-  
+
   /** Clean up resources */
   destroy(): void;
-  
+
   /** Handle successful image load */
   handleImageLoad(image: IImageSource): void;
-  
+
   /** Handle image load error */
   handleImageError(image: IImageSource, error: Error): void;
-  
+
   /** Check if image is in viewport (for lazy loading) */
   isImageVisible(image: IImageSource): boolean;
 
   /** Optional runtime settings API */
-  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean }): void;
+  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number }): void;
 
   /** Optional runtime property for remote load timeout */
   remoteLoadTimeoutMs?: number;
@@ -182,16 +185,16 @@ export interface IGalleryView {
 export interface IContentScanner {
   /** Scan path for images */
   scanPath(path: string, recursive?: boolean): Promise<IImageSource[]>;
-  
+
   /** Check if file is supported image format */
   isImageFile(path: string): boolean;
-  
+
   /** Extract image links from markdown file */
   extractLinksFromFile(file: unknown): Promise<IImageSource[]>; // any for TFile from Obsidian
-  
+
   /** Validate image source accessibility */
   validateImageSource(source: IImageSource): Promise<boolean>;
-  
+
   /** Clear cache for path */
   invalidateCache(path: string): void;
 
@@ -205,28 +208,28 @@ export interface IContentScanner {
 export interface IGalleryInstance {
   /** Unique identifier for this gallery */
   readonly id: string;
-  
+
   /** Gallery configuration */
   readonly config: IGalleryConfig;
-  
+
   /** List of images to display */
   readonly images: IImageSource[];
-  
+
   /** DOM container element */
   readonly container: HTMLElement;
-  
+
   /** Current view renderer */
   readonly view: IGalleryView;
-  
+
   /** Number of successfully loaded images */
   readonly loadedCount: number;
-  
+
   /** Number of failed image loads */
   readonly errorCount: number;
-  
+
   /** Update gallery with new images */
   update(images: IImageSource[]): void;
-  
+
   /** Destroy gallery and clean up resources */
   destroy(): void;
 }
@@ -261,10 +264,10 @@ export interface IGalleryEvents {
 export interface IViewFactory {
   /** Create a view renderer of the specified type */
   createView(type: string, container: HTMLElement): IGalleryView;
-  
+
   /** Get list of supported view types */
   getSupportedTypes(): string[];
-  
+
   /** Register a new view type */
   registerViewType(type: string, viewClass: new (container: HTMLElement) => IGalleryView): void;
 }

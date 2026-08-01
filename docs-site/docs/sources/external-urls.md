@@ -11,12 +11,12 @@ You can include remotely hosted images in your gallery by using the `external` s
 
 ## Configuration
 
-To use external URLs, set the `type` to `external` and provide a list of `urls`.
+To use external URLs, set the `type` to `external` and provide a list of `urls`. URLs can be plain strings or `{ url, caption }` objects.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `type` | string | — | **Required**. Must be `external`. |
-| `urls` | list of strings | — | **Required**. List of remote image URLs to load. |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Yes | Must be `external`. |
+| `urls` | list of strings or objects | Yes | List of remote image URLs or `{ url, caption }` objects. |
 
 ## Example
 
@@ -25,7 +25,8 @@ To use external URLs, set the `type` to `external` and provide a list of `urls`.
 sources:
   - type: external
     urls:
-      - https://example.com/photos/cover.jpg
+      - url: https://example.com/photos/cover.jpg
+        caption: "Sunset over the Pacific"
       - https://cdn.example.org/gallery/img123.webp
 view:
   type: thumbnail

@@ -8,10 +8,10 @@ export class GalleryConfig implements IGalleryConfig {
     public readonly path: string;
     public readonly view: IViewConfig;
     public readonly recursive: boolean;
-    public readonly urls?: string[];
+    public readonly urls?: (string | { url: string; caption?: string })[];
     public readonly sources: ISourceConfig[];
 
-    constructor(config: Partial<IGalleryConfig> & { urls?: string[], sources?: ISourceConfig[] }) {
+    constructor(config: Partial<IGalleryConfig> & { urls?: (string | { url: string; caption?: string })[], sources?: ISourceConfig[] }) {
         this.sources = config.sources || [];
 
         if (config.path && typeof config.path === 'string' && config.path.trim() !== '') {
@@ -98,7 +98,7 @@ export class GalleryConfig implements IGalleryConfig {
             path: typeof data.path === 'string' ? data.path : undefined,
             view: viewType,
             recursive: typeof data.recursive === 'boolean' ? data.recursive : undefined,
-            urls: Array.isArray(data.urls) ? (data.urls as string[]) : undefined,
+            urls: Array.isArray(data.urls) ? (data.urls as (string | { url: string; caption?: string })[]) : undefined,
             sources: Array.isArray(data.sources) ? (data.sources as ISourceConfig[]) : undefined
         });
     }
@@ -109,7 +109,7 @@ export class GalleryConfig implements IGalleryConfig {
     isValid(): boolean {
         try {
             return this.sources.length > 0 &&
-                   ['thumbnail', 'carousel', 'grid'].includes(this.view.type);
+                ['thumbnail', 'carousel', 'grid'].includes(this.view.type);
         } catch {
             return false;
         }

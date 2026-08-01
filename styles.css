@@ -1294,15 +1294,15 @@
    Gallery Builder Modal Styles
    ========================================================================== */
 
-.modal.gallery-builder-modal-container {
-  width: 860px !important;
-  max-width: 90vw !important;
+body .modal-container .modal.gallery-builder-modal-container {
+  width: 860px;
+  max-width: 90vw;
 }
 
-.gallery-builder-modal {
-  width: 100% !important;
-  max-width: none !important;
-  padding: 24px 28px !important;
+body .modal-container .modal-content.gallery-builder-modal {
+  width: 100%;
+  max-width: none;
+  padding: 24px 28px;
 }
 
 .gallery-builder-header {
@@ -1466,7 +1466,8 @@
   color: var(--text-normal);
 }
 
-.gallery-builder-remove-icon-btn {
+.modal-content button.gallery-builder-remove-icon-btn,
+button.gallery-builder-remove-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1476,7 +1477,7 @@
   padding: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-error, #e53935) !important;
+  color: var(--text-error, #e53935);
   border: 1px solid var(--background-modifier-border);
   font-size: 0.95rem;
   font-weight: 700;
@@ -1485,9 +1486,10 @@
   line-height: 1;
 }
 
-.gallery-builder-remove-icon-btn:hover {
+.modal-content button.gallery-builder-remove-icon-btn:hover,
+button.gallery-builder-remove-icon-btn:hover {
   background: var(--background-modifier-error-hover, #e53935);
-  color: #ffffff !important;
+  color: #ffffff;
   border-color: var(--background-modifier-error-border, #e53935);
   box-shadow: 0 2px 6px rgba(229, 57, 53, 0.25);
 }

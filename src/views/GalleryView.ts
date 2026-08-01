@@ -99,32 +99,7 @@ export abstract class GalleryView implements IGalleryView {
     }
 
     protected createElement(parent: HTMLElement, tag: string, props?: CreateElementOptions): HTMLElement {
-        const obsParent = parent as unknown as ObsidianDOMExtensions;
-        if (obsParent?.createEl && typeof obsParent.createEl === 'function') {
-            return obsParent.createEl(tag, props || {});
-        }
-        // If parent doesn't have createEl, try using the container's createEl method
-        const obsContainer = this.container as unknown as ObsidianDOMExtensions;
-        if (obsContainer?.createEl && typeof obsContainer.createEl === 'function') {
-            const el = obsContainer.createEl(tag, props || {});
-            parent.appendChild(el);
-            return el;
-        }
-        // Last resort: use createElement on parent and manually set properties
-        const el = parent.ownerDocument?.createElement(tag) || new Document().createElement(tag);
-        if (props) {
-            if (props.cls) el.className = props.cls;
-            if (props.text) el.textContent = props.text;
-            if (props.attr && typeof props.attr === 'object') {
-                Object.entries(props.attr).forEach(([key, value]) => {
-                    if (value !== null && value !== undefined) {
-                        el.setAttribute(key, String(value));
-                    }
-                });
-            }
-        }
-        parent.appendChild(el);
-        return el;
+        return parent.createEl(tag as keyof HTMLElementTagNameMap, props as DomElementInfo);
     }
 
     /**
@@ -457,41 +432,16 @@ export abstract class GalleryView implements IGalleryView {
         }
 
         // Create modal overlay using ownerDocument for compatibility with different rendering contexts
+        // Create modal overlay using Obsidian createDiv helper
         const body = doc.body;
-        const obsBody = body as unknown as { createDiv?: (options?: Record<string, unknown>) => HTMLElement };
-        
-        let modal: HTMLElement;
-        if (obsBody?.createDiv && typeof obsBody.createDiv === 'function') {
-          modal = obsBody.createDiv({
-              cls: 'gallery-modal',
-              attr: {
-                  'role': 'dialog',
-                  'aria-modal': 'true',
-                  'aria-label': image.displayName || 'Image dialog'
-              }
-          });
-        } else {
-          // Fallback: use container's createEl if available
-          const obsContainer = this.container as unknown as ObsidianDOMExtensions;
-          if (obsContainer?.createEl && typeof obsContainer.createEl === 'function') {
-            modal = obsContainer.createEl('div', {
-              cls: 'gallery-modal',
-              attr: {
+        const modal = body.createDiv({
+            cls: 'gallery-modal',
+            attr: {
                 'role': 'dialog',
                 'aria-modal': 'true',
                 'aria-label': image.displayName || 'Image dialog'
-              }
-            });
-            body.appendChild(modal);
-          } else {
-            modal = doc.createElement('div');
-            modal.className = 'gallery-modal';
-            modal.setAttribute('role', 'dialog');
-            modal.setAttribute('aria-modal', 'true');
-            modal.setAttribute('aria-label', image.displayName || 'Image dialog');
-            body.appendChild(modal);
-          }
-        }
+            }
+        });
 
         this.activeModal = modal;
         this.slideshowPlaying = false;
@@ -764,29 +714,11 @@ export abstract class GalleryView implements IGalleryView {
         downloadBtn.addEventListener('click', () => {
             const displayUrl = currentImage.getDisplayUrl();
             if (displayUrl) {
-                const obsBody = doc.body as unknown as { createEl?: (tag: string, options?: Record<string, unknown>) => HTMLElement };
-                let a: HTMLElement;
-                if (obsBody?.createEl && typeof obsBody.createEl === 'function') {
-                  a = obsBody.createEl('a', {
-                      href: displayUrl,
-                      attr: { target: '_blank', download: currentImage.displayName || 'image' }
-                  });
-                } else {
-                  // Use container's createEl if body doesn't have it
-                  const obsContainer = this.container as unknown as ObsidianDOMExtensions;
-                  if (obsContainer?.createEl && typeof obsContainer.createEl === 'function') {
-                    a = obsContainer.createEl('a', {
-                      href: displayUrl,
-                      attr: { target: '_blank', download: currentImage.displayName || 'image' }
-                    });
-                  } else {
-                    a = doc.createElement('a');
-                    a.setAttribute('href', displayUrl);
-                    a.setAttribute('target', '_blank');
-                    a.setAttribute('download', currentImage.displayName || 'image');
-                  }
-                }
-                (a as HTMLAnchorElement).click();
+                const a = doc.body.createEl('a', {
+                    href: displayUrl,
+                    attr: { target: '_blank', download: currentImage.displayName || 'image' }
+                });
+                a.click();
                 a.remove();
             }
         });

@@ -229,42 +229,15 @@ export class LoadingSpinner {
    */
   private createDiv(parent: HTMLElement, arg?: string | { cls?: string }): HTMLElement {
     const target = parent || activeDocument.body;
-    const obsTarget = target as unknown as { createDiv?: (options?: Record<string, unknown>) => HTMLElement };
     const options = typeof arg === 'string' ? { cls: arg } : (arg || {});
-    
-    if (obsTarget?.createDiv && typeof obsTarget.createDiv === 'function') {
-      return obsTarget.createDiv(options);
-    }
-    
-    // Fallback for test environments where createDiv is not available
-    const ownerDoc = target.ownerDocument ?? new Document();
-    const div = ownerDoc.createElement('div');
-    if (options.cls) div.className = options.cls;
-    target.appendChild(div);
-    return div;
+    return target.createDiv(options);
   }
 
   /**
-   * Create an SVG element. Supports Obsidian helper API when present.
+   * Create an SVG element. Supports Obsidian helper API.
    */
   private createSvg(parent: Element, tag: string, options?: { cls?: string; attr?: Record<string, string | number> }): SVGElement {
-    const obsParent = parent as unknown as { createSvg?: (tag: string, options?: Record<string, unknown>) => SVGElement };
-    
-    if (obsParent?.createSvg && typeof obsParent.createSvg === 'function') {
-      return obsParent.createSvg(tag, options);
-    }
-    
-    // Fallback for test environments where createSvg is not available
-    const ownerDoc = parent.ownerDocument ?? new Document();
-    const svgElement = ownerDoc.createElementNS('http://www.w3.org/2000/svg', tag);
-    if (options?.cls) svgElement.setAttribute('class', options.cls);
-    if (options?.attr) {
-      Object.entries(options.attr).forEach(([key, value]) => {
-        svgElement.setAttribute(key, String(value));
-      });
-    }
-    parent.appendChild(svgElement);
-    return svgElement;
+    return parent.createSvg(tag as keyof SVGElementTagNameMap, options);
   }
 
   private addClass(el: HTMLElement, cls: string) {

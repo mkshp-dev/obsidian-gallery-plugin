@@ -235,36 +235,15 @@ export class ErrorPlaceholder {
    * Create a div element. Supports Obsidian helper API when present.
    */
   private createDiv(parent: HTMLElement, arg?: string | { cls?: string }): HTMLElement {
-    const obsParent = parent as unknown as { createDiv?: (options?: Record<string, unknown>) => HTMLElement };
     const options = typeof arg === 'string' ? { cls: arg } : (arg || {});
-    
-    if (obsParent?.createDiv && typeof obsParent.createDiv === 'function') {
-      return obsParent.createDiv(options);
-    }
-    
-    // Fallback for test environments where createDiv is not available
-    const div = parent.ownerDocument?.createElement('div') || new Document().createElement('div');
-    if (options.cls) div.className = options.cls;
-    parent.appendChild(div);
-    return div;
+    return parent.createDiv(options);
   }
 
   /**
-   * Create an element. Supports Obsidian helper API when present.
+   * Create an element. Supports Obsidian helper API.
    */
   private createElement(parent: HTMLElement, tag: string, options?: { cls?: string; text?: string }): HTMLElement {
-    const obsParent = parent as unknown as { createEl?: (tag: string, options?: Record<string, unknown>) => HTMLElement };
-    
-    if (obsParent?.createEl && typeof obsParent.createEl === 'function') {
-      return obsParent.createEl(tag, options);
-    }
-    
-    // Fallback for test environments where createEl is not available
-    const el = parent.ownerDocument?.createElement(tag) || new Document().createElement(tag);
-    if (options?.cls) el.className = options.cls;
-    if (options?.text) el.textContent = options.text;
-    parent.appendChild(el);
-    return el;
+    return parent.createEl(tag as keyof HTMLElementTagNameMap, options);
   }
 
   /**

@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.2.5 - 2026-07-31
+## In-progress
 
 - **Persistent Image Captions**: Added persistent image caption rendering below images across Grid, Thumbnail, and Carousel views.
 - **Global Caption Controls**: Added global `Show captions` toggle and `Caption max lines` (1–5 lines) settings in Settings → General.

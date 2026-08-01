@@ -1584,3 +1584,145 @@ button.gallery-builder-remove-icon-btn:hover {
   font-weight: 600;
   padding: 6px 16px;
 }
+
+/* ==========================================================================
+   Gallery Plugin Settings Tabs (Minimal Underline Style with Icons)
+   ========================================================================== */
+
+.setting-item.gallery-settings-tab-header-setting {
+  border: none;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.gallery-settings-tab-header {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 0;
+  width: 100%;
+}
+
+.gallery-settings-tab-btn,
+button.gallery-settings-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 8px 4px 10px 4px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  margin-bottom: -1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.gallery-settings-tab-btn:hover,
+button.gallery-settings-tab-btn:hover {
+  color: var(--text-normal);
+  background: transparent;
+  box-shadow: none;
+}
+
+.gallery-settings-tab-btn.is-active,
+button.gallery-settings-tab-btn.is-active {
+  color: var(--text-accent, var(--interactive-accent));
+  border-bottom: 3px solid var(--interactive-accent);
+  font-weight: 600;
+  background: transparent;
+  box-shadow: none;
+}
+
+.gallery-settings-tab-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  display: inline-block;
+}
+
+.gallery-settings-tab-title {
+  line-height: 1;
+  font-size: 0.95rem;
+}
+
+/* ==========================================================================
+   Full-Width Immich Connections Layout (Providers Tab)
+   ========================================================================== */
+
+.setting-item.gallery-immich-connections-setting {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  border-top: none;
+  padding-top: 4px;
+}
+
+.setting-item.gallery-immich-connections-setting .setting-item-info {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 4px;
+}
+
+.setting-item.gallery-immich-connections-setting .setting-item-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.setting-item.gallery-immich-connections-setting .setting-item-control {
+  width: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.immich-connections-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.immich-connection-item {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 0;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.immich-connection-item:hover {
+  border-color: var(--background-modifier-border-hover);
+}
+
+.immich-connection-summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  outline: none;
+  user-select: none;
+  padding: 4px 0;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+}
+
+.immich-connection-title {
+  margin-left: 8px;
+}
+
+.immich-connection-content {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--background-modifier-border);
+}

@@ -269,13 +269,13 @@ export class ParameterParser {
                             errors.push(this.createConfigError(`sources[${i}].filters.isFavorite`,
                                 'Immich source "filters.isFavorite" must be a boolean'));
                         }
-                        if (source.filters.createdAfter !== undefined && (typeof source.filters.createdAfter !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(source.filters.createdAfter))) {
+                        if (source.filters.createdAfter !== undefined && (typeof source.filters.createdAfter !== 'string' || !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(source.filters.createdAfter))) {
                             errors.push(this.createConfigError(`sources[${i}].filters.createdAfter`,
-                                'Immich source "filters.createdAfter" must be a string in YYYY-MM-DD format'));
+                                'Immich source "filters.createdAfter" must be a string in YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format'));
                         }
-                        if (source.filters.createdBefore !== undefined && (typeof source.filters.createdBefore !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(source.filters.createdBefore))) {
+                        if (source.filters.createdBefore !== undefined && (typeof source.filters.createdBefore !== 'string' || !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(source.filters.createdBefore))) {
                             errors.push(this.createConfigError(`sources[${i}].filters.createdBefore`,
-                                'Immich source "filters.createdBefore" must be a string in YYYY-MM-DD format'));
+                                'Immich source "filters.createdBefore" must be a string in YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format'));
                         }
                         if (source.filters.assetType !== undefined && source.filters.assetType !== 'image' && source.filters.assetType !== 'video') {
                             errors.push(this.createConfigError(`sources[${i}].filters.assetType`,

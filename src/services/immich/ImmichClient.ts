@@ -99,11 +99,13 @@ export class ImmichClient {
                 if (filters.isFavorite !== undefined) {
                     body.isFavorite = filters.isFavorite;
                 }
-                if (filters.createdAfter !== undefined) {
-                    body.createdAfter = filters.createdAfter;
+                if (typeof filters.createdAfter === 'string') {
+                    const val = filters.createdAfter;
+                    body.createdAfter = /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T00:00:00.000Z` : val;
                 }
-                if (filters.createdBefore !== undefined) {
-                    body.createdBefore = filters.createdBefore;
+                if (typeof filters.createdBefore === 'string') {
+                    const val = filters.createdBefore;
+                    body.createdBefore = /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T23:59:59.999Z` : val;
                 }
                 if (filters.assetType !== undefined) {
                     body.type = (filters.assetType as string).toUpperCase();

@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS } from '../models/settings';
 
 export class GallerySettingsTab extends PluginSettingTab {
     plugin: GalleryPlugin;
+    private activeTab: 'general' | 'providers' = 'general';
 
     constructor(app: App, plugin: GalleryPlugin) {
         super(app, plugin);
@@ -12,6 +13,46 @@ export class GallerySettingsTab extends PluginSettingTab {
     }
 
     getSettingDefinitions(): SettingDefinitionItem[] {
+        return [
+            {
+                type: 'group',
+                heading: '',
+                items: [
+                    {
+                        name: '',
+                        render: (setting: Setting) => {
+                            setting.settingEl.empty();
+                            setting.settingEl.addClass('gallery-settings-tab-header-setting');
+                            const tabHeader = setting.settingEl.createDiv({ cls: 'gallery-settings-tab-header' });
+
+                            const generalBtn = tabHeader.createEl('button', {
+                                cls: `gallery-settings-tab-btn ${this.activeTab === 'general' ? 'is-active' : ''}`
+                            });
+                            generalBtn.createSpan({ cls: 'gallery-settings-tab-icon', text: '⚙️' });
+                            generalBtn.createSpan({ cls: 'gallery-settings-tab-title', text: 'General' });
+                            generalBtn.addEventListener('click', () => {
+                                this.activeTab = 'general';
+                                this.update();
+                            });
+
+                            const providersBtn = tabHeader.createEl('button', {
+                                cls: `gallery-settings-tab-btn ${this.activeTab === 'providers' ? 'is-active' : ''}`
+                            });
+                            providersBtn.createSpan({ cls: 'gallery-settings-tab-icon', text: '🔌' });
+                            providersBtn.createSpan({ cls: 'gallery-settings-tab-title', text: 'Providers' });
+                            providersBtn.addEventListener('click', () => {
+                                this.activeTab = 'providers';
+                                this.update();
+                            });
+                        }
+                    }
+                ]
+            },
+            ...(this.activeTab === 'general' ? this.getGeneralDefinitions() : this.getProvidersDefinitions())
+        ];
+    }
+
+    private getGeneralDefinitions(): SettingDefinitionItem[] {
         return [
             {
                 type: 'group',
@@ -64,11 +105,16 @@ export class GallerySettingsTab extends PluginSettingTab {
                         control: { type: 'number', key: 'captionMaxLines', defaultValue: DEFAULT_SETTINGS.captionMaxLines, min: 1, max: 10 }
                     }
                 ]
-            },
+            }
+        ];
+    }
+
+    private getProvidersDefinitions(): SettingDefinitionItem[] {
+        return [
             {
                 type: 'group',
                 heading: 'Immich authenticated providers',
-                desc: 'Configure authenticated access to your personal Immich library. Note: Public immich-share links do not require configuration here.',
+                desc: 'Configure authenticated access to your personal immich library. Note: Public immich-share links do not require configuration here.',
                 items: [
                     {
                         name: 'Connections',
@@ -80,46 +126,26 @@ export class GallerySettingsTab extends PluginSettingTab {
     }
 
     private renderImmichConnections(setting: Setting, group: SettingGroup): void {
+        setting.settingEl.empty();
+        setting.settingEl.addClass('gallery-immich-connections-setting');
         const containerEl = setting.settingEl.createDiv('immich-connections-container');
 
         this.plugin.settings.immichConnections.forEach((conn, index) => {
             const connDetails = containerEl.createEl('details', {
                 cls: 'immich-connection-item'
             });
-            connDetails.setCssStyles({
-                border: '1px solid var(--background-modifier-border)',
-                padding: '10px',
-                marginBottom: '10px',
-                borderRadius: '5px'
-            });
 
-            // Expand by default if it's a new / empty connection
             if (!conn.key && !conn.baseUrl && !conn.apiKey) {
                 connDetails.setAttribute('open', 'true');
             }
 
-            const summary = connDetails.createEl('summary');
-            summary.setCssStyles({
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                outline: 'none',
-                userSelect: 'none',
-                padding: '4px 0'
-            });
+            const summary = connDetails.createEl('summary', { cls: 'immich-connection-summary' });
 
-            const titleSpan = summary.createSpan();
+            const titleSpan = summary.createSpan({ cls: 'immich-connection-title' });
             const getTitle = (key: string) => key ? `Immich: ${key}` : 'New Immich connection';
             titleSpan.setText(getTitle(conn.key));
-            titleSpan.setCssStyles({
-                marginLeft: '8px'
-            });
 
-            const contentDiv = connDetails.createDiv();
-            contentDiv.setCssStyles({
-                marginTop: '10px',
-                paddingTop: '10px',
-                borderTop: '1px solid var(--background-modifier-border)'
-            });
+            const contentDiv = connDetails.createDiv('immich-connection-content');
 
             new Setting(contentDiv)
                 .setName('Connection key')
@@ -173,6 +199,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     .onClick(async () => {
                         this.plugin.settings.immichConnections.splice(index, 1);
                         await this.plugin.saveSettings();
+                        this.plugin.refreshGalleries();
                         this.update();
                     })
                 );
@@ -189,6 +216,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                         apiKey: ''
                     });
                     await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
                     this.update();
                 })
             );

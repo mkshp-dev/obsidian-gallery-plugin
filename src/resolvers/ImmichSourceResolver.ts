@@ -66,7 +66,7 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                 const resolvedTagIds: string[] = [];
 
                 for (const tagName of source.filters.tags) {
-                    const matchingTags = availableTags.filter(t => t.value === tagName);
+                    const matchingTags = availableTags.filter(t => t.name === tagName || t.value === tagName);
 
                     if (matchingTags.length === 0) {
                         throw new Error(`Tag not found: '${tagName}'.`);

@@ -179,7 +179,7 @@ view: thumbnail`;
     filters:
       createdAfter: invalid-date
 view: thumbnail`;
-        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "filters.createdAfter" must be a string in YYYY-MM-DD format');
+        expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "filters.createdAfter" must be a string in YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format');
     });
 
     it('new v2 immich album block fails validation on invalid albumIds', () => {

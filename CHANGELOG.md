@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
+
 ## 2.2.6 - 2026-08-01
 
 - **Persistent Image Captions**: Added persistent image caption rendering below images across Grid, Thumbnail, and Carousel views.

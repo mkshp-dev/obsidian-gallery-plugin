@@ -1,6 +1,6 @@
 {
   "name": "obsidian-gallery-plugin",
-  "version": "2.2.6",
+  "version": "2.2.7",
   "description": "Interactive image galleries for Obsidian notes using code blocks",
   "main": "main.js",
   "scripts": {

@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "fs";
+import { execSync } from "child_process";
 
 const targetVersion = process.env.npm_package_version;
 
@@ -15,3 +16,12 @@ if (!(targetVersion in versions)) {
     versions[targetVersion] = minAppVersion;
     writeFileSync('versions.json', JSON.stringify(versions, null, '\t'));
 }
+
+// Tag documentation version in docs-site
+try {
+    console.log(`[version-bump] Tagging docs-site version ${targetVersion}...`);
+    execSync(`npx docusaurus docs:version ${targetVersion}`, { cwd: './docs-site', stdio: 'inherit' });
+} catch (e) {
+    console.error('[version-bump] Failed to tag docs-site version:', e.message);
+}
+

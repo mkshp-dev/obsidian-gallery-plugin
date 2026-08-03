@@ -2,12 +2,18 @@
 
 ## In-progress
 
+- **Immich Source Album Filtering**: Fixed a bug where the authenticated `immich` source type ignored `albumIds` filters and displayed all assets from the main server library instead of restricting results to the specified album(s).
+- **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
+
+## 2.2.6 - 2026-08-01
+
 - **Persistent Image Captions**: Added persistent image caption rendering below images across Grid, Thumbnail, and Carousel views.
 - **Global Caption Controls**: Added global `Show captions` toggle and `Caption max lines` (1–5 lines) settings in Settings → General.
 - **Comprehensive Metadata & EXIF Extraction**: Automatically extracts image titles, descriptions, and EXIF metadata across local vault files, external URLs, authenticated Immich connections, and public Immich share links.
 - **Gallery View Builder Modal (`Ctrl+P`)**: Completely redesigned the modal layout (`860px` width) with quick-add source pills, a single wide vault folder selector, live YAML codeblock preview with copy button, external URL caption fields, and square red `✕` action buttons.
 - **Lightbox Hover Tooltips & Event Isolation**: Added hover tooltips (`Zoom In`, `Zoom Out`, `Reset Zoom`, `Play/Pause Slideshow`, `Toggle Info`, `Open Original`, `Close`) to all Lightbox controls and isolated click events to prevent Obsidian's native image preview from opening simultaneously.
 - **Immich Password Authentication & Search**: Added password normalization and Bearer token/Cookie authorization for password-protected Immich share links (`immich-share`), with `POST /api/search/metadata` album resolution.
+
 
 ## 2.2.3 - 2026-07-03
 

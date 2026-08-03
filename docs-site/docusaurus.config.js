@@ -30,6 +30,11 @@ const config = {
         docs: {
           sidebarPath: './sidebars.js',
           editUrl: 'https://github.com/mkshp-dev/obsidian-gallery-plugin/tree/Dev/docs-site/',
+          versions: {
+            current: {
+              label: 'In-Progress',
+            },
+          },
         },
         blog: false,
         theme: {
@@ -50,6 +55,11 @@ const config = {
             sidebarId: 'tutorialSidebar',
             position: 'left',
             label: 'Docs',
+          },
+          {
+            type: 'docsVersionDropdown',
+            position: 'right',
+            dropdownActiveClassDisabled: true,
           },
           {
             href: 'https://github.com/mkshp-dev/obsidian-gallery-plugin',

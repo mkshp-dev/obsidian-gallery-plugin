@@ -187,6 +187,12 @@ describe('ImmichClient', () => {
         const assets = await client.searchMetadata({ albumIds: ['album1', 'album2'] });
 
         expect(requestUrl).toHaveBeenCalledTimes(2);
+        expect(requestUrl).toHaveBeenNthCalledWith(1, expect.objectContaining({
+            body: JSON.stringify({ albumIds: ['album1'] })
+        }));
+        expect(requestUrl).toHaveBeenNthCalledWith(2, expect.objectContaining({
+            body: JSON.stringify({ albumIds: ['album2'] })
+        }));
         expect(assets).toHaveLength(1); // deduped
     });
 

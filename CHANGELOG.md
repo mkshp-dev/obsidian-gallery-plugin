@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- **Immich Source Album Filtering**: Fixed a bug where the authenticated `immich` source type ignored `albumIds` filters and displayed all assets from the main server library instead of restricting results to the specified album(s).
 - **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
 
 ## 2.2.6 - 2026-08-01

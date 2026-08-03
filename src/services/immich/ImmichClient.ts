@@ -121,7 +121,7 @@ export class ImmichClient {
             const promises = [];
             if (filters && Array.isArray(filters.albumIds) && filters.albumIds.length > 0) {
                 for (const albumId of filters.albumIds as string[]) {
-                    const albumBody = { ...body, albumId: albumId };
+                    const albumBody = { ...body, albumIds: [albumId] };
                     promises.push(this.doSearch(url, albumBody));
                 }
             } else {

@@ -70,7 +70,9 @@ export class GalleryBuilderModal extends Modal {
             { type: 'local', label: '+ Local vault' },
             { type: 'external', label: '+ External URLs' },
             { type: 'immich-share', label: '+ Immich share' },
-            { type: 'immich', label: '+ Immich auth' }
+            { type: 'immich', label: '+ Immich auth' },
+            { type: 'nextcloud', label: '+ Nextcloud auth' },
+            { type: 'nextcloud-share', label: '+ Nextcloud share' }
         ];
 
         const sourcesContainer = sourcesSection.createDiv('gallery-builder-sources-list');
@@ -155,14 +157,18 @@ export class GalleryBuilderModal extends Modal {
             'local': '📁',
             'external': '🌐',
             'immich-share': '🔗',
-            'immich': '🔐'
+            'immich': '🔐',
+            'nextcloud': '☁️',
+            'nextcloud-share': '🔗'
         };
 
         const nameMap: Record<string, string> = {
             'local': 'Local Vault',
             'external': 'External URLs',
             'immich-share': 'Immich Share Link',
-            'immich': 'Immich Authenticated'
+            'immich': 'Immich Authenticated',
+            'nextcloud': 'Nextcloud Authenticated',
+            'nextcloud-share': 'Nextcloud Share Link'
         };
 
         this.sources.forEach((source, index) => {
@@ -591,6 +597,99 @@ export class GalleryBuilderModal extends Modal {
                 );
 
             renderDynamicContent(source.connection).catch(e => console.error(e));
+        } else if (source.type === 'nextcloud') {
+            const connections = this.plugin.settings.nextcloudConnections || [];
+
+            if (connections.length === 0) {
+                container.createEl('p', {
+                    text: 'No nextcloud connections configured. Please add one in the plugin settings.',
+                    cls: 'gallery-error-text'
+                });
+                return;
+            }
+
+            const connectionOptions: Record<string, string> = {};
+            connections.forEach(conn => {
+                connectionOptions[conn.key] = conn.key;
+            });
+
+            if (!source.connection || !connectionOptions[source.connection]) {
+                source.connection = connections[0].key;
+            }
+
+            new Setting(container)
+                .setName('Connection')
+                .setDesc('Select a nextcloud connection.')
+                .addDropdown(dropdown => dropdown
+                    .addOptions(connectionOptions)
+                    .setValue(source.connection!)
+                    .onChange(value => {
+                        source.connection = value;
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Path')
+                .setDesc('Path on your nextcloud server to fetch images from.')
+                .addText(text => text
+                    .setPlaceholder('/')
+                    .setValue(source.path || '')
+                    .onChange(value => {
+                        source.path = value;
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Recursive')
+                .setDesc('Include subfolders.')
+                .addToggle(toggle => toggle
+                    .setValue(source.recursive !== false)
+                    .onChange(value => {
+                        source.recursive = value;
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Limit')
+                .setDesc('Maximum number of items to fetch.')
+                .addText(text => text
+                    .setValue(source.limit?.toString() || '')
+                    .onChange(value => {
+                        const parsed = parseInt(value, 10);
+                        if (!isNaN(parsed) && parsed > 0) {
+                            source.limit = parsed;
+                        } else {
+                            delete source.limit;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+        } else if (source.type === 'nextcloud-share') {
+            new Setting(container)
+                .setName('Share URL')
+                .setDesc('Nextcloud public share link.')
+                .addText(text => text
+                    .setValue(source.url || '')
+                    .onChange(value => {
+                        source.url = value;
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Password')
+                .setDesc('(Optional) password if the share link is protected.')
+                .addText(text => {
+                    text.inputEl.type = 'password';
+                    text.setValue(source.password || '')
+                        .onChange(value => {
+                            source.password = value;
+                            this.refreshLivePreview();
+                        });
+                });
         }
     }
 

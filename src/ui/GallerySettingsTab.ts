@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice, type SettingDefinitionItem, type SettingGroup } from 'obsidian';
 import { ImmichClient } from '../services/immich/ImmichClient';
+import { NextcloudClient } from '../services/nextcloud/NextcloudClient';
 import type GalleryPlugin from '../main';
 import { DEFAULT_SETTINGS } from '../models/settings';
 
@@ -121,6 +122,17 @@ export class GallerySettingsTab extends PluginSettingTab {
                         render: (setting: Setting, group: SettingGroup) => this.renderImmichConnections(setting, group)
                     }
                 ]
+            },
+            {
+                type: 'group',
+                heading: 'Nextcloud authenticated providers',
+                desc: 'Configure authenticated access to your Nextcloud files. Note: Public share links do not require configuration here.',
+                items: [
+                    {
+                        name: 'Connections',
+                        render: (setting: Setting, group: SettingGroup) => this.renderNextcloudConnections(setting, group)
+                    }
+                ]
             }
         ];
     }
@@ -214,6 +226,117 @@ export class GallerySettingsTab extends PluginSettingTab {
                         key: '',
                         baseUrl: '',
                         apiKey: ''
+                    });
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries();
+                    this.update();
+                })
+            );
+    }
+
+    private renderNextcloudConnections(setting: Setting, group: SettingGroup): void {
+        setting.settingEl.empty();
+        setting.settingEl.addClass('gallery-nextcloud-connections-setting');
+        const containerEl = setting.settingEl.createDiv('nextcloud-connections-container');
+
+        this.plugin.settings.nextcloudConnections.forEach((conn, index) => {
+            const connDetails = containerEl.createEl('details', {
+                cls: 'nextcloud-connection-item'
+            });
+
+            if (!conn.key && !conn.baseUrl && !conn.username) {
+                connDetails.setAttribute('open', 'true');
+            }
+
+            const summary = connDetails.createEl('summary', { cls: 'nextcloud-connection-summary' });
+
+            const titleSpan = summary.createSpan({ cls: 'nextcloud-connection-title' });
+            const getTitle = (key: string) => key ? `Nextcloud: ${key}` : 'New Nextcloud connection';
+            titleSpan.setText(getTitle(conn.key));
+
+            const contentDiv = connDetails.createDiv('nextcloud-connection-content');
+
+            new Setting(contentDiv)
+                .setName('Connection key')
+                .setDesc('A stable reference used in gallery blocks (e.g. Home).')
+                .addText(text => text
+                    .setPlaceholder('Home')
+                    .setValue(conn.key || '')
+                    .onChange(async (value) => {
+                        this.plugin.settings.nextcloudConnections[index].key = value;
+                        await this.plugin.saveSettings();
+                        titleSpan.setText(getTitle(value));
+                    })
+                );
+
+            new Setting(contentDiv)
+                .setName('Base URL')
+                .setDesc('The base URL of your nextcloud server (e.g. Https://cloud.example.com).')
+                .addText(text => text
+                    .setPlaceholder('https://cloud.example.com')
+                    .setValue(conn.baseUrl)
+                    .onChange(async (value) => {
+                        this.plugin.settings.nextcloudConnections[index].baseUrl = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
+            new Setting(contentDiv)
+                .setName('Username')
+                .setDesc('Your nextcloud username.')
+                .addText(text => text
+                    .setPlaceholder('Username')
+                    .setValue(conn.username)
+                    .onChange(async (value) => {
+                        this.plugin.settings.nextcloudConnections[index].username = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
+            new Setting(contentDiv)
+                .setName('App password')
+                .setDesc('Your nextcloud app password.')
+                .addText(text => {
+                    text.inputEl.type = 'password';
+                    text.setPlaceholder('App password')
+                        .setValue(conn.appPassword)
+                        .onChange(async (value) => {
+                            this.plugin.settings.nextcloudConnections[index].appPassword = value;
+                            await this.plugin.saveSettings();
+                        });
+                });
+
+            new Setting(contentDiv)
+                .addButton(btn => btn
+                    .setButtonText('Test connection')
+                    .onClick(async () => {
+                        const client = new NextcloudClient(conn);
+                        const result = await client.validateConnection();
+                        new Notice(result.message);
+                    })
+                )
+                .addButton(btn => btn
+                    .setButtonText('Remove connection')
+                    .setDestructive()
+                    .onClick(async () => {
+                        this.plugin.settings.nextcloudConnections.splice(index, 1);
+                        await this.plugin.saveSettings();
+                        this.plugin.refreshGalleries();
+                        this.update();
+                    })
+                );
+        });
+
+        new Setting(containerEl)
+            .addButton(btn => btn
+                .setButtonText('Add nextcloud connection')
+                .setCta()
+                .onClick(async () => {
+                    this.plugin.settings.nextcloudConnections.push({
+                        key: '',
+                        baseUrl: '',
+                        username: '',
+                        appPassword: ''
                     });
                     await this.plugin.saveSettings();
                     this.plugin.refreshGalleries();

@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- **Nextcloud public shares**: Added support for resolving Nextcloud public share links via the `nextcloud-share` source type, including password-protected shares.
 - **Nextcloud integration**: Added foundational Nextcloud type definitions, interfaces, configuration settings, and source lifecycle support.
 
 ## 2.2.7 - 2026-08-03

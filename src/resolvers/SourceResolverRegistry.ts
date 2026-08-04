@@ -5,6 +5,7 @@ import { ExternalSourceResolver } from './ExternalSourceResolver';
 import { ImmichShareSourceResolver } from './ImmichShareSourceResolver';
 import { ImmichSourceResolver } from './ImmichSourceResolver';
 import { NextcloudSourceResolver } from './NextcloudSourceResolver';
+import { NextcloudShareSourceResolver } from './NextcloudShareSourceResolver';
 import { IImmichConnection, INextcloudConnection } from '../models/interfaces';
 
 export class SourceResolverRegistry {
@@ -20,6 +21,7 @@ export class SourceResolverRegistry {
         this.registerResolver(new ImmichShareSourceResolver());
         this.registerResolver(new ImmichSourceResolver(getConnections));
         this.registerResolver(new NextcloudSourceResolver(getNextcloudConnections));
+        this.registerResolver(new NextcloudShareSourceResolver());
     }
 
     registerResolver(resolver: GallerySourceResolver<ISourceConfig>) {

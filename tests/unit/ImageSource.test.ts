@@ -1,4 +1,5 @@
 import { ImageSource } from '../../src/models/ImageSource';
+import { ObjectUrlManager } from '../../src/utils/immich/ObjectUrlManager';
 
 describe('ImageSource', () => {
     describe('getDisplayUrl', () => {
@@ -56,6 +57,13 @@ describe('ImageSource', () => {
             expect(img.hasTimedOut()).toBe(false);
         });
 
+        it('should return false for nextcloud images even after time passes', () => {
+            const img = new ImageSource('nextcloud://conn/files/image.jpg', 'nextcloud');
+            img.startLoading();
+            jest.advanceTimersByTime(15000); // 15 seconds
+            expect(img.hasTimedOut()).toBe(false);
+        });
+
         it('should return true for external images if loading takes more than 10 seconds', () => {
             const img = new ImageSource('https://example.com/pic.jpg', 'external');
             
@@ -69,6 +77,24 @@ describe('ImageSource', () => {
             
             jest.advanceTimersByTime(2); // 10001 ms total
             expect(img.hasTimedOut()).toBe(true);
+        });
+    });
+
+    describe('destroy', () => {
+        it('should release nextcloud resourceUrl if provided', () => {
+            const spyRelease = jest.spyOn(ObjectUrlManager, 'releaseByUrl').mockImplementation(() => {});
+            const img = new ImageSource('nextcloud://conn/files/image.jpg', 'nextcloud', 'image', 'blob:nextcloud-test-url');
+            img.destroy();
+            expect(spyRelease).toHaveBeenCalledWith('blob:nextcloud-test-url');
+            spyRelease.mockRestore();
+        });
+
+        it('should not release nextcloud-share resourceUrl', () => {
+            const spyRelease = jest.spyOn(ObjectUrlManager, 'releaseByUrl').mockImplementation(() => {});
+            const img = new ImageSource('https://cloud.example.com/s/TOKEN', 'nextcloud-share', 'image', 'blob:nextcloud-test-url');
+            img.destroy();
+            expect(spyRelease).not.toHaveBeenCalled();
+            spyRelease.mockRestore();
         });
     });
 

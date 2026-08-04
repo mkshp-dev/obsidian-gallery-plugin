@@ -8,7 +8,7 @@ import { ObjectUrlManager } from '../utils/immich/ObjectUrlManager';
 export class ImageSource implements IImageSource {
     public readonly path: string;
     public readonly resourceUrl?: string;
-    public readonly type: 'local' | 'external' | 'immich-share' | 'immich';
+    public readonly type: 'local' | 'external' | 'immich-share' | 'immich' | 'nextcloud' | 'nextcloud-share';
     public readonly displayName: string;
     public caption?: string;
     public size?: number;
@@ -20,7 +20,7 @@ export class ImageSource implements IImageSource {
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    constructor(path: string, type: 'local' | 'external' | 'immich-share' | 'immich', displayName?: string, resourceUrl?: string, caption?: string) {
+    constructor(path: string, type: 'local' | 'external' | 'immich-share' | 'immich' | 'nextcloud' | 'nextcloud-share', displayName?: string, resourceUrl?: string, caption?: string) {
         this.path = path;
         this.resourceUrl = resourceUrl;
         this.type = type;
@@ -111,7 +111,7 @@ export class ImageSource implements IImageSource {
      * Check if loading has timed out (10 seconds for external URLs)
      */
     hasTimedOut(): boolean {
-        if (this.type === 'local' || this.type === 'immich' || !this.loadStartTime) {
+        if (this.type === 'local' || this.type === 'immich' || this.type === 'nextcloud' || !this.loadStartTime) {
             return false;
         }
 
@@ -229,6 +229,9 @@ export class ImageSource implements IImageSource {
      */
     destroy(): void {
         if (this.type === 'immich' && this.resourceUrl) {
+            ObjectUrlManager.releaseByUrl(this.resourceUrl);
+        }
+        if (this.type === 'nextcloud' && this.resourceUrl) {
             ObjectUrlManager.releaseByUrl(this.resourceUrl);
         }
     }

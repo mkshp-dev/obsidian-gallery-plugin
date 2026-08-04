@@ -107,6 +107,26 @@ export class GalleryYamlGenerator {
                         yaml += `      order: ${source.sort.order}\n`;
                     }
                     break;
+                case 'nextcloud':
+                    if (!source.connection) throw new Error('Nextcloud source requires a connection.');
+                    yaml += `    connection: ${source.connection}\n`;
+                    if (source.path) {
+                        yaml += `    path: ${source.path}\n`;
+                    }
+                    if (source.recursive !== undefined) {
+                        yaml += `    recursive: ${source.recursive}\n`;
+                    }
+                    if (source.limit) {
+                        yaml += `    limit: ${source.limit}\n`;
+                    }
+                    break;
+                case 'nextcloud-share':
+                    if (!source.url) throw new Error('Nextcloud share source requires a URL.');
+                    yaml += `    url: ${source.url.trim()}\n`;
+                    if (source.password && source.password.trim()) {
+                        yaml += `    password: ${source.password.trim()}\n`;
+                    }
+                    break;
             }
         }
 

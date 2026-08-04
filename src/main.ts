@@ -37,6 +37,7 @@ export default class GalleryPlugin extends Plugin {
             this.contentScanner,
             this.viewFactory,
             () => this.settings.immichConnections,
+            () => this.settings.nextcloudConnections,
             () => this.getProcessingOptions()
         );
 

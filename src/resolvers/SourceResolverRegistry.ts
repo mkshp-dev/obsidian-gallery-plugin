@@ -4,16 +4,22 @@ import { LocalSourceResolver } from './LocalSourceResolver';
 import { ExternalSourceResolver } from './ExternalSourceResolver';
 import { ImmichShareSourceResolver } from './ImmichShareSourceResolver';
 import { ImmichSourceResolver } from './ImmichSourceResolver';
-import { IImmichConnection } from '../models/interfaces';
+import { NextcloudSourceResolver } from './NextcloudSourceResolver';
+import { IImmichConnection, INextcloudConnection } from '../models/interfaces';
 
 export class SourceResolverRegistry {
     private resolvers: Map<string, GallerySourceResolver<ISourceConfig>> = new Map();
 
-    constructor(contentScanner: IContentScanner, getConnections: () => IImmichConnection[]) {
+    constructor(
+        contentScanner: IContentScanner,
+        getConnections: () => IImmichConnection[],
+        getNextcloudConnections: () => INextcloudConnection[]
+    ) {
         this.registerResolver(new LocalSourceResolver(contentScanner));
         this.registerResolver(new ExternalSourceResolver());
         this.registerResolver(new ImmichShareSourceResolver());
         this.registerResolver(new ImmichSourceResolver(getConnections));
+        this.registerResolver(new NextcloudSourceResolver(getNextcloudConnections));
     }
 
     registerResolver(resolver: GallerySourceResolver<ISourceConfig>) {

@@ -602,3 +602,39 @@ view: grid`;
         });
         expect(config.view.type).toBe('grid');
     });
+
+    it('new v2 nextcloud block parses correctly', () => {
+        const yaml = `sources:
+  - type: nextcloud
+    connection: my-cloud
+    path: /Photos
+    recursive: false
+    limit: 10
+view: grid`;
+        const config = ParameterParser.parseYaml(yaml);
+        expect(config.sources).toHaveLength(1);
+        expect(config.sources[0]).toEqual({
+            type: 'nextcloud',
+            connection: 'my-cloud',
+            path: '/Photos',
+            recursive: false,
+            limit: 10
+        });
+        expect(config.view.type).toBe('grid');
+    });
+
+    it('new v2 nextcloud-share block parses correctly', () => {
+        const yaml = `sources:
+  - type: nextcloud-share
+    url: https://cloud.example.com/s/TOKEN
+    password: mypassword
+view: thumbnail`;
+        const config = ParameterParser.parseYaml(yaml);
+        expect(config.sources).toHaveLength(1);
+        expect(config.sources[0]).toEqual({
+            type: 'nextcloud-share',
+            url: 'https://cloud.example.com/s/TOKEN',
+            password: 'mypassword'
+        });
+        expect(config.view.type).toBe('thumbnail');
+    });

@@ -112,4 +112,80 @@ describe('NextcloudSourceResolver', () => {
         // since viewType is 'carousel', we expect 'original' representation
         expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/Photos/image1.jpg', 'original', undefined);
     });
+
+    it('should respect recursive parameter', async () => {
+        const mockListFiles = jest.fn().mockResolvedValue([]);
+        (NextcloudClient as jest.Mock).mockImplementation(() => {
+            return {
+                listFiles: mockListFiles,
+                getFileBlobUrl: jest.fn()
+            };
+        });
+
+        const source: INextcloudSourceConfig = { type: 'nextcloud', connection: 'my-cloud', path: '/Photos', recursive: false };
+        const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+        await resolver.resolve(source, context);
+
+        expect(mockListFiles).toHaveBeenCalledWith('/Photos', false);
+    });
+
+    it('should enforce limit parameter', async () => {
+        const mockListFiles = jest.fn().mockResolvedValue([
+            { path: '/1.jpg', name: '1.jpg', contentType: 'image/jpeg' },
+            { path: '/2.jpg', name: '2.jpg', contentType: 'image/jpeg' },
+            { path: '/3.jpg', name: '3.jpg', contentType: 'image/jpeg' }
+        ]);
+        const mockGetFileBlobUrl = jest.fn().mockResolvedValue('blob:test');
+
+        (NextcloudClient as jest.Mock).mockImplementation(() => {
+            return {
+                listFiles: mockListFiles,
+                getFileBlobUrl: mockGetFileBlobUrl
+            };
+        });
+
+        const source: INextcloudSourceConfig = { type: 'nextcloud', connection: 'my-cloud', path: '/', limit: 2 };
+        const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+        const result = await resolver.resolve(source, context);
+
+        expect(result.images.length).toBe(2);
+        expect(result.images[0].displayName).toBe('1.jpg');
+        expect(result.images[1].displayName).toBe('2.jpg');
+        expect(mockGetFileBlobUrl).toHaveBeenCalledTimes(2);
+    });
+
+    it('should select thumbnail representation for thumbnail view', async () => {
+        const mockListFiles = jest.fn().mockResolvedValue([
+            { path: '/1.jpg', name: '1.jpg', contentType: 'image/jpeg' }
+        ]);
+        const mockGetFileBlobUrl = jest.fn().mockResolvedValue('blob:test');
+        (NextcloudClient as jest.Mock).mockImplementation(() => ({
+            listFiles: mockListFiles, getFileBlobUrl: mockGetFileBlobUrl
+        }));
+
+        const source: INextcloudSourceConfig = { type: 'nextcloud', connection: 'my-cloud', path: '/' };
+        const context: GallerySourceResolveContext = { viewType: 'thumbnail' };
+        await resolver.resolve(source, context);
+
+        expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/1.jpg', 'thumbnail', undefined);
+    });
+
+    it('should select original representation for carousel view', async () => {
+        const mockListFiles = jest.fn().mockResolvedValue([
+            { path: '/1.jpg', name: '1.jpg', contentType: 'image/jpeg' }
+        ]);
+        const mockGetFileBlobUrl = jest.fn().mockResolvedValue('blob:test');
+        (NextcloudClient as jest.Mock).mockImplementation(() => ({
+            listFiles: mockListFiles, getFileBlobUrl: mockGetFileBlobUrl
+        }));
+
+        const source: INextcloudSourceConfig = { type: 'nextcloud', connection: 'my-cloud', path: '/' };
+        const context: GallerySourceResolveContext = { viewType: 'carousel' };
+        await resolver.resolve(source, context);
+
+        expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/1.jpg', 'original', undefined);
+    });
+
 });

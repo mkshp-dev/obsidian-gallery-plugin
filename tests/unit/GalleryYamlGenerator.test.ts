@@ -141,7 +141,7 @@ describe('GalleryYamlGenerator', () => {
 
     it('should generate valid yaml for nextcloud source', () => {
         const sources: Partial<ISourceConfig>[] = [
-            { type: 'nextcloud', connection: 'my-cloud', path: '/Photos', recursive: false, filenameFilter: '*.jpg', limit: 10 }
+            { type: 'nextcloud', connection: 'my-cloud', path: '/Photos', recursive: false, filenameFilter: '*.jpg', limit: 10, filters: { maxSizeKb: 5000, minSizeKb: 100 } }
         ];
 
         const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
@@ -152,6 +152,9 @@ describe('GalleryYamlGenerator', () => {
         expect(result).toContain('recursive: false');
         expect(result).toContain('filenameFilter: *.jpg');
         expect(result).toContain('limit: 10');
+        expect(result).toContain('filters:');
+        expect(result).toContain('maxSizeKb: 5000');
+        expect(result).toContain('minSizeKb: 100');
     });
 
     it('should throw an error if nextcloud source is missing connection', () => {

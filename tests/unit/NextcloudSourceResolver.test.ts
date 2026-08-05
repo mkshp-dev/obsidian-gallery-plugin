@@ -317,4 +317,83 @@ describe('NextcloudSourceResolver', () => {
             expect(result.images[0].displayName).toBe('2.jpg');
         });
     });
+
+    describe('Size Filters (maxSizeKb / minSizeKb)', () => {
+        const mockFiles = [
+            { path: '/1.jpg', name: '1.jpg', contentType: 'image/jpeg', size: 500 * 1024 }, // 500 KB
+            { path: '/2.jpg', name: '2.jpg', contentType: 'image/jpeg', size: 2000 * 1024 }, // 2000 KB
+            { path: '/3.jpg', name: '3.jpg', contentType: 'image/jpeg', size: 5000 * 1024 }, // 5000 KB
+            { path: '/4.jpg', name: '4.jpg', contentType: 'image/jpeg' }, // No size
+        ];
+
+        beforeEach(() => {
+            (NextcloudClient as jest.Mock).mockImplementation(() => ({
+                listFiles: jest.fn().mockResolvedValue([...mockFiles]),
+                getFileBlobUrl: jest.fn().mockResolvedValue('blob:test')
+            }));
+        });
+
+        it('should filter files by maxSizeKb', async () => {
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                filters: { maxSizeKb: 2500 }
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            expect(result.images.length).toBe(3);
+            expect(result.images.map(i => i.displayName)).toEqual(['1.jpg', '2.jpg', '4.jpg']);
+        });
+
+        it('should filter files by minSizeKb', async () => {
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                filters: { minSizeKb: 1000 }
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            expect(result.images.length).toBe(3);
+            expect(result.images.map(i => i.displayName)).toEqual(['2.jpg', '3.jpg', '4.jpg']);
+        });
+
+        it('should filter files by both minSizeKb and maxSizeKb', async () => {
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                filters: { minSizeKb: 1000, maxSizeKb: 4000 }
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            expect(result.images.length).toBe(2);
+            expect(result.images.map(i => i.displayName)).toEqual(['2.jpg', '4.jpg']);
+        });
+
+        it('should apply limit AFTER size filtering', async () => {
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                limit: 1,
+                filters: { minSizeKb: 1000 }
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            // Without limit: 2.jpg, 3.jpg, 4.jpg
+            // With limit 1: 2.jpg
+            expect(result.images.length).toBe(1);
+            expect(result.images[0].displayName).toBe('2.jpg');
+        });
+    });
 });

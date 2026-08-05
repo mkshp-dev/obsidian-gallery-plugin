@@ -119,13 +119,19 @@ export class GalleryYamlGenerator {
                     if (source.filenameFilter) {
                         yaml += `    filenameFilter: ${source.filenameFilter}\n`;
                     }
-                    if (source.filters && (source.filters.modifiedAfter || source.filters.modifiedBefore)) {
+                    if (source.filters && (source.filters.modifiedAfter || source.filters.modifiedBefore || source.filters.maxSizeKb !== undefined || source.filters.minSizeKb !== undefined)) {
                         yaml += `    filters:\n`;
                         if (source.filters.modifiedAfter) {
                             yaml += `      modifiedAfter: ${source.filters.modifiedAfter}\n`;
                         }
                         if (source.filters.modifiedBefore) {
                             yaml += `      modifiedBefore: ${source.filters.modifiedBefore}\n`;
+                        }
+                        if (source.filters.maxSizeKb !== undefined) {
+                            yaml += `      maxSizeKb: ${source.filters.maxSizeKb}\n`;
+                        }
+                        if (source.filters.minSizeKb !== undefined) {
+                            yaml += `      minSizeKb: ${source.filters.minSizeKb}\n`;
                         }
                     }
                     if (source.limit) {

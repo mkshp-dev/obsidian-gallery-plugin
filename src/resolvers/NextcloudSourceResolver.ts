@@ -42,6 +42,27 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
                 files = files.filter(file => regex.test(file.name));
             }
 
+            if (source.filters) {
+                const { modifiedAfter, modifiedBefore } = source.filters;
+
+                const afterDate = modifiedAfter ? new Date(modifiedAfter).getTime() : undefined;
+                const beforeDate = modifiedBefore ? new Date(modifiedBefore).getTime() : undefined;
+
+                if (afterDate !== undefined || beforeDate !== undefined) {
+                    files = files.filter(file => {
+                        if (!file.lastModified) return true;
+
+                        const fileDate = new Date(file.lastModified).getTime();
+                        if (isNaN(fileDate)) return true;
+
+                        if (afterDate !== undefined && fileDate < afterDate) return false;
+                        if (beforeDate !== undefined && fileDate > beforeDate) return false;
+
+                        return true;
+                    });
+                }
+            }
+
             if (source.limit && source.limit > 0) {
                 files = files.slice(0, source.limit);
             }

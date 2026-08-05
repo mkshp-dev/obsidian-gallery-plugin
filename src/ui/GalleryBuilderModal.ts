@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Editor, Notice, TFolder } from 'obsidian';
 import type GalleryPlugin from '../main';
-import { ISourceConfig } from '../models/interfaces';
+import { ISourceConfig, INextcloudSourceConfig } from '../models/interfaces';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 
@@ -564,6 +564,46 @@ export class GalleryBuilderModal extends Modal {
 
             // Display Section
             new Setting(container).setName('Display').setHeading();
+
+            new Setting(container)
+                .setName('Modified after')
+                .setDesc('Only show images modified after this date (iso-8601, e.g. 2025-01-01)')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('YYYY-MM-DD')
+                        .setValue(typedSource.filters?.modifiedAfter || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            if (value.trim()) {
+                                typedSource.filters.modifiedAfter = value.trim();
+                            } else {
+                                delete typedSource.filters.modifiedAfter;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Modified before')
+                .setDesc('Only show images modified before this date (iso-8601, e.g. 2025-12-31)')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('YYYY-MM-DD')
+                        .setValue(typedSource.filters?.modifiedBefore || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            if (value.trim()) {
+                                typedSource.filters.modifiedBefore = value.trim();
+                            } else {
+                                delete typedSource.filters.modifiedBefore;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
 
             new Setting(container)
                 .setName('Limit')

@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- **Nextcloud Filters UI**: Wired `nextcloud` and `nextcloud-share` filter and sort UI controls into the Gallery Builder Modal.
 - **Nextcloud Filters**: Add limit field to nextcloud-share source
 - **Nextcloud Filters**: Sort order (by name / lastModified / size) for nextcloud sources
 - **Nextcloud Filters**: Added `filenameFilter` field to `nextcloud` and `nextcloud-share` sources allowing users to match filenames using glob patterns or extensions.

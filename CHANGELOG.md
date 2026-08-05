@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- **Nextcloud Filters**: Sort order (by name / lastModified / size) for nextcloud sources
 - **Nextcloud Filters**: Added `filenameFilter` field to `nextcloud` and `nextcloud-share` sources allowing users to match filenames using glob patterns or extensions.
 
 - **Nextcloud public shares**: Added support for resolving Nextcloud public share links via the `nextcloud-share` source type, including password-protected shares.

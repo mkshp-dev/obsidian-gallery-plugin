@@ -481,3 +481,107 @@ describe('Nextcloud Share Source Sorting', () => {
         expect(result.images.map(i => i.displayName)).toEqual(['image_a.jpg', 'image_b.png']);
     });
 });
+
+describe('Nextcloud Share Source Filtering', () => {
+    let resolver: NextcloudShareSourceResolver;
+
+    beforeEach(() => {
+        resolver = new NextcloudShareSourceResolver();
+
+        (global as any).DOMParser = class DOMParser {
+            parseFromString(str: string, type: string) {
+                const responses = str.split('</d:response>').filter(s => s.trim().length > 0).map(r => r + '</d:response>');
+                return {
+                    getElementsByTagNameNS: (ns: string, tag: string) => [],
+                    getElementsByTagName: (tag: string) => {
+                        if (tag === 'd:response') {
+                            return responses.map(r => {
+                                const createMockElement = (content: string) => ({
+                                    getElementsByTagNameNS: () => [],
+                                    getElementsByTagName: (subtag: string) => {
+                                        if (subtag === 'd:propstat') {
+                                            const statMatch = content.match(/<d:propstat>(.*?)<\/d:propstat>/s);
+                                            if (!statMatch) return [];
+                                            const statContent = statMatch[1];
+                                            return [createMockElement(statContent)];
+                                        }
+                                        if (subtag === 'd:prop') {
+                                            const propMatch = content.match(/<d:prop>(.*?)<\/d:prop>/s);
+                                            if (!propMatch) return [];
+                                            const propContent = propMatch[1];
+                                            return [createMockElement(propContent)];
+                                        }
+                                        const regex = new RegExp(`<${subtag}>(.*?)</${subtag}>`, 's');
+                                        const m = content.match(regex);
+                                        return m ? [{ textContent: m[1] }] : [];
+                                    }
+                                });
+                                return createMockElement(r);
+                            });
+                        }
+                        return [];
+                    }
+                };
+            }
+        };
+    });
+
+    it('should filter files by mimeTypes if provided', async () => {
+        const xmlResponse = `
+            <?xml version="1.0"?>
+            <d:multistatus xmlns:d="DAV:">
+                <d:response>
+                    <d:href>/public.php/webdav/image_a.jpg</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/jpeg</d:getcontenttype>
+                            <d:displayname>image_a.jpg</d:displayname>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+                <d:response>
+                    <d:href>/public.php/webdav/image_b.png</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/png</d:getcontenttype>
+                            <d:displayname>image_b.png</d:displayname>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+                <d:response>
+                    <d:href>/public.php/webdav/doc.pdf</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>application/pdf</d:getcontenttype>
+                            <d:displayname>doc.pdf</d:displayname>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+            </d:multistatus>
+        `;
+
+        (requestUrl as jest.Mock)
+            .mockResolvedValueOnce({ status: 207, text: xmlResponse })
+            .mockResolvedValue({
+                status: 200,
+                arrayBuffer: new ArrayBuffer(10),
+                headers: { 'content-type': 'image/png' }
+            });
+
+        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
+        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
+
+        let source: INextcloudShareSourceConfig = {
+            type: 'nextcloud-share',
+            url: 'https://cloud.example.com/s/TOKEN123',
+            filters: { mimeTypes: ['image/png'] }
+        };
+        let result = await resolver.resolve(source, { viewType: 'grid' });
+
+        expect(result.images.length).toBe(1);
+        expect(result.images[0].displayName).toBe('image_b.png');
+    });
+});

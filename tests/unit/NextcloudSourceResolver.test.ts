@@ -74,7 +74,7 @@ describe('NextcloudSourceResolver', () => {
 
         expect(result.images[1].path).toBe('nextcloud://my-cloud/Photos/image2.png');
 
-        expect(mockListFiles).toHaveBeenCalledWith('/Photos', true);
+        expect(mockListFiles).toHaveBeenCalledWith('/Photos', true, undefined);
         expect(mockGetFileBlobUrl).toHaveBeenCalledTimes(2);
         // since viewType is 'grid', we expect 'thumbnail' representation
         expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/Photos/image1.jpg', 'thumbnail', undefined);
@@ -127,7 +127,7 @@ describe('NextcloudSourceResolver', () => {
 
         await resolver.resolve(source, context);
 
-        expect(mockListFiles).toHaveBeenCalledWith('/Photos', false);
+        expect(mockListFiles).toHaveBeenCalledWith('/Photos', false, undefined);
     });
 
     it('should filter files by filenameFilter glob pattern', async () => {

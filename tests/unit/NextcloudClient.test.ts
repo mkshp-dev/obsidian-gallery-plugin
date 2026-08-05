@@ -260,6 +260,40 @@ describe('NextcloudClient', () => {
             expect(files[0].fileId).toBe('123');
         });
 
+        it('should filter by mimeTypes when provided', async () => {
+            const xmlResponse = `
+                <?xml version="1.0"?>
+                <d:multistatus xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">
+                    <d:response>
+                        <d:href>/remote.php/dav/files/testuser/Photos/image1.jpg</d:href>
+                        <d:propstat>
+                            <d:prop>
+                                <d:getcontenttype>image/jpeg</d:getcontenttype>
+                            </d:prop>
+                            <d:status>HTTP/1.1 200 OK</d:status>
+                        </d:propstat>
+                    </d:response>
+                    <d:response>
+                        <d:href>/remote.php/dav/files/testuser/Photos/image2.png</d:href>
+                        <d:propstat>
+                            <d:prop>
+                                <d:getcontenttype>image/png</d:getcontenttype>
+                            </d:prop>
+                            <d:status>HTTP/1.1 200 OK</d:status>
+                        </d:propstat>
+                    </d:response>
+                </d:multistatus>
+            `;
+
+            (requestUrl as jest.Mock).mockResolvedValue({ status: 207, text: xmlResponse });
+
+            const files = await client.listFiles('/Photos', false, ['image/png']);
+
+            expect(files.length).toBe(1);
+            expect(files[0].name).toBe('image2.png');
+            expect(files[0].contentType).toBe('image/png');
+        });
+
         it('should cache listFiles response', async () => {
             (requestUrl as jest.Mock).mockResolvedValue({ status: 207, text: '<d:multistatus></d:multistatus>' });
 

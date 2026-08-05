@@ -69,8 +69,8 @@ export class NextcloudClient {
     }
   }
 
-  public async listFiles(path: string, recursive: boolean = false): Promise<NextcloudFile[]> {
-    const cacheKey = `${this.connection.key}:${path}:${recursive}`;
+  public async listFiles(path: string, recursive: boolean = false, mimeTypesFilter?: string[]): Promise<NextcloudFile[]> {
+    const cacheKey = `${this.connection.key}:${path}:${recursive}:${mimeTypesFilter ? mimeTypesFilter.join(',') : ''}`;
     const now = Date.now();
     const cached = NextcloudClient.cache.get(cacheKey);
 
@@ -78,7 +78,7 @@ export class NextcloudClient {
       return cached.promise;
     }
 
-    const promise = this.performListFiles(path, recursive);
+    const promise = this.performListFiles(path, recursive, mimeTypesFilter);
     NextcloudClient.cache.set(cacheKey, { promise, timestamp: now });
 
     try {
@@ -89,7 +89,7 @@ export class NextcloudClient {
     }
   }
 
-  private async performListFiles(path: string, recursive: boolean): Promise<NextcloudFile[]> {
+  private async performListFiles(path: string, recursive: boolean, mimeTypesFilter?: string[]): Promise<NextcloudFile[]> {
     try {
       // Normalize path
       let normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -112,7 +112,7 @@ export class NextcloudClient {
         throw new Error(`Failed to list files. Status: ${response.status}`);
       }
 
-      return this.parseWebdavResponse(response.text, normalizedPath);
+      return this.parseWebdavResponse(response.text, normalizedPath, mimeTypesFilter);
     } catch (error) {
       Logger.error(`Failed to list Nextcloud files at path ${path}:`, error);
       throw error;
@@ -172,7 +172,7 @@ export class NextcloudClient {
     }
   }
 
-  private parseWebdavResponse(xmlText: string, basePath: string): NextcloudFile[] {
+  private parseWebdavResponse(xmlText: string, basePath: string, mimeTypesFilter?: string[]): NextcloudFile[] {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
     const responses = xmlDoc.getElementsByTagNameNS('DAV:', 'response');
@@ -181,7 +181,10 @@ export class NextcloudClient {
     const responsesList = responses.length > 0 ? Array.from(responses) : Array.from(xmlDoc.getElementsByTagName('d:response'));
 
     const files: NextcloudFile[] = [];
-    const validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    let validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (mimeTypesFilter && mimeTypesFilter.length > 0) {
+        validImageMimeTypes = validImageMimeTypes.filter(mime => mimeTypesFilter.includes(mime));
+    }
 
     for (const response of responsesList) {
       // Extract href

@@ -35,7 +35,7 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
         try {
             const path = source.path || '/';
             const recursive = source.recursive !== undefined ? source.recursive : true;
-            let files = await client.listFiles(path, recursive);
+            let files = await client.listFiles(path, recursive, source.filters?.mimeTypes);
 
             if (source.filenameFilter) {
                 const regex = globToRegex(source.filenameFilter);

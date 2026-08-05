@@ -198,6 +198,53 @@ describe('NextcloudShareSourceResolver', () => {
         expect(ObjectUrlManager.create).toHaveBeenCalled();
     });
 
+    it('should filter files by filenameFilter glob pattern', async () => {
+        const xmlResponse = `
+            <?xml version="1.0"?>
+            <d:multistatus xmlns:d="DAV:">
+                <d:response>
+                    <d:href>/public.php/webdav/image1.jpg</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/jpeg</d:getcontenttype>
+                            <d:displayname>image1.jpg</d:displayname>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+                <d:response>
+                    <d:href>/public.php/webdav/image2.png</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/png</d:getcontenttype>
+                            <d:displayname>image2.png</d:displayname>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+            </d:multistatus>
+        `;
+
+        (requestUrl as jest.Mock)
+            .mockResolvedValueOnce({ status: 207, text: xmlResponse })
+            .mockResolvedValueOnce({
+                status: 200,
+                arrayBuffer: new ArrayBuffer(10),
+                headers: { 'content-type': 'image/jpeg' }
+            });
+
+        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
+        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
+
+        const source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123', filenameFilter: '*.jpg' };
+        const result = await resolver.resolve(source, { viewType: 'grid' });
+
+        expect(result.errors.length).toBe(0);
+        expect(result.images.length).toBe(1);
+        expect(result.images[0].displayName).toBe('image1.jpg');
+        expect(ObjectUrlManager.create).toHaveBeenCalledTimes(1);
+    });
+
     it('should use ObjectUrlManager cache for blob URLs', async () => {
         const xmlResponse = `
             <?xml version="1.0"?>

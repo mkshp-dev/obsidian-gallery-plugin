@@ -192,6 +192,18 @@ describe('GalleryYamlGenerator', () => {
         expect(result).not.toContain('password:');
     });
 
+    it('should generate valid yaml for nextcloud-share source with limit', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN', limit: 20 }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'thumbnail');
+
+        expect(result).toContain('- type: nextcloud-share');
+        expect(result).toContain('url: https://cloud.example.com/s/TOKEN');
+        expect(result).toContain('limit: 20');
+    });
+
     it('should throw an error if nextcloud-share source is missing url', () => {
         const sources: Partial<ISourceConfig>[] = [
             { type: 'nextcloud-share' }

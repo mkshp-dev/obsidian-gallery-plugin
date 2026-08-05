@@ -203,3 +203,29 @@ describe('GalleryYamlGenerator', () => {
     });
 
 });
+
+describe('Nextcloud & Nextcloud Share Sorting Generation', () => {
+        it('should emit sort block for nextcloud sources', () => {
+            const yaml = GalleryYamlGenerator.generateYaml([{
+                type: 'nextcloud',
+                connection: 'my-nc',
+                sort: { by: 'size', order: 'desc' }
+            }], 'grid');
+
+            expect(yaml).toContain('sort:');
+            expect(yaml).toContain('by: size');
+            expect(yaml).toContain('order: desc');
+        });
+
+        it('should emit sort block for nextcloud-share sources', () => {
+            const yaml = GalleryYamlGenerator.generateYaml([{
+                type: 'nextcloud-share',
+                url: 'https://cloud.example.com/s/TOKEN',
+                sort: { by: 'lastModified', order: 'asc' }
+            }], 'grid');
+
+            expect(yaml).toContain('sort:');
+            expect(yaml).toContain('by: lastModified');
+            expect(yaml).toContain('order: asc');
+        });
+    });

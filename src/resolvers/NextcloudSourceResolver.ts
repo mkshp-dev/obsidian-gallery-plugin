@@ -77,6 +77,23 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
                 }
             }
 
+            if (source.sort) {
+                const { by, order } = source.sort;
+                files.sort((a, b) => {
+                    let comparison = 0;
+                    if (by === 'name') {
+                        comparison = a.name.localeCompare(b.name);
+                    } else if (by === 'size') {
+                        comparison = (a.size || 0) - (b.size || 0);
+                    } else if (by === 'lastModified') {
+                        const dateA = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+                        const dateB = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+                        comparison = dateA - dateB;
+                    }
+                    return order === 'desc' ? -comparison : comparison;
+                });
+            }
+
             if (source.limit && source.limit > 0) {
                 files = files.slice(0, source.limit);
             }

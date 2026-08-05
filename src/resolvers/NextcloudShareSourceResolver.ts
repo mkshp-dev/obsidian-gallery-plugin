@@ -78,6 +78,7 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
     <d:resourcetype/>
     <d:getcontenttype/>
     <d:getcontentlength/>
+    <d:getlastmodified/>
     <d:displayname/>
   </d:prop>
 </d:propfind>`;
@@ -152,6 +153,23 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                         files = files.filter(file => regex.test(file.name));
                     }
 
+                    if (source.sort) {
+                        const { by, order } = source.sort;
+                        files.sort((a, b) => {
+                            let comparison = 0;
+                            if (by === 'name') {
+                                comparison = a.name.localeCompare(b.name);
+                            } else if (by === 'size') {
+                                comparison = (a.size || 0) - (b.size || 0);
+                            } else if (by === 'lastModified') {
+                                const dateA = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+                                const dateB = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+                                comparison = dateA - dateB;
+                            }
+                            return order === 'desc' ? -comparison : comparison;
+                        });
+                    }
+
                     const resolvedImages = await Promise.all(files.map(async (file) => {
                         try {
                             const fileUrl = `${urlObj.origin}${file.href}`;
@@ -218,13 +236,13 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
         return { images, errors };
     }
 
-    private parseWebdavResponse(xmlText: string): Array<{ href: string, name: string, contentType: string }> {
+    private parseWebdavResponse(xmlText: string): Array<{ href: string, name: string, contentType: string, size: number, lastModified?: string }> {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
         const responses = xmlDoc.getElementsByTagNameNS('DAV:', 'response');
 
         const responsesList = responses.length > 0 ? Array.from(responses) : Array.from(xmlDoc.getElementsByTagName('d:response'));
-        const files: Array<{ href: string, name: string, contentType: string }> = [];
+        const files: Array<{ href: string, name: string, contentType: string, size: number, lastModified?: string }> = [];
         const validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
         for (const response of responsesList) {
@@ -244,6 +262,8 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
             let isCollection = false;
             let contentType = '';
             let displayName = '';
+            let contentLength = 0;
+            let lastModified = '';
 
             const propstatList = response.getElementsByTagNameNS('DAV:', 'propstat');
             const propstats = propstatList.length > 0 ? Array.from(propstatList) : Array.from(response.getElementsByTagName('d:propstat'));
@@ -271,6 +291,12 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                 const ctEl = props.getElementsByTagNameNS('DAV:', 'getcontenttype')[0] || props.getElementsByTagName('d:getcontenttype')[0];
                 if (ctEl) contentType = ctEl.textContent || '';
 
+                const clEl = props.getElementsByTagNameNS('DAV:', 'getcontentlength')[0] || props.getElementsByTagName('d:getcontentlength')[0];
+                if (clEl) contentLength = parseInt(clEl.textContent || '0', 10);
+
+                const lmEl = props.getElementsByTagNameNS('DAV:', 'getlastmodified')[0] || props.getElementsByTagName('d:getlastmodified')[0];
+                if (lmEl) lastModified = lmEl.textContent || '';
+
                 const dispEl = props.getElementsByTagNameNS('DAV:', 'displayname')[0] || props.getElementsByTagName('d:displayname')[0];
                 if (dispEl) displayName = dispEl.textContent || '';
             }
@@ -288,7 +314,9 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                 files.push({
                     href: decodedHref.startsWith('/') ? decodedHref : `/${decodedHref}`,
                     name,
-                    contentType
+                    contentType,
+                    size: contentLength,
+                    lastModified
                 });
             }
         }

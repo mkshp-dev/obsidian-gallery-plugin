@@ -137,6 +137,11 @@ export class GalleryYamlGenerator {
                     if (source.limit) {
                         yaml += `    limit: ${source.limit}\n`;
                     }
+                    if (source.sort) {
+                        yaml += `    sort:\n`;
+                        yaml += `      by: ${source.sort.by}\n`;
+                        yaml += `      order: ${source.sort.order}\n`;
+                    }
                     break;
                 case 'nextcloud-share':
                     if (!source.url) throw new Error('Nextcloud share source requires a URL.');
@@ -146,6 +151,11 @@ export class GalleryYamlGenerator {
                     }
                     if (source.filenameFilter) {
                         yaml += `    filenameFilter: ${source.filenameFilter}\n`;
+                    }
+                    if (source.sort) {
+                        yaml += `    sort:\n`;
+                        yaml += `      by: ${source.sort.by}\n`;
+                        yaml += `      order: ${source.sort.order}\n`;
                     }
                     break;
             }

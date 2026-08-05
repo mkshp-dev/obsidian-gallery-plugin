@@ -397,3 +397,77 @@ describe('NextcloudSourceResolver', () => {
         });
     });
 });
+
+describe('Nextcloud Source Sorting', () => {
+    let resolver: NextcloudSourceResolver;
+
+    beforeEach(() => {
+        resolver = new NextcloudSourceResolver(() => [
+            { key: 'my-cloud', baseUrl: 'https://cloud.example.com', username: 'user', appPassword: 'password' }
+        ]);
+        const mockFiles = [
+            { path: '/a.jpg', name: 'a.jpg', contentType: 'image/jpeg', size: 500, lastModified: 'Wed, 01 Jan 2025 10:00:00 GMT' },
+            { path: '/c.jpg', name: 'c.jpg', contentType: 'image/jpeg', size: 100, lastModified: 'Sun, 15 Jun 2025 10:00:00 GMT' },
+            { path: '/b.jpg', name: 'b.jpg', contentType: 'image/jpeg', size: 1000, lastModified: 'Wed, 31 Dec 2024 10:00:00 GMT' }
+        ];
+
+        (NextcloudClient as jest.Mock).mockImplementation(() => ({
+            listFiles: jest.fn().mockResolvedValue([...mockFiles]),
+            getFileBlobUrl: jest.fn().mockResolvedValue('blob:test')
+        }));
+    });
+
+    it('should sort by name asc', async () => {
+        const source: INextcloudSourceConfig = {
+            type: 'nextcloud', connection: 'my-cloud', path: '/',
+            sort: { by: 'name', order: 'asc' }
+        };
+        const result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['a.jpg', 'b.jpg', 'c.jpg']);
+    });
+
+    it('should sort by name desc', async () => {
+        const source: INextcloudSourceConfig = {
+            type: 'nextcloud', connection: 'my-cloud', path: '/',
+            sort: { by: 'name', order: 'desc' }
+        };
+        const result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['c.jpg', 'b.jpg', 'a.jpg']);
+    });
+
+    it('should sort by size asc', async () => {
+        const source: INextcloudSourceConfig = {
+            type: 'nextcloud', connection: 'my-cloud', path: '/',
+            sort: { by: 'size', order: 'asc' }
+        };
+        const result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['c.jpg', 'a.jpg', 'b.jpg']);
+    });
+
+    it('should sort by size desc', async () => {
+        const source: INextcloudSourceConfig = {
+            type: 'nextcloud', connection: 'my-cloud', path: '/',
+            sort: { by: 'size', order: 'desc' }
+        };
+        const result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['b.jpg', 'a.jpg', 'c.jpg']);
+    });
+
+    it('should sort by lastModified asc', async () => {
+        const source: INextcloudSourceConfig = {
+            type: 'nextcloud', connection: 'my-cloud', path: '/',
+            sort: { by: 'lastModified', order: 'asc' }
+        };
+        const result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['b.jpg', 'a.jpg', 'c.jpg']);
+    });
+
+    it('should sort by lastModified desc', async () => {
+        const source: INextcloudSourceConfig = {
+            type: 'nextcloud', connection: 'my-cloud', path: '/',
+            sort: { by: 'lastModified', order: 'desc' }
+        };
+        const result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['c.jpg', 'a.jpg', 'b.jpg']);
+    });
+});

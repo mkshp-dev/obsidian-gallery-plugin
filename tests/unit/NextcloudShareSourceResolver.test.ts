@@ -334,3 +334,95 @@ describe('NextcloudShareSourceResolver', () => {
         expect(result.images.length).toBe(0);
     });
 });
+
+describe('Nextcloud Share Source Sorting', () => {
+    let resolver: NextcloudShareSourceResolver;
+
+    beforeEach(() => {
+        resolver = new NextcloudShareSourceResolver();
+    });
+
+    it('should parse size and lastModified from XML and sort appropriately', async () => {
+        const xmlResponse = `
+            <?xml version="1.0"?>
+            <d:multistatus xmlns:d="DAV:">
+                <d:response>
+                    <d:href>/public.php/webdav/image_a.jpg</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/jpeg</d:getcontenttype>
+                            <d:displayname>image_a.jpg</d:displayname>
+                            <d:getcontentlength>500</d:getcontentlength>
+                            <d:getlastmodified>Wed, 01 Jan 2025 10:00:00 GMT</d:getlastmodified>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+                <d:response>
+                    <d:href>/public.php/webdav/image_c.png</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/png</d:getcontenttype>
+                            <d:displayname>image_c.png</d:displayname>
+                            <d:getcontentlength>100</d:getcontentlength>
+                            <d:getlastmodified>Sun, 15 Jun 2025 10:00:00 GMT</d:getlastmodified>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+                <d:response>
+                    <d:href>/public.php/webdav/image_b.jpg</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/jpeg</d:getcontenttype>
+                            <d:displayname>image_b.jpg</d:displayname>
+                            <d:getcontentlength>1000</d:getcontentlength>
+                            <d:getlastmodified>Wed, 31 Dec 2024 10:00:00 GMT</d:getlastmodified>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+            </d:multistatus>
+        `;
+
+        (requestUrl as jest.Mock)
+            .mockResolvedValueOnce({ status: 207, text: xmlResponse })
+            .mockResolvedValue({
+                status: 200,
+                arrayBuffer: new ArrayBuffer(10),
+                headers: { 'content-type': 'image/jpeg' }
+            });
+
+        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
+        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
+
+        // Test Sort by name desc
+        let source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123', sort: { by: 'name', order: 'desc' } };
+        let result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['image_c.png', 'image_b.jpg', 'image_a.jpg']);
+
+        // Test Sort by size asc
+        (requestUrl as jest.Mock)
+            .mockResolvedValueOnce({ status: 207, text: xmlResponse })
+            .mockResolvedValue({
+                status: 200,
+                arrayBuffer: new ArrayBuffer(10),
+                headers: { 'content-type': 'image/jpeg' }
+            });
+        source = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123', sort: { by: 'size', order: 'asc' } };
+        result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['image_c.png', 'image_a.jpg', 'image_b.jpg']);
+
+        // Test Sort by lastModified asc
+        (requestUrl as jest.Mock)
+            .mockResolvedValueOnce({ status: 207, text: xmlResponse })
+            .mockResolvedValue({
+                status: 200,
+                arrayBuffer: new ArrayBuffer(10),
+                headers: { 'content-type': 'image/jpeg' }
+            });
+        source = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123', sort: { by: 'lastModified', order: 'asc' } };
+        result = await resolver.resolve(source, { viewType: 'grid' });
+        expect(result.images.map(i => i.displayName)).toEqual(['image_b.jpg', 'image_a.jpg', 'image_c.png']);
+    });
+});

@@ -60,6 +60,10 @@ export interface INextcloudSourceConfig {
   path?: string;        // WebDAV path within user's files (default: '/')
   recursive?: boolean;  // scan subdirectories (default: true)
   limit?: number;
+  sort?: {
+    by: 'name' | 'lastModified' | 'size';
+    order: 'asc' | 'desc';
+  };
   filenameFilter?: string; // Optional glob pattern for filenames
   filters?: {
     modifiedAfter?: string;
@@ -74,6 +78,10 @@ export interface INextcloudShareSourceConfig {
   url: string;          // full share URL e.g. https://cloud.example.com/s/TOKEN
   password?: string;    // optional share password
   filenameFilter?: string; // Optional glob pattern for filenames
+  sort?: {
+    by: 'name' | 'lastModified' | 'size';
+    order: 'asc' | 'desc';
+  };
 }
 
 export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichSourceConfig | INextcloudSourceConfig | INextcloudShareSourceConfig;

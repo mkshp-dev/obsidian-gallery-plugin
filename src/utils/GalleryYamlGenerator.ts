@@ -152,6 +152,9 @@ export class GalleryYamlGenerator {
                     if (source.filenameFilter) {
                         yaml += `    filenameFilter: ${source.filenameFilter}\n`;
                     }
+                    if (source.limit) {
+                        yaml += `    limit: ${source.limit}\n`;
+                    }
                     if (source.sort) {
                         yaml += `    sort:\n`;
                         yaml += `      by: ${source.sort.by}\n`;

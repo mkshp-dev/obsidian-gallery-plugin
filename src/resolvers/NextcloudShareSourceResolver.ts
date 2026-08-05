@@ -170,6 +170,10 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                         });
                     }
 
+                    if (source.limit && source.limit > 0) {
+                        files = files.slice(0, source.limit);
+                    }
+
                     const resolvedImages = await Promise.all(files.map(async (file) => {
                         try {
                             const fileUrl = `${urlObj.origin}${file.href}`;

@@ -425,4 +425,59 @@ describe('Nextcloud Share Source Sorting', () => {
         result = await resolver.resolve(source, { viewType: 'grid' });
         expect(result.images.map(i => i.displayName)).toEqual(['image_b.jpg', 'image_a.jpg', 'image_c.png']);
     });
+
+    it('should limit results if limit is provided', async () => {
+        const xmlResponse = `
+            <?xml version="1.0"?>
+            <d:multistatus xmlns:d="DAV:">
+                <d:response>
+                    <d:href>/public.php/webdav/image_a.jpg</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/jpeg</d:getcontenttype>
+                            <d:displayname>image_a.jpg</d:displayname>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+                <d:response>
+                    <d:href>/public.php/webdav/image_b.png</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/png</d:getcontenttype>
+                            <d:displayname>image_b.png</d:displayname>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+                <d:response>
+                    <d:href>/public.php/webdav/image_c.png</d:href>
+                    <d:propstat>
+                        <d:prop>
+                            <d:getcontenttype>image/png</d:getcontenttype>
+                            <d:displayname>image_c.png</d:displayname>
+                        </d:prop>
+                        <d:status>HTTP/1.1 200 OK</d:status>
+                    </d:propstat>
+                </d:response>
+            </d:multistatus>
+        `;
+
+        (requestUrl as jest.Mock)
+            .mockResolvedValueOnce({ status: 207, text: xmlResponse })
+            .mockResolvedValue({
+                status: 200,
+                arrayBuffer: new ArrayBuffer(10),
+                headers: { 'content-type': 'image/jpeg' }
+            });
+
+        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
+        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
+
+        let source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123', limit: 2 };
+        let result = await resolver.resolve(source, { viewType: 'grid' });
+
+        expect(result.images.length).toBe(2);
+        expect(result.images.map(i => i.displayName)).toEqual(['image_a.jpg', 'image_b.png']);
+    });
 });

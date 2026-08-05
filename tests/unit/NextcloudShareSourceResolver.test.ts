@@ -100,12 +100,14 @@ describe('NextcloudShareSourceResolver', () => {
         expect(result.errors[0]).toContain('Invalid URL format: not-a-url');
     });
 
-    it('should return error for URL missing /s/ token', async () => {
-        const source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/share/abc' };
+    it('should support Nextcloud Photos app public share URLs (/apps/photos/public/{TOKEN})', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({ status: 404 });
+        const source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/apps/photos/public/TOKEN123' };
         const result = await resolver.resolve(source, { viewType: 'grid' });
 
-        expect(result.errors.length).toBe(1);
-        expect(result.errors[0]).toContain('Invalid Nextcloud share URL. Expected format: https://cloud.example.com/s/{TOKEN}');
+        expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({
+            url: 'https://cloud.example.com/public.php/webdav/'
+        }));
     });
 
     it('should handle 404 response', async () => {

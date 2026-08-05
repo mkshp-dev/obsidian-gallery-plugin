@@ -23,14 +23,14 @@ describe('ImageSource', () => {
             expect(img.getDisplayUrl()).toBe('immich://conn/album/1/asset/2');
         });
 
-        it('should return path for external image even if resourceUrl is provided', () => {
+        it('should return resourceUrl for external image if resourceUrl is provided', () => {
             const img = new ImageSource('https://example.com/pic.jpg', 'external', 'pic', 'blob:something-else');
-            expect(img.getDisplayUrl()).toBe('https://example.com/pic.jpg');
+            expect(img.getDisplayUrl()).toBe('blob:something-else');
         });
 
-        it('should return path for immich-share image even if resourceUrl is provided', () => {
+        it('should return resourceUrl for immich-share image if resourceUrl is provided', () => {
             const img = new ImageSource('https://example.com/share/key/original', 'immich-share', 'share-pic', 'blob:something-else');
-            expect(img.getDisplayUrl()).toBe('https://example.com/share/key/original');
+            expect(img.getDisplayUrl()).toBe('blob:something-else');
         });
     });
 

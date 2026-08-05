@@ -25,32 +25,53 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
             return { images, errors };
         }
 
-        // Parse share token
-        // e.g. https://cloud.example.com/s/TOKEN
-        const match = urlObj.pathname.match(/\/s\/([^/]+)/);
-        if (!match) {
-            errors.push('Invalid Nextcloud share URL. Expected format: https://cloud.example.com/s/{TOKEN}');
+        // Parse share token and base URL from various Nextcloud share link formats:
+        // - https://cloud.example.com/s/TOKEN
+        // - https://cloud.example.com/index.php/s/TOKEN
+        // - https://cloud.example.com/apps/photos/public/TOKEN
+        // - https://cloud.example.com/index.php/apps/photos/public/TOKEN
+        const knownPatterns = [
+            { regex: /(.*)\/(?:index\.php\/)?apps\/photos\/public\/([a-zA-Z0-9_-]+)/, isPhotosApp: true },
+            { regex: /(.*)\/(?:index\.php\/)?s\/([a-zA-Z0-9_-]+)/, isPhotosApp: false },
+            { regex: /(.*)\/(?:index\.php\/)?apps\/files\/s\/([a-zA-Z0-9_-]+)/, isPhotosApp: false },
+            { regex: /(.*)\/(?:index\.php\/)?public_shares\/([a-zA-Z0-9_-]+)/, isPhotosApp: false }
+        ];
+
+        let token = '';
+        let basePath = '';
+        let isPhotosApp = false;
+
+        for (const pattern of knownPatterns) {
+            const match = urlObj.pathname.match(pattern.regex);
+            if (match) {
+                basePath = match[1];
+                token = match[2];
+                isPhotosApp = pattern.isPhotosApp;
+                break;
+            }
+        }
+
+        // Fallback: if no pattern matched, try extracting last non-empty path segment as token
+        if (!token) {
+            const segments = urlObj.pathname.split('/').filter(Boolean);
+            if (segments.length > 0) {
+                token = segments[segments.length - 1];
+                basePath = urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/' + token));
+            }
+        }
+
+        if (!token) {
+            errors.push(`Invalid Nextcloud share URL: ${source.url}`);
             return { images, errors };
         }
-        const token = match[1];
 
-        // Extract base URL correctly in case Nextcloud is hosted in a subdirectory
-        const basePath = urlObj.pathname.substring(0, urlObj.pathname.indexOf('/s/'));
+        // Strip /index.php if present in basePath
+        basePath = basePath.replace(/\/index\.php\/?$/, '');
+
         const baseUrl = `${urlObj.origin}${basePath}`;
         const password = source.password || '';
 
-        const webdavUrl = `${baseUrl}/public.php/webdav/`;
-
-        const authString = `${token}:${password}`;
-        const base64Auth = btoa(authString);
-        const headers = {
-            'Authorization': `Basic ${base64Auth}`,
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'text/xml; charset=utf-8'
-        };
-
-        try {
-            const propfindBody = `<?xml version="1.0"?>
+        const propfindBody = `<?xml version="1.0"?>
 <d:propfind xmlns:d="DAV:">
   <d:prop>
     <d:resourcetype/>
@@ -60,78 +81,132 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
   </d:prop>
 </d:propfind>`;
 
-            const response = await requestUrl({
-                url: webdavUrl,
-                method: 'PROPFIND',
-                headers: {
-                    ...headers,
-                    'Depth': '1'
-                },
-                body: propfindBody
+        // Construct primary and fallback configurations
+        const strategies: Array<{ name: string; url: string; headers: Record<string, string>; requiresAuth: boolean }> = [];
+
+        if (isPhotosApp) {
+            // Nextcloud Photos app public album WebDAV endpoint (unauthenticated)
+            strategies.push({
+                name: 'photospublic',
+                url: `${baseUrl}/remote.php/dav/photospublic/${token}/`,
+                headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+                requiresAuth: false
             });
+            // Fallback to standard public.php/webdav/
+            const authString = `${token}:${password}`;
+            strategies.push({
+                name: 'webdav',
+                url: `${baseUrl}/public.php/webdav/`,
+                headers: {
+                    'Authorization': `Basic ${btoa(authString)}`,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'text/xml; charset=utf-8'
+                },
+                requiresAuth: true
+            });
+        } else {
+            // Standard files public share WebDAV endpoint
+            const authString = `${token}:${password}`;
+            strategies.push({
+                name: 'webdav',
+                url: `${baseUrl}/public.php/webdav/`,
+                headers: {
+                    'Authorization': `Basic ${btoa(authString)}`,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'text/xml; charset=utf-8'
+                },
+                requiresAuth: true
+            });
+            // Fallback to photospublic
+            strategies.push({
+                name: 'photospublic',
+                url: `${baseUrl}/remote.php/dav/photospublic/${token}/`,
+                headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+                requiresAuth: false
+            });
+        }
 
-            if (response.status === 401) {
-                if (password) {
-                    errors.push('Authentication failed. Incorrect password for Nextcloud share.');
-                } else {
-                    errors.push('Authentication failed. Nextcloud share is password-protected.');
-                }
-                return { images, errors };
-            } else if (response.status === 404) {
-                errors.push('Nextcloud share not found or expired.');
-                return { images, errors };
-            } else if (response.status !== 200 && response.status !== 207) {
-                errors.push(`Failed to list files. Status: ${response.status}`);
-                return { images, errors };
-            }
+        let lastStatus = 0;
+        let lastErrorText = '';
 
-            const files = this.parseWebdavResponse(response.text);
+        for (const strat of strategies) {
+            try {
+                const response = await requestUrl({
+                    url: strat.url,
+                    method: 'PROPFIND',
+                    headers: {
+                        ...strat.headers,
+                        'Depth': '1'
+                    },
+                    body: propfindBody
+                });
 
-            const resolvedImages = await Promise.all(files.map(async (file) => {
-                try {
-                    const fileUrl = `${urlObj.origin}${file.href}`; // href typically includes full path
+                lastStatus = response.status;
 
-                    const cacheKey = `nextcloud-share:${token}:${file.href}`;
-                    let blobUrl = ObjectUrlManager.acquire(cacheKey);
+                if (response.status === 200 || response.status === 207) {
+                    const files = this.parseWebdavResponse(response.text);
 
-                    if (!blobUrl) {
-                        const fileRes = await requestUrl({
-                            url: fileUrl,
-                            method: 'GET',
-                            headers: {
-                                'Authorization': `Basic ${base64Auth}`,
-                                'X-Requested-With': 'XMLHttpRequest'
+                    const resolvedImages = await Promise.all(files.map(async (file) => {
+                        try {
+                            const fileUrl = `${urlObj.origin}${file.href}`;
+                            const cacheKey = `nextcloud-share:${token}:${file.href}`;
+                            let blobUrl = ObjectUrlManager.acquire(cacheKey);
+
+                            if (!blobUrl) {
+                                const fileRes = await requestUrl({
+                                    url: fileUrl,
+                                    method: 'GET',
+                                    headers: strat.requiresAuth ? {
+                                        'Authorization': strat.headers['Authorization'],
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    } : {}
+                                });
+
+                                if (fileRes.status !== 200) {
+                                    throw new Error(`Failed to fetch file. Status: ${fileRes.status}`);
+                                }
+
+                                const contentType = typeof fileRes.headers['content-type'] === 'string' ? fileRes.headers['content-type'] : 'image/jpeg';
+                                const blob = new Blob([fileRes.arrayBuffer], { type: contentType });
+                                blobUrl = ObjectUrlManager.create(cacheKey, blob);
                             }
-                        });
 
-                        if (fileRes.status !== 200) {
-                            throw new Error(`Failed to fetch file. Status: ${fileRes.status}`);
+                            if (blobUrl) {
+                                const logicalPath = `nextcloud-share://${token}${file.href}`;
+                                return new ImageSource(logicalPath, 'nextcloud-share', file.name, blobUrl, undefined);
+                            }
+                            return null;
+                        } catch (e) {
+                            Logger.warn(`Failed to load file ${file.href} for Nextcloud share: ${e instanceof Error ? e.message : String(e)}`);
+                            return null;
                         }
+                    }));
 
-                        const contentType = typeof fileRes.headers['content-type'] === 'string' ? fileRes.headers['content-type'] : 'image/jpeg';
-                        const blob = new Blob([fileRes.arrayBuffer], { type: contentType });
-                        blobUrl = ObjectUrlManager.create(cacheKey, blob);
+                    for (const img of resolvedImages) {
+                        if (img !== null) {
+                            images.push(img);
+                        }
                     }
 
-                    if (blobUrl) {
-                        const logicalPath = `nextcloud-share://${token}${file.href}`;
-                        return new ImageSource(logicalPath, 'nextcloud-share', file.name, blobUrl, undefined);
-                    }
-                    return null;
-                } catch (e) {
-                    Logger.warn(`Failed to load file ${file.href} for Nextcloud share: ${e instanceof Error ? e.message : String(e)}`);
-                    return null;
+                    return { images, errors };
                 }
-            }));
 
-            for (const img of resolvedImages) {
-                if (img !== null) {
-                    images.push(img);
+                if (response.status === 401 && strat.requiresAuth) {
+                    lastErrorText = password
+                        ? 'Authentication failed. Incorrect password for Nextcloud share.'
+                        : 'Authentication failed. Nextcloud share is password-protected.';
                 }
+            } catch (error) {
+                Logger.debug(`Strategy ${strat.name} failed for share ${token}:`, error);
             }
+        }
 
-        } catch (error) {
-            errors.push(error instanceof Error ? error.message : String(error));
+        if (lastErrorText) {
+            errors.push(lastErrorText);
+        } else if (lastStatus === 404) {
+            errors.push('Nextcloud share not found or expired.');
+        } else {
+            errors.push(`Failed to list files from Nextcloud share (HTTP ${lastStatus || 'error'})`);
         }
 
         return { images, errors };

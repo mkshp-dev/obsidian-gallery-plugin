@@ -195,7 +195,7 @@ export class ImageSource implements IImageSource {
      * For external files, returns path
      */
     getDisplayUrl(): string {
-        if ((this.type === 'local' || this.type === 'immich') && this.resourceUrl) {
+        if (this.resourceUrl) {
             return this.resourceUrl;
         }
         return this.path;

@@ -61,6 +61,10 @@ export interface INextcloudSourceConfig {
   recursive?: boolean;  // scan subdirectories (default: true)
   limit?: number;
   filenameFilter?: string; // Optional glob pattern for filenames
+  filters?: {
+    modifiedAfter?: string;
+    modifiedBefore?: string;
+  };
 }
 
 export interface INextcloudShareSourceConfig {

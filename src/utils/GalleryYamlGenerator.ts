@@ -119,6 +119,15 @@ export class GalleryYamlGenerator {
                     if (source.filenameFilter) {
                         yaml += `    filenameFilter: ${source.filenameFilter}\n`;
                     }
+                    if (source.filters && (source.filters.modifiedAfter || source.filters.modifiedBefore)) {
+                        yaml += `    filters:\n`;
+                        if (source.filters.modifiedAfter) {
+                            yaml += `      modifiedAfter: ${source.filters.modifiedAfter}\n`;
+                        }
+                        if (source.filters.modifiedBefore) {
+                            yaml += `      modifiedBefore: ${source.filters.modifiedBefore}\n`;
+                        }
+                    }
                     if (source.limit) {
                         yaml += `    limit: ${source.limit}\n`;
                     }

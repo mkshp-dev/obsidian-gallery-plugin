@@ -214,4 +214,107 @@ describe('NextcloudSourceResolver', () => {
         expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/1.jpg', 'original', undefined);
     });
 
+    describe('Date Range Filters (modifiedAfter / modifiedBefore)', () => {
+        const mockFiles = [
+            { path: '/1.jpg', name: '1.jpg', contentType: 'image/jpeg', lastModified: 'Wed, 01 Jan 2025 10:00:00 GMT' },
+            { path: '/2.jpg', name: '2.jpg', contentType: 'image/jpeg', lastModified: 'Sun, 15 Jun 2025 10:00:00 GMT' },
+            { path: '/3.jpg', name: '3.jpg', contentType: 'image/jpeg', lastModified: 'Wed, 31 Dec 2025 10:00:00 GMT' },
+            { path: '/4.jpg', name: '4.jpg', contentType: 'image/jpeg' }, // No date
+        ];
+
+        beforeEach(() => {
+            (NextcloudClient as jest.Mock).mockImplementation(() => ({
+                listFiles: jest.fn().mockResolvedValue([...mockFiles]),
+                getFileBlobUrl: jest.fn().mockResolvedValue('blob:test')
+            }));
+        });
+
+        it('should filter files modified after a specific date (exclusive edge)', async () => {
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                filters: { modifiedAfter: '2025-06-01T00:00:00.000Z' }
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            expect(result.images.length).toBe(3);
+            expect(result.images.map(i => i.displayName)).toEqual(['2.jpg', '3.jpg', '4.jpg']);
+        });
+
+        it('should filter files modified before a specific date (exclusive edge)', async () => {
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                filters: { modifiedBefore: '2025-06-01T00:00:00.000Z' }
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            expect(result.images.length).toBe(2);
+            expect(result.images.map(i => i.displayName)).toEqual(['1.jpg', '4.jpg']);
+        });
+
+        it('should filter files within a date range (modifiedAfter and modifiedBefore)', async () => {
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                filters: {
+                    modifiedAfter: '2025-01-01T10:00:01.000Z',
+                    modifiedBefore: '2025-12-31T09:59:59.000Z'
+                }
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            // 1.jpg is exactly 2025-01-01 10:00:00 GMT
+            // 2.jpg is 2025-06-15 10:00:00 GMT
+            // 3.jpg is exactly 2025-12-31 10:00:00 GMT
+            // Since modifiedAfter is 1 second after 1.jpg, 1.jpg is excluded.
+            // Since modifiedBefore is 1 second before 3.jpg, 3.jpg is excluded.
+            expect(result.images.length).toBe(2);
+            expect(result.images.map(i => i.displayName)).toEqual(['2.jpg', '4.jpg']);
+        });
+
+        it('should handle timezone neutrality by parsing ISO strings correctly', async () => {
+            // Using a plain date string without timezone info
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                filters: { modifiedAfter: '2025-06-15' } // This is typically parsed as UTC midnight
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            // 2.jpg is Jun 15 10:00:00 GMT, which is > Jun 15 00:00:00 GMT
+            expect(result.images.length).toBe(3);
+            expect(result.images.map(i => i.displayName)).toEqual(['2.jpg', '3.jpg', '4.jpg']);
+        });
+
+        it('should apply limit AFTER date filtering', async () => {
+            const source: INextcloudSourceConfig = {
+                type: 'nextcloud',
+                connection: 'my-cloud',
+                path: '/',
+                limit: 1,
+                filters: { modifiedAfter: '2025-06-01T00:00:00.000Z' }
+            };
+            const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+            const result = await resolver.resolve(source, context);
+
+            // Without limit, it would be [2.jpg, 3.jpg, 4.jpg]
+            // With limit 1, it should just be 2.jpg
+            expect(result.images.length).toBe(1);
+            expect(result.images[0].displayName).toBe('2.jpg');
+        });
+    });
 });

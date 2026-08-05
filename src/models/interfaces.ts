@@ -70,6 +70,7 @@ export interface INextcloudSourceConfig {
     modifiedBefore?: string;
     maxSizeKb?: number;
     minSizeKb?: number;
+    mimeTypes?: string[];
   };
 }
 
@@ -78,6 +79,9 @@ export interface INextcloudShareSourceConfig {
   url: string;          // full share URL e.g. https://cloud.example.com/s/TOKEN
   password?: string;    // optional share password
   filenameFilter?: string; // Optional glob pattern for filenames
+  filters?: {
+    mimeTypes?: string[];
+  };
   limit?: number;       // Max number of files to return
   sort?: {
     by: 'name' | 'lastModified' | 'size';

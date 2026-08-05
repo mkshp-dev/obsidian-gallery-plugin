@@ -119,7 +119,7 @@ export class GalleryYamlGenerator {
                     if (source.filenameFilter) {
                         yaml += `    filenameFilter: ${source.filenameFilter}\n`;
                     }
-                    if (source.filters && (source.filters.modifiedAfter || source.filters.modifiedBefore || source.filters.maxSizeKb !== undefined || source.filters.minSizeKb !== undefined)) {
+                    if (source.filters && (source.filters.modifiedAfter || source.filters.modifiedBefore || source.filters.maxSizeKb !== undefined || source.filters.minSizeKb !== undefined || (source.filters.mimeTypes && source.filters.mimeTypes.length > 0))) {
                         yaml += `    filters:\n`;
                         if (source.filters.modifiedAfter) {
                             yaml += `      modifiedAfter: ${source.filters.modifiedAfter}\n`;
@@ -132,6 +132,12 @@ export class GalleryYamlGenerator {
                         }
                         if (source.filters.minSizeKb !== undefined) {
                             yaml += `      minSizeKb: ${source.filters.minSizeKb}\n`;
+                        }
+                        if (source.filters.mimeTypes && source.filters.mimeTypes.length > 0) {
+                            yaml += `      mimeTypes:\n`;
+                            for (const mime of source.filters.mimeTypes) {
+                                yaml += `        - ${mime}\n`;
+                            }
                         }
                     }
                     if (source.limit) {
@@ -151,6 +157,13 @@ export class GalleryYamlGenerator {
                     }
                     if (source.filenameFilter) {
                         yaml += `    filenameFilter: ${source.filenameFilter}\n`;
+                    }
+                    if (source.filters && source.filters.mimeTypes && source.filters.mimeTypes.length > 0) {
+                        yaml += `    filters:\n`;
+                        yaml += `      mimeTypes:\n`;
+                        for (const mime of source.filters.mimeTypes) {
+                            yaml += `        - ${mime}\n`;
+                        }
                     }
                     if (source.limit) {
                         yaml += `    limit: ${source.limit}\n`;

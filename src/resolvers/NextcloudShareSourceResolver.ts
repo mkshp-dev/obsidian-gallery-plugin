@@ -146,7 +146,7 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                 lastStatus = response.status;
 
                 if (response.status === 200 || response.status === 207) {
-                    let files = this.parseWebdavResponse(response.text);
+                    let files = this.parseWebdavResponse(response.text, source.filters?.mimeTypes);
 
                     if (source.filenameFilter) {
                         const regex = globToRegex(source.filenameFilter);
@@ -240,14 +240,18 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
         return { images, errors };
     }
 
-    private parseWebdavResponse(xmlText: string): Array<{ href: string, name: string, contentType: string, size: number, lastModified?: string }> {
+    private parseWebdavResponse(xmlText: string, mimeTypesFilter?: string[]): Array<{ href: string, name: string, contentType: string, size: number, lastModified?: string }> {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
         const responses = xmlDoc.getElementsByTagNameNS('DAV:', 'response');
 
         const responsesList = responses.length > 0 ? Array.from(responses) : Array.from(xmlDoc.getElementsByTagName('d:response'));
         const files: Array<{ href: string, name: string, contentType: string, size: number, lastModified?: string }> = [];
-        const validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+        let validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (mimeTypesFilter && mimeTypesFilter.length > 0) {
+            validImageMimeTypes = validImageMimeTypes.filter(mime => mimeTypesFilter.includes(mime));
+        }
 
         for (const response of responsesList) {
             let href = '';

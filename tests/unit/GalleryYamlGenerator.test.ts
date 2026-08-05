@@ -138,4 +138,63 @@ describe('GalleryYamlGenerator', () => {
             GalleryYamlGenerator.generateYaml([], 'grid');
         }).toThrow('At least one source is required.');
     });
+
+    it('should generate valid yaml for nextcloud source', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'nextcloud', connection: 'my-cloud', path: '/Photos', recursive: false, limit: 10 }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
+
+        expect(result).toContain('- type: nextcloud');
+        expect(result).toContain('connection: my-cloud');
+        expect(result).toContain('path: /Photos');
+        expect(result).toContain('recursive: false');
+        expect(result).toContain('limit: 10');
+    });
+
+    it('should throw an error if nextcloud source is missing connection', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'nextcloud' }
+        ];
+
+        expect(() => {
+            GalleryYamlGenerator.generateYaml(sources, 'grid');
+        }).toThrow('Nextcloud source requires a connection.');
+    });
+
+    it('should generate valid yaml for nextcloud-share source with password', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN', password: 'secretpassword' }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'thumbnail');
+
+        expect(result).toContain('- type: nextcloud-share');
+        expect(result).toContain('url: https://cloud.example.com/s/TOKEN');
+        expect(result).toContain('password: secretpassword');
+    });
+
+    it('should generate valid yaml for nextcloud-share source without password', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN' }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'thumbnail');
+
+        expect(result).toContain('- type: nextcloud-share');
+        expect(result).toContain('url: https://cloud.example.com/s/TOKEN');
+        expect(result).not.toContain('password:');
+    });
+
+    it('should throw an error if nextcloud-share source is missing url', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'nextcloud-share' }
+        ];
+
+        expect(() => {
+            GalleryYamlGenerator.generateYaml(sources, 'grid');
+        }).toThrow('Nextcloud share source requires a URL.');
+    });
+
 });

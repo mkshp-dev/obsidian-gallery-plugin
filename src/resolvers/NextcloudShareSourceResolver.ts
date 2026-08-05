@@ -4,6 +4,7 @@ import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 import { ObjectUrlManager } from '../utils/immich/ObjectUrlManager';
 import { requestUrl } from 'obsidian';
+import { globToRegex } from '../utils/globToRegex';
 
 export class NextcloudShareSourceResolver implements GallerySourceResolver<INextcloudShareSourceConfig> {
     readonly type = 'nextcloud-share';
@@ -144,7 +145,12 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                 lastStatus = response.status;
 
                 if (response.status === 200 || response.status === 207) {
-                    const files = this.parseWebdavResponse(response.text);
+                    let files = this.parseWebdavResponse(response.text);
+
+                    if (source.filenameFilter) {
+                        const regex = globToRegex(source.filenameFilter);
+                        files = files.filter(file => regex.test(file.name));
+                    }
 
                     const resolvedImages = await Promise.all(files.map(async (file) => {
                         try {

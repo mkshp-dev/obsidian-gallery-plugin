@@ -141,7 +141,7 @@ describe('GalleryYamlGenerator', () => {
 
     it('should generate valid yaml for nextcloud source', () => {
         const sources: Partial<ISourceConfig>[] = [
-            { type: 'nextcloud', connection: 'my-cloud', path: '/Photos', recursive: false, limit: 10 }
+            { type: 'nextcloud', connection: 'my-cloud', path: '/Photos', recursive: false, filenameFilter: '*.jpg', limit: 10 }
         ];
 
         const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
@@ -150,6 +150,7 @@ describe('GalleryYamlGenerator', () => {
         expect(result).toContain('connection: my-cloud');
         expect(result).toContain('path: /Photos');
         expect(result).toContain('recursive: false');
+        expect(result).toContain('filenameFilter: *.jpg');
         expect(result).toContain('limit: 10');
     });
 
@@ -165,7 +166,7 @@ describe('GalleryYamlGenerator', () => {
 
     it('should generate valid yaml for nextcloud-share source with password', () => {
         const sources: Partial<ISourceConfig>[] = [
-            { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN', password: 'secretpassword' }
+            { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN', password: 'secretpassword', filenameFilter: '*.png' }
         ];
 
         const result = GalleryYamlGenerator.generateYaml(sources, 'thumbnail');
@@ -173,6 +174,7 @@ describe('GalleryYamlGenerator', () => {
         expect(result).toContain('- type: nextcloud-share');
         expect(result).toContain('url: https://cloud.example.com/s/TOKEN');
         expect(result).toContain('password: secretpassword');
+        expect(result).toContain('filenameFilter: *.png');
     });
 
     it('should generate valid yaml for nextcloud-share source without password', () => {

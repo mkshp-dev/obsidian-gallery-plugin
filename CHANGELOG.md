@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Nextcloud Filters**: Added `filenameFilter` field to `nextcloud` and `nextcloud-share` sources allowing users to match filenames using glob patterns or extensions.
+
 - **Nextcloud public shares**: Added support for resolving Nextcloud public share links via the `nextcloud-share` source type, including password-protected shares.
 - **Nextcloud integration**: Added foundational Nextcloud type definitions, interfaces, configuration settings, and source lifecycle support.
 

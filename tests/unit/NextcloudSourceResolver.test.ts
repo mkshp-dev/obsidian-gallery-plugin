@@ -130,6 +130,32 @@ describe('NextcloudSourceResolver', () => {
         expect(mockListFiles).toHaveBeenCalledWith('/Photos', false);
     });
 
+    it('should filter files by filenameFilter glob pattern', async () => {
+        const mockListFiles = jest.fn().mockResolvedValue([
+            { path: '/1.jpg', name: '1.jpg', contentType: 'image/jpeg' },
+            { path: '/2.png', name: '2.png', contentType: 'image/png' },
+            { path: '/3.jpg', name: '3.jpg', contentType: 'image/jpeg' }
+        ]);
+        const mockGetFileBlobUrl = jest.fn().mockResolvedValue('blob:test');
+
+        (NextcloudClient as jest.Mock).mockImplementation(() => {
+            return {
+                listFiles: mockListFiles,
+                getFileBlobUrl: mockGetFileBlobUrl
+            };
+        });
+
+        const source: INextcloudSourceConfig = { type: 'nextcloud', connection: 'my-cloud', path: '/', filenameFilter: '*.jpg' };
+        const context: GallerySourceResolveContext = { viewType: 'grid' };
+
+        const result = await resolver.resolve(source, context);
+
+        expect(result.images.length).toBe(2);
+        expect(result.images[0].displayName).toBe('1.jpg');
+        expect(result.images[1].displayName).toBe('3.jpg');
+        expect(mockGetFileBlobUrl).toHaveBeenCalledTimes(2);
+    });
+
     it('should enforce limit parameter', async () => {
         const mockListFiles = jest.fn().mockResolvedValue([
             { path: '/1.jpg', name: '1.jpg', contentType: 'image/jpeg' },

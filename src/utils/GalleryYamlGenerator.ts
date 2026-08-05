@@ -116,6 +116,9 @@ export class GalleryYamlGenerator {
                     if (source.recursive !== undefined) {
                         yaml += `    recursive: ${source.recursive}\n`;
                     }
+                    if (source.filenameFilter) {
+                        yaml += `    filenameFilter: ${source.filenameFilter}\n`;
+                    }
                     if (source.limit) {
                         yaml += `    limit: ${source.limit}\n`;
                     }
@@ -125,6 +128,9 @@ export class GalleryYamlGenerator {
                     yaml += `    url: ${source.url.trim()}\n`;
                     if (source.password && source.password.trim()) {
                         yaml += `    password: ${source.password.trim()}\n`;
+                    }
+                    if (source.filenameFilter) {
+                        yaml += `    filenameFilter: ${source.filenameFilter}\n`;
                     }
                     break;
             }

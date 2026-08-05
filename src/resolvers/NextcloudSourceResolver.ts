@@ -3,6 +3,7 @@ import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySou
 import { NextcloudClient } from '../services/nextcloud/NextcloudClient';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
+import { globToRegex } from '../utils/globToRegex';
 
 export class NextcloudSourceResolver implements GallerySourceResolver<INextcloudSourceConfig> {
     readonly type = 'nextcloud';
@@ -35,6 +36,11 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
             const path = source.path || '/';
             const recursive = source.recursive !== undefined ? source.recursive : true;
             let files = await client.listFiles(path, recursive);
+
+            if (source.filenameFilter) {
+                const regex = globToRegex(source.filenameFilter);
+                files = files.filter(file => regex.test(file.name));
+            }
 
             if (source.limit && source.limit > 0) {
                 files = files.slice(0, source.limit);

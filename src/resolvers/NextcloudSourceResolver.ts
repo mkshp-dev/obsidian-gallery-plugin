@@ -43,7 +43,7 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
             }
 
             if (source.filters) {
-                const { modifiedAfter, modifiedBefore } = source.filters;
+                const { modifiedAfter, modifiedBefore, maxSizeKb, minSizeKb } = source.filters;
 
                 const afterDate = modifiedAfter ? new Date(modifiedAfter).getTime() : undefined;
                 const beforeDate = modifiedBefore ? new Date(modifiedBefore).getTime() : undefined;
@@ -57,6 +57,20 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
 
                         if (afterDate !== undefined && fileDate < afterDate) return false;
                         if (beforeDate !== undefined && fileDate > beforeDate) return false;
+
+                        return true;
+                    });
+                }
+
+                if (maxSizeKb !== undefined || minSizeKb !== undefined) {
+                    files = files.filter(file => {
+                        if (file.size === undefined) return true;
+
+                        const maxSizeBytes = maxSizeKb !== undefined ? maxSizeKb * 1024 : undefined;
+                        const minSizeBytes = minSizeKb !== undefined ? minSizeKb * 1024 : undefined;
+
+                        if (maxSizeBytes !== undefined && file.size > maxSizeBytes) return false;
+                        if (minSizeBytes !== undefined && file.size < minSizeBytes) return false;
 
                         return true;
                     });

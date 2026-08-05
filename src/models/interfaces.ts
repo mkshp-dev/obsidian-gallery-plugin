@@ -64,6 +64,8 @@ export interface INextcloudSourceConfig {
   filters?: {
     modifiedAfter?: string;
     modifiedBefore?: string;
+    maxSizeKb?: number;
+    minSizeKb?: number;
   };
 }
 

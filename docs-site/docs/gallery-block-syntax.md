@@ -27,7 +27,7 @@ view:
 
 **Required** (unless using legacy syntax). The `sources` key takes a list of objects. Each object represents an image source. You can define multiple sources in a single gallery block, and the plugin will load images from all of them.
 
-See the [Sources](./category/sources) section for details on configuring specific source types (`local`, `external`, `immich-share`, `immich`).
+See the [Sources](./category/sources) section for details on configuring specific source types (`local`, `external`, `immich-share`, `immich`, `nextcloud-share`, `nextcloud`).
 
 ### `view`
 

@@ -29,28 +29,43 @@ The General tab controls core plugin behavior and remote image handling.
 
 ## Providers tab
 
-The Providers tab manages authenticated connections to your Immich servers. These connections are used by the `immich` source type to display your personal albums, favorites, and more.
+The Providers tab manages authenticated connections to your **Immich** and **Nextcloud** servers. These connections are used by the `immich` and `nextcloud` source types to access your personal libraries and folders.
 
 > [!NOTE]
-> Public Immich **shared links** (`immich-share` source type) do not require any configuration here — they work without an account.
+> Public **shared links** (`immich-share` and `nextcloud-share` source types) do not require any configuration here — they work directly using public share URLs.
 
-### Adding an Immich connection
+### Immich Connections
 
 1. Click **Add Immich connection**.
-2. Fill in the three fields for the new connection:
+2. Fill in the connection details:
 
 | Field | Description |
 |-------|-------------|
-| **Connection key** | A short, memorable name you choose (e.g. `home`, `work`). This is what you type in your gallery blocks under `connection:`. It must be unique across your connections. |
+| **Connection key** | A short, memorable name you choose (e.g. `home`, `work`). This is referenced in your gallery blocks under `connection:`. |
 | **Base URL** | The root URL of your Immich server, e.g. `https://immich.example.com`. |
 | **API key** | A personal API key generated in your Immich account under **Account settings → API Keys**. |
 
-3. Click **Test connection** to verify the credentials. A notice will confirm success or report the error.
-4. Settings are saved automatically as you type.
+3. Click **Test connection** to verify credentials.
+
+---
+
+### Nextcloud Connections
+
+1. Click **Add Nextcloud connection**.
+2. Fill in the connection details:
+
+| Field | Description |
+|-------|-------------|
+| **Connection key** | A short, memorable name you choose (e.g. `nextcloud-demo`, `my-cloud`). Referenced in your gallery blocks under `connection:`. |
+| **Base URL** | The root URL of your Nextcloud server, e.g. `https://cloud.example.com`. |
+| **Username** | Your Nextcloud username or email address. |
+| **App Password** | An App Password generated in Nextcloud (**Settings → Security → Devices & sessions → Create new app password**). |
+
+3. Click **Test connection** to verify WebDAV authentication.
 
 ### Removing a connection
 
-Click **Remove connection** next to the connection you want to delete. This only removes the plugin's stored credentials — it does not affect your Immich server or any gallery blocks that reference the key.
+Click **Remove connection** next to the connection you want to delete. This only removes stored credentials — it does not affect your server or notes.
 
 > [!WARNING]
-> If you remove a connection whose `key` is referenced in a gallery block, that block will show an error ("Connection not found") until you either restore the connection or update the block.
+> If you remove a connection whose `key` is referenced in a gallery block, that block will show a "Connection not found" error until you restore the connection or update the block.

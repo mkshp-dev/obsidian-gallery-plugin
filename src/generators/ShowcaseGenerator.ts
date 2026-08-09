@@ -42,6 +42,9 @@ export class ShowcaseGenerator {
             await this.createImmichAlbumsNote();
             await this.createImmichSharedLinkNote();
             await this.createImmichPasswordNote();
+            await this.createNextcloudAuthenticatedNote();
+            await this.createNextcloudRecursiveAndFiltersNote();
+            await this.createNextcloudSharedLinkNote();
             await this.createErrorStatesNote();
 
             new Notice('Gallery view showcase generated successfully in gallerydemo');
@@ -106,9 +109,18 @@ No account required, just a public share URL:
 - [[10 - Immich shared link]] — Public shared album.
 - [[11 - Password-protected Immich share]] — Password-protected share.
 
+### ☁️ Nextcloud — Authenticated
+Connect to your Nextcloud server using connection settings (\`nextcloud-demo\`):
+- [[12 - Nextcloud authenticated]] — Path selection, subfolders, and view layouts.
+- [[13 - Nextcloud recursive and filters]] — Sub-folder scanning, globs, MIME types, sizes, and date filtering.
+
+### 🔗 Nextcloud — Shared Links
+No connection settings required, just a public Nextcloud share URL:
+- [[14 - Nextcloud shared link]] — Public and password-protected Nextcloud share links.
+
 ### ⚠️ Error States Reference
 See every compact error the plugin can show — great for debugging your own galleries:
-- [[12 - Error states]] — One intentionally broken gallery per error type.
+- [[15 - Error states]] — One intentionally broken gallery per error type.
 
 ## Next Steps
 Want to learn more? Check out the full [Documentation](https://mkshp-dev.github.io/obsidian-gallery-plugin/)!
@@ -617,6 +629,217 @@ view:
         await this.app.vault.create(`${this.basePath}/11 - Password-protected Immich share.md`, content);
     }
 
+    private async createNextcloudAuthenticatedNote(): Promise<void> {
+        const content = `\
+# Nextcloud — Authenticated Gallery
+
+Connect Gallery View to your Nextcloud instance using connection settings configured in **Settings → Gallery View → Nextcloud Connections**.
+
+> **Note:** Configure a Nextcloud connection with key \`nextcloud-demo\` in plugin settings to preview these galleries.
+
+---
+
+### Root gallery folder (\`/Gallery-Test\`)
+
+Loads images from the \`/Gallery-Test\` folder on your Nextcloud server.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: nextcloud-demo
+    path: /Gallery-Test
+view:
+  type: grid
+\`\`\`
+
+---
+
+### Specific subfolder (\`/Gallery-Test/Vacation\`)
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: nextcloud-demo
+    path: /Gallery-Test/Vacation
+view:
+  type: thumbnail
+\`\`\`
+
+---
+
+### Carousel view layout
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: nextcloud-demo
+    path: /Gallery-Test
+view:
+  type: carousel
+\`\`\`
+
+## How it works
+- \`type: nextcloud\` tells the plugin to load images from Nextcloud via WebDAV.
+- \`connection: nextcloud-demo\` refers to the connection key configured in Nextcloud settings.
+- \`path\` specifies the folder path on your Nextcloud server.
+`;
+        await this.app.vault.create(`${this.basePath}/12 - Nextcloud authenticated.md`, content);
+    }
+
+    private async createNextcloudRecursiveAndFiltersNote(): Promise<void> {
+        const content = `\
+# Nextcloud — Recursive Scan and Filters
+
+Combine Nextcloud sources with advanced filters, glob pattern matching, and sorting options.
+
+---
+
+### Recursive scanning (all subfolders)
+
+Adding \`recursive: true\` scans sub-folders such as \`Vacation/\`, \`Nature/\`, and \`Archive/2023/\`.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: nextcloud-demo
+    path: /Gallery-Test
+    recursive: true
+view:
+  type: grid
+\`\`\`
+
+---
+
+### Filename pattern matching (\`filenameFilter\`)
+
+Only load images whose names match the glob pattern \`IMG_*\`.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: nextcloud-demo
+    path: /Gallery-Test
+    recursive: true
+    filenameFilter: "IMG_*"
+view:
+  type: thumbnail
+\`\`\`
+
+---
+
+### Filter by MIME types & file size
+
+Only load JPEG and PNG files that are at least 10 KB in size.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: nextcloud-demo
+    path: /Gallery-Test
+    recursive: true
+    filters:
+      mimeTypes:
+        - image/jpeg
+        - image/png
+      minSizeKb: 10
+      maxSizeKb: 5000
+view:
+  type: grid
+\`\`\`
+
+---
+
+### Sorting & limit
+
+Show the 10 most recently modified images.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: nextcloud-demo
+    path: /Gallery-Test
+    recursive: true
+    sort:
+      by: lastModified
+      order: desc
+    limit: 10
+view:
+  type: carousel
+\`\`\`
+
+## Filter options
+| Option | Example | Description |
+|---|---|---|
+| \`recursive\` | \`true\` / \`false\` | Scan subdirectories recursively |
+| \`filenameFilter\` | \`"IMG_*"\` / \`"*.png"\` | Glob pattern filter for file names |
+| \`filters.mimeTypes\` | \`["image/jpeg", "image/png"]\` | Filter by image MIME type |
+| \`filters.minSizeKb\` / \`maxSizeKb\` | \`10\` / \`5000\` | Filter by file size range in KB |
+| \`filters.modifiedAfter\` / \`modifiedBefore\` | \`"2024-01-01"\` | Filter by modification date |
+| \`sort.by\` | \`name\` / \`size\` / \`lastModified\` | Field to sort files by |
+| \`sort.order\` | \`asc\` / \`desc\` | Ascending or descending order |
+| \`limit\` | \`10\` | Maximum number of images to fetch |
+`;
+        await this.app.vault.create(`${this.basePath}/13 - Nextcloud recursive and filters.md`, content);
+    }
+
+    private async createNextcloudSharedLinkNote(): Promise<void> {
+        const content = `\
+# Nextcloud Shared Links (Public & Password-Protected)
+
+Gallery View can display images directly from a public Nextcloud share link — no account or login settings required.
+
+---
+
+### Standard Public Share Link
+
+Paste any public Nextcloud folder share URL.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud-share
+    url: https://use23.thegood.cloud/s/YOUR_SHARE_TOKEN
+view:
+  type: grid
+\`\`\`
+
+---
+
+### Password-Protected Nextcloud Share
+
+If your Nextcloud public share link is protected with a password, specify it in the \`password\` field.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud-share
+    url: https://use23.thegood.cloud/s/YOUR_PROTECTED_SHARE_TOKEN
+    password: my-secret-password
+view:
+  type: grid
+\`\`\`
+
+---
+
+### Nextcloud Photos App Public Album
+
+If you create a public album link in the Nextcloud Photos app:
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud-share
+    url: https://use23.thegood.cloud/apps/photos/public/YOUR_ALBUM_TOKEN
+view:
+  type: thumbnail
+\`\`\`
+
+## How to use
+1. Open Nextcloud in your browser.
+2. Select a folder or photo album and click **Share**.
+3. Create a public share link (optionally set a password).
+4. Copy and paste the share URL into the \`url\` field above.
+`;
+        await this.app.vault.create(`${this.basePath}/14 - Nextcloud shared link.md`, content);
+    }
+
     private async createErrorStatesNote(): Promise<void> {
         const lines: string[] = [
             '# Error States Reference',
@@ -835,6 +1058,63 @@ view:
             '',
             '---',
             '',
+            '## Nextcloud Errors',
+            '',
+            '### 15 — Nextcloud: Missing connection reference',
+            '> [!NOTE] Expected output',
+            "> `\u26a0\ufe0f gallery: Nextcloud source is missing a 'connection' reference.`",
+            '',
+            '```obs-gallery',
+            'sources:',
+            '  - type: nextcloud',
+            '    path: /Gallery-Test',
+            'view:',
+            '  type: grid',
+            '```',
+            '',
+            '---',
+            '',
+            '### 16 — Nextcloud: Connection key not found in settings',
+            '> [!NOTE] Expected output',
+            "> `\u26a0\ufe0f gallery: Nextcloud connection with key 'nonexistent' not found in settings.`",
+            '',
+            '```obs-gallery',
+            'sources:',
+            '  - type: nextcloud',
+            '    connection: nonexistent',
+            'view:',
+            '  type: grid',
+            '```',
+            '',
+            '---',
+            '',
+            '### 17 — Nextcloud share: Missing URL',
+            '> [!NOTE] Expected output',
+            '> `\u26a0\ufe0f gallery: Nextcloud share source is missing a URL.`',
+            '',
+            '```obs-gallery',
+            'sources:',
+            '  - type: nextcloud-share',
+            'view:',
+            '  type: grid',
+            '```',
+            '',
+            '---',
+            '',
+            '### 18 — Nextcloud share: Invalid URL format',
+            '> [!NOTE] Expected output',
+            '> `\u26a0\ufe0f gallery: Invalid Nextcloud share URL: https://invalid-share-link.example.com`',
+            '',
+            '```obs-gallery',
+            'sources:',
+            '  - type: nextcloud-share',
+            '    url: https://invalid-share-link.example.com',
+            'view:',
+            '  type: grid',
+            '```',
+            '',
+            '---',
+            '',
             '## Error display mode',
             '',
             'You can control whether errors are shown at all in **Settings → Gallery View → Error display mode**:',
@@ -847,6 +1127,6 @@ view:
         ];
 
         const content = lines.join('\n') + '\n';
-        await this.app.vault.create(`${this.basePath}/12 - Error states.md`, content);
+        await this.app.vault.create(`${this.basePath}/15 - Error states.md`, content);
     }
 }

@@ -11,7 +11,7 @@ sidebar_position: 1
 - Display images in thumbnail grids, carousels, or masonry layouts
 - Click thumbnails to open a full-size modal viewer
 - Scan folders recursively for large collections
-- Load images from external URLs, Immich shared links, or your personal authenticated Immich library
+- Load images from external URLs, Immich, or Nextcloud (shared links and authenticated connections)
 
 ## Supported Source Types
 
@@ -20,6 +20,8 @@ The plugin supports multiple image source types today:
 - **External URLs** (`external`) — load images from remote URLs.
 - **Immich shared links** (`immich-share`) — load images directly from public Immich shares without any account configuration.
 - **Immich authenticated** (`immich`) — connect to your personal Immich library using an API key to display albums, favorites, recent assets, and more.
+- **Nextcloud shared links** (`nextcloud-share`) — load images directly from public Nextcloud folder share links or Photos app public albums.
+- **Nextcloud authenticated** (`nextcloud`) — connect to your Nextcloud instance via WebDAV using app password credentials to display folders with filtering, globs, and subfolder scanning.
 
 ## Quick Example
 
@@ -49,8 +51,8 @@ Instead of writing YAML by hand, use the **Gallery View: Insert gallery** comman
 ### YAML Autocomplete
 
 When your cursor is inside an `obs-gallery` code block, Gallery View provides IntelliSense-style completions for:
-- `type:` — suggests valid source types (`local`, `immich`, `immich-share`)
-- `connection:` — suggests your configured Immich connection keys
+- `type:` — suggests valid source types (`local`, `external`, `immich`, `immich-share`, `nextcloud`, `nextcloud-share`)
+- `connection:` — suggests your configured Immich and Nextcloud connection keys
 - `view:` — suggests valid view types
 - `assetType:` — suggests `image` or `video`
 - `sort.order:` — suggests `asc` or `desc`

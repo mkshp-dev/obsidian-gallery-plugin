@@ -1,0 +1,34 @@
+--- src/resolvers/NextcloudShareSourceResolver.ts
++++ src/resolvers/NextcloudShareSourceResolver.ts
+@@ -29,12 +29,15 @@
+             return { images, errors };
+         }
+         const token = match[1];
+-        const origin = urlObj.origin;
++
++        // Extract base URL correctly in case Nextcloud is hosted in a subdirectory
++        const basePath = urlObj.pathname.substring(0, urlObj.pathname.indexOf('/s/'));
++        const baseUrl = `${urlObj.origin}${basePath}`;
+         const password = source.password || '';
+
+-        const webdavUrl = `${origin}/public.php/webdav/`;
++        const webdavUrl = `${baseUrl}/public.php/webdav/`;
+
+         const authString = `${token}:${password}`;
+         const base64Auth = btoa(authString);
+         const headers = {
+             'Authorization': `Basic ${base64Auth}`,
+@@ -75,13 +78,13 @@
+             const files = this.parseWebdavResponse(response.text);
+
+             const resolvedImages = await Promise.all(files.map(async (file) => {
+                 try {
+-                    const fileUrl = `${origin}${file.href}`;
++                    const fileUrl = `${urlObj.origin}${file.href}`; // href typically includes full path
+
+                     const cacheKey = `nextcloud-share:${token}:${file.href}`;
+                     let blobUrl = ObjectUrlManager.acquire(cacheKey);
+
+                     if (!blobUrl) {
+                         const fileRes = await requestUrl({
+                             url: fileUrl,

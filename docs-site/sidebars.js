@@ -19,6 +19,8 @@ const sidebars = {
         'sources/external-urls',
         'sources/immich-shared-links',
         'sources/immich-authenticated',
+        'sources/nextcloud-shared-links',
+        'sources/nextcloud-authenticated',
       ],
     },
     {

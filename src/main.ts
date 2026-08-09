@@ -37,6 +37,7 @@ export default class GalleryPlugin extends Plugin {
             this.contentScanner,
             this.viewFactory,
             () => this.settings.immichConnections,
+            () => this.settings.nextcloudConnections,
             () => this.getProcessingOptions()
         );
 
@@ -123,6 +124,20 @@ export default class GalleryPlugin extends Plugin {
                     apiKey: conn.apiKey || ''
                 };
             });
+        }
+
+        if (this.settings.nextcloudConnections && Array.isArray(this.settings.nextcloudConnections)) {
+            this.settings.nextcloudConnections = this.settings.nextcloudConnections.map((connRaw) => {
+                const conn = connRaw as unknown as Record<string, string | undefined>;
+                return {
+                    key: conn.key || conn.name || conn.id || `conn_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                    baseUrl: conn.baseUrl || '',
+                    username: conn.username || '',
+                    appPassword: conn.appPassword || ''
+                };
+            });
+        } else {
+            this.settings.nextcloudConnections = [];
         }
     }
 

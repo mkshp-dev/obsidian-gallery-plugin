@@ -89,7 +89,10 @@ describe('ShowcaseGenerator', () => {
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/09 - Immich albums.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/10 - Immich shared link.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/11 - Password-protected Immich share.md', expect.any(String));
-        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/12 - Error states.md', expect.any(String));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/12 - Nextcloud authenticated.md', expect.any(String));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/13 - Nextcloud recursive and filters.md', expect.any(String));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/14 - Nextcloud shared link.md', expect.any(String));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/15 - Error states.md', expect.any(String));
 
         // 4. Verify success notice
         expect(Notice).toHaveBeenCalledWith('Gallery view showcase generated successfully in gallerydemo');

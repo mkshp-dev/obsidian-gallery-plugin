@@ -1,4 +1,4 @@
-import { IImmichConnection } from './interfaces';
+import { IImmichConnection, INextcloudConnection } from './interfaces';
 
 /**
  * Plugin settings
@@ -15,6 +15,7 @@ export interface GalleryPluginSettings {
     showCaptions: boolean;
     captionMaxLines: number;
     immichConnections: IImmichConnection[];
+    nextcloudConnections: INextcloudConnection[];
 }
 
 export const DEFAULT_SETTINGS: GalleryPluginSettings = {
@@ -26,5 +27,6 @@ export const DEFAULT_SETTINGS: GalleryPluginSettings = {
     enableLifecycleLogging: false,
     showCaptions: true,
     captionMaxLines: 1,
-    immichConnections: []
+    immichConnections: [],
+    nextcloudConnections: []
 };

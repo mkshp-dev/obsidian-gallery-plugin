@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Editor, Notice, TFolder } from 'obsidian';
 import type GalleryPlugin from '../main';
-import { ISourceConfig } from '../models/interfaces';
+import { ISourceConfig, INextcloudSourceConfig, INextcloudShareSourceConfig } from '../models/interfaces';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 
@@ -70,7 +70,9 @@ export class GalleryBuilderModal extends Modal {
             { type: 'local', label: '+ Local vault' },
             { type: 'external', label: '+ External URLs' },
             { type: 'immich-share', label: '+ Immich share' },
-            { type: 'immich', label: '+ Immich auth' }
+            { type: 'immich', label: '+ Immich auth' },
+            { type: 'nextcloud', label: '+ Nextcloud auth' },
+            { type: 'nextcloud-share', label: '+ Nextcloud share' }
         ];
 
         const sourcesContainer = sourcesSection.createDiv('gallery-builder-sources-list');
@@ -155,14 +157,18 @@ export class GalleryBuilderModal extends Modal {
             'local': '📁',
             'external': '🌐',
             'immich-share': '🔗',
-            'immich': '🔐'
+            'immich': '🔐',
+            'nextcloud': '☁️',
+            'nextcloud-share': '🔗'
         };
 
         const nameMap: Record<string, string> = {
             'local': 'Local Vault',
             'external': 'External URLs',
             'immich-share': 'Immich Share Link',
-            'immich': 'Immich Authenticated'
+            'immich': 'Immich Authenticated',
+            'nextcloud': 'Nextcloud Authenticated',
+            'nextcloud-share': 'Nextcloud Share Link'
         };
 
         this.sources.forEach((source, index) => {
@@ -206,6 +212,12 @@ export class GalleryBuilderModal extends Modal {
                 break;
             case 'immich':
                 newSource = { type: 'immich', connection: '' };
+                break;
+            case 'nextcloud':
+                newSource = { type: 'nextcloud', connection: '' };
+                break;
+            case 'nextcloud-share':
+                newSource = { type: 'nextcloud-share', url: '' };
                 break;
         }
 
@@ -560,6 +572,46 @@ export class GalleryBuilderModal extends Modal {
             new Setting(container).setName('Display').setHeading();
 
             new Setting(container)
+                .setName('Modified after')
+                .setDesc('Only show images modified after this date (iso-8601, e.g. 2025-01-01)')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('YYYY-MM-DD')
+                        .setValue(typedSource.filters?.modifiedAfter || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            if (value.trim()) {
+                                typedSource.filters.modifiedAfter = value.trim();
+                            } else {
+                                delete typedSource.filters.modifiedAfter;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Modified before')
+                .setDesc('Only show images modified before this date (iso-8601, e.g. 2025-12-31)')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('YYYY-MM-DD')
+                        .setValue(typedSource.filters?.modifiedBefore || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            if (value.trim()) {
+                                typedSource.filters.modifiedBefore = value.trim();
+                            } else {
+                                delete typedSource.filters.modifiedBefore;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
                 .setName('Limit')
                 .setDesc('Maximum number of items to fetch.')
                 .addText(text => text
@@ -591,6 +643,342 @@ export class GalleryBuilderModal extends Modal {
                 );
 
             renderDynamicContent(source.connection).catch(e => console.error(e));
+        } else if (source.type === 'nextcloud') {
+            const connections = this.plugin.settings.nextcloudConnections || [];
+
+            if (connections.length === 0) {
+                container.createEl('p', {
+                    text: 'No nextcloud connections configured. Please add one in the plugin settings.',
+                    cls: 'gallery-error-text'
+                });
+                return;
+            }
+
+            const connectionOptions: Record<string, string> = {};
+            connections.forEach(conn => {
+                connectionOptions[conn.key] = conn.key;
+            });
+
+            if (!source.connection || !connectionOptions[source.connection]) {
+                source.connection = connections[0].key;
+            }
+
+            new Setting(container)
+                .setName('Connection')
+                .setDesc('Select a nextcloud connection.')
+                .addDropdown(dropdown => dropdown
+                    .addOptions(connectionOptions)
+                    .setValue(source.connection!)
+                    .onChange(value => {
+                        source.connection = value;
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Path')
+                .setDesc('Path on your nextcloud server to fetch images from.')
+                .addText(text => text
+                    .setPlaceholder('/')
+                    .setValue(source.path || '')
+                    .onChange(value => {
+                        source.path = value;
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Recursive')
+                .setDesc('Include subfolders.')
+                .addToggle(toggle => toggle
+                    .setValue(source.recursive !== false)
+                    .onChange(value => {
+                        source.recursive = value;
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Limit')
+                .setDesc('Maximum number of items to fetch.')
+                .addText(text => text
+                    .setValue(source.limit?.toString() || '')
+                    .onChange(value => {
+                        const parsed = parseInt(value, 10);
+                        if (!isNaN(parsed) && parsed > 0) {
+                            source.limit = parsed;
+                        } else {
+                            delete source.limit;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container).setName('Filter criteria').setHeading();
+
+            new Setting(container)
+                .setName('Filename filter')
+                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .addText(text => text
+                    .setPlaceholder('*.jpg')
+                    .setValue(source.filenameFilter || '')
+                    .onChange(value => {
+                        if (value) {
+                            source.filenameFilter = value;
+                        } else {
+                            delete source.filenameFilter;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Modified after')
+                .setDesc('Only show files modified after this date.')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('YYYY-MM-DD')
+                        .setValue(typedSource.filters?.modifiedAfter || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            if (value.trim()) {
+                                typedSource.filters.modifiedAfter = value.trim();
+                            } else {
+                                delete typedSource.filters.modifiedAfter;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Modified before')
+                .setDesc('Only show files modified before this date.')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('YYYY-MM-DD')
+                        .setValue(typedSource.filters?.modifiedBefore || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            if (value.trim()) {
+                                typedSource.filters.modifiedBefore = value.trim();
+                            } else {
+                                delete typedSource.filters.modifiedBefore;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Max size (kb)')
+                .setDesc('Maximum file size in kilobytes.')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('5000')
+                        .setValue(typedSource.filters?.maxSizeKb?.toString() || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            const parsed = parseInt(value, 10);
+                            if (!isNaN(parsed) && parsed > 0) {
+                                typedSource.filters.maxSizeKb = parsed;
+                            } else {
+                                delete typedSource.filters.maxSizeKb;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Min size (kb)')
+                .setDesc('Minimum file size in kilobytes.')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('100')
+                        .setValue(typedSource.filters?.minSizeKb?.toString() || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            const parsed = parseInt(value, 10);
+                            if (!isNaN(parsed) && parsed >= 0) {
+                                typedSource.filters.minSizeKb = parsed;
+                            } else {
+                                delete typedSource.filters.minSizeKb;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Mime types')
+                .setDesc('Comma-separated list of mime types (e.g. Image/jpeg, image/png).')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setValue(typedSource.filters?.mimeTypes?.join(', ') || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            if (value.trim()) {
+                                typedSource.filters.mimeTypes = value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                            } else {
+                                delete typedSource.filters.mimeTypes;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container).setName('Sort').setHeading();
+
+            new Setting(container)
+                .setName('Sort by')
+                .setDesc('Property to sort by.')
+                .addDropdown(dropdown => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return dropdown
+                        .addOption('name', 'Name')
+                        .addOption('lastModified', 'Last modified')
+                        .addOption('size', 'Size')
+                        .setValue(typedSource.sort?.by || 'name')
+                        .onChange(value => {
+                            if (!typedSource.sort) typedSource.sort = { by: 'name', order: 'asc' };
+                            typedSource.sort.by = value as 'name' | 'lastModified' | 'size';
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Sort order')
+                .setDesc('Sort direction.')
+                .addDropdown(dropdown => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return dropdown
+                        .addOption('asc', 'Ascending')
+                        .addOption('desc', 'Descending')
+                        .setValue(typedSource.sort?.order || 'asc')
+                        .onChange(value => {
+                            if (!typedSource.sort) typedSource.sort = { by: 'name', order: 'asc' };
+                            typedSource.sort.order = value as 'asc' | 'desc';
+                            this.refreshLivePreview();
+                        });
+                });
+
+        } else if (source.type === 'nextcloud-share') {
+            new Setting(container)
+                .setName('Share URL')
+                .setDesc('Nextcloud public share link.')
+                .addText(text => text
+                    .setValue(source.url || '')
+                    .onChange(value => {
+                        source.url = value;
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Password')
+                .setDesc('(Optional) password if the share link is protected.')
+                .addText(text => {
+                    text.inputEl.type = 'password';
+                    text.setValue(source.password || '')
+                        .onChange(value => {
+                            source.password = value;
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container).setName('Filter criteria').setHeading();
+
+            new Setting(container)
+                .setName('Filename filter')
+                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .addText(text => text
+                    .setPlaceholder('*.jpg')
+                    .setValue(source.filenameFilter || '')
+                    .onChange(value => {
+                        if (value) {
+                            source.filenameFilter = value;
+                        } else {
+                            delete source.filenameFilter;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container)
+                .setName('Mime types')
+                .setDesc('Comma-separated list of mime types (e.g. Image/jpeg, image/png).')
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudShareSourceConfig;
+                    return text
+                        .setValue(typedSource.filters?.mimeTypes?.join(', ') || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            if (value.trim()) {
+                                typedSource.filters.mimeTypes = value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                            } else {
+                                delete typedSource.filters.mimeTypes;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Limit')
+                .setDesc('Maximum number of items to fetch.')
+                .addText(text => text
+                    .setValue(source.limit?.toString() || '')
+                    .onChange(value => {
+                        const parsed = parseInt(value, 10);
+                        if (!isNaN(parsed) && parsed > 0) {
+                            source.limit = parsed;
+                        } else {
+                            delete source.limit;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
+            new Setting(container).setName('Sort').setHeading();
+
+            new Setting(container)
+                .setName('Sort by')
+                .setDesc('Property to sort by.')
+                .addDropdown(dropdown => {
+                    const typedSource = source as unknown as INextcloudShareSourceConfig;
+                    return dropdown
+                        .addOption('name', 'Name')
+                        .addOption('lastModified', 'Last modified')
+                        .addOption('size', 'Size')
+                        .setValue(typedSource.sort?.by || 'name')
+                        .onChange(value => {
+                            if (!typedSource.sort) typedSource.sort = { by: 'name', order: 'asc' };
+                            typedSource.sort.by = value as 'name' | 'lastModified' | 'size';
+                            this.refreshLivePreview();
+                        });
+                });
+
+            new Setting(container)
+                .setName('Sort order')
+                .setDesc('Sort direction.')
+                .addDropdown(dropdown => {
+                    const typedSource = source as unknown as INextcloudShareSourceConfig;
+                    return dropdown
+                        .addOption('asc', 'Ascending')
+                        .addOption('desc', 'Descending')
+                        .setValue(typedSource.sort?.order || 'asc')
+                        .onChange(value => {
+                            if (!typedSource.sort) typedSource.sort = { by: 'name', order: 'asc' };
+                            typedSource.sort.order = value as 'asc' | 'desc';
+                            this.refreshLivePreview();
+                        });
+                });
         }
     }
 

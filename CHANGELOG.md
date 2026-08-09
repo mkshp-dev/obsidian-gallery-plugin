@@ -2,8 +2,20 @@
 
 ## In-progress
 
+- **Nextcloud Filters UI**: Wired `nextcloud` and `nextcloud-share` filter and sort UI controls into the Gallery Builder Modal.
+- **Nextcloud Filters**: Add limit field to nextcloud-share source
+- **Nextcloud Filters**: Sort order (by name / lastModified / size) for nextcloud sources
+- **Nextcloud Filters**: Added `filenameFilter` field to `nextcloud` and `nextcloud-share` sources allowing users to match filenames using glob patterns or extensions.
+
+- **Nextcloud public shares**: Added support for resolving Nextcloud public share links via the `nextcloud-share` source type, including password-protected shares.
+- **Nextcloud integration**: Added foundational Nextcloud type definitions, interfaces, configuration settings, and source lifecycle support.
+
+## 2.2.7 - 2026-08-03
+
+
 - **Immich Source Album Filtering**: Fixed a bug where the authenticated `immich` source type ignored `albumIds` filters and displayed all assets from the main server library instead of restricting results to the specified album(s).
 - **Docs**: Verified versioned Docusaurus deployment workflow and automated changelog syncing.
+
 
 ## 2.2.6 - 2026-08-01
 

@@ -47,7 +47,49 @@ export interface IImmichSourceConfig {
   };
 }
 
-export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichSourceConfig;
+export interface INextcloudConnection {
+  key: string;          // stable reference for gallery blocks
+  baseUrl: string;      // e.g. https://cloud.example.com
+  username: string;
+  appPassword: string;  // Nextcloud App Password
+}
+
+export interface INextcloudSourceConfig {
+  type: 'nextcloud';
+  connection: string;   // key referencing a saved connection
+  path?: string;        // WebDAV path within user's files (default: '/')
+  recursive?: boolean;  // scan subdirectories (default: true)
+  limit?: number;
+  sort?: {
+    by: 'name' | 'lastModified' | 'size';
+    order: 'asc' | 'desc';
+  };
+  filenameFilter?: string; // Optional glob pattern for filenames
+  filters?: {
+    modifiedAfter?: string;
+    modifiedBefore?: string;
+    maxSizeKb?: number;
+    minSizeKb?: number;
+    mimeTypes?: string[];
+  };
+}
+
+export interface INextcloudShareSourceConfig {
+  type: 'nextcloud-share';
+  url: string;          // full share URL e.g. https://cloud.example.com/s/TOKEN
+  password?: string;    // optional share password
+  filenameFilter?: string; // Optional glob pattern for filenames
+  filters?: {
+    mimeTypes?: string[];
+  };
+  limit?: number;       // Max number of files to return
+  sort?: {
+    by: 'name' | 'lastModified' | 'size';
+    order: 'asc' | 'desc';
+  };
+}
+
+export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichSourceConfig | INextcloudSourceConfig | INextcloudShareSourceConfig;
 
 export interface IViewConfig {
   type: 'thumbnail' | 'carousel' | 'grid';
@@ -85,7 +127,7 @@ export interface IImageSource {
   resourceUrl?: string;
 
   /** Source type */
-  type: 'local' | 'external' | 'immich-share' | 'immich';
+  type: 'local' | 'external' | 'immich-share' | 'immich' | 'nextcloud' | 'nextcloud-share';
 
   /** Optional image caption */
   caption?: string;

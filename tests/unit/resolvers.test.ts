@@ -3,6 +3,9 @@ import { ExternalSourceResolver } from '../../src/resolvers/ExternalSourceResolv
 import { SourceResolverRegistry } from '../../src/resolvers/SourceResolverRegistry';
 import { IContentScanner, IImageSource, ILocalSourceConfig, IExternalSourceConfig } from '../../src/models/interfaces';
 import { ImageSource } from '../../src/models/ImageSource';
+import { NextcloudSourceResolver } from '../../src/resolvers/NextcloudSourceResolver';
+import { NextcloudShareSourceResolver } from '../../src/resolvers/NextcloudShareSourceResolver';
+
 
 describe('Resolvers', () => {
     let mockScanner: jest.Mocked<IContentScanner>;
@@ -115,7 +118,7 @@ describe('Resolvers', () => {
 
     describe('SourceResolverRegistry', () => {
         it('should resolve a valid source through dispatch correctly', async () => {
-            const registry = new SourceResolverRegistry(mockScanner);
+            const registry = new SourceResolverRegistry(mockScanner, () => [], () => []);
             const source: IExternalSourceConfig = { type: 'external', urls: ['http://example.com/img.jpg'] };
 
             const { images, errors } = await registry.resolveSource(source, {});
@@ -125,8 +128,21 @@ describe('Resolvers', () => {
             expect(images[0].path).toBe('http://example.com/img.jpg');
         });
 
+
+        it('should have nextcloud resolver registered', () => {
+            const registry = new SourceResolverRegistry(mockScanner, () => [], () => []);
+            const nextcloudResolver = registry.getResolver('nextcloud');
+            expect(nextcloudResolver).toBeInstanceOf(NextcloudSourceResolver);
+        });
+
+        it('should have nextcloud-share resolver registered', () => {
+            const registry = new SourceResolverRegistry(mockScanner, () => [], () => []);
+            const nextcloudShareResolver = registry.getResolver('nextcloud-share');
+            expect(nextcloudShareResolver).toBeInstanceOf(NextcloudShareSourceResolver);
+        });
+
         it('should fail in a controlled way for unknown source type', async () => {
-            const registry = new SourceResolverRegistry(mockScanner);
+            const registry = new SourceResolverRegistry(mockScanner, () => [], () => []);
             const source = { type: 'unknown_source_type' } as any;
 
             const { images, errors } = await registry.resolveSource(source, {});

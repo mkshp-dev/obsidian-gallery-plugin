@@ -107,6 +107,73 @@ export class GalleryYamlGenerator {
                         yaml += `      order: ${source.sort.order}\n`;
                     }
                     break;
+                case 'nextcloud':
+                    if (!source.connection) throw new Error('Nextcloud source requires a connection.');
+                    yaml += `    connection: ${source.connection}\n`;
+                    if (source.path) {
+                        yaml += `    path: ${source.path}\n`;
+                    }
+                    if (source.recursive !== undefined) {
+                        yaml += `    recursive: ${source.recursive}\n`;
+                    }
+                    if (source.filenameFilter) {
+                        yaml += `    filenameFilter: ${source.filenameFilter}\n`;
+                    }
+                    if (source.filters && (source.filters.modifiedAfter || source.filters.modifiedBefore || source.filters.maxSizeKb !== undefined || source.filters.minSizeKb !== undefined || (source.filters.mimeTypes && source.filters.mimeTypes.length > 0))) {
+                        yaml += `    filters:\n`;
+                        if (source.filters.modifiedAfter) {
+                            yaml += `      modifiedAfter: ${source.filters.modifiedAfter}\n`;
+                        }
+                        if (source.filters.modifiedBefore) {
+                            yaml += `      modifiedBefore: ${source.filters.modifiedBefore}\n`;
+                        }
+                        if (source.filters.maxSizeKb !== undefined) {
+                            yaml += `      maxSizeKb: ${source.filters.maxSizeKb}\n`;
+                        }
+                        if (source.filters.minSizeKb !== undefined) {
+                            yaml += `      minSizeKb: ${source.filters.minSizeKb}\n`;
+                        }
+                        if (source.filters.mimeTypes && source.filters.mimeTypes.length > 0) {
+                            yaml += `      mimeTypes:\n`;
+                            for (const mime of source.filters.mimeTypes) {
+                                yaml += `        - ${mime}\n`;
+                            }
+                        }
+                    }
+                    if (source.limit) {
+                        yaml += `    limit: ${source.limit}\n`;
+                    }
+                    if (source.sort) {
+                        yaml += `    sort:\n`;
+                        yaml += `      by: ${source.sort.by}\n`;
+                        yaml += `      order: ${source.sort.order}\n`;
+                    }
+                    break;
+                case 'nextcloud-share':
+                    if (!source.url) throw new Error('Nextcloud share source requires a URL.');
+                    yaml += `    url: ${source.url.trim()}\n`;
+                    if (source.password && source.password.trim()) {
+                        yaml += `    password: ${source.password.trim()}\n`;
+                    }
+                    if (source.filenameFilter) {
+                        yaml += `    filenameFilter: ${source.filenameFilter}\n`;
+                    }
+                    if (source.filters && source.filters.mimeTypes && source.filters.mimeTypes.length > 0) {
+                        yaml += `    filters:\n`;
+                        yaml += `      mimeTypes:\n`;
+                        for (const mime of source.filters.mimeTypes) {
+                            yaml += `        - ${mime}\n`;
+                        }
+                    }
+                    if (source.limit) {
+                        yaml += `    limit: ${source.limit}\n`;
+                    }
+                    if (source.sort) {
+                        yaml += `    sort:\n`;
+                        yaml += `      by: ${source.sort.by}\n`;
+                        yaml += `      order: ${source.sort.order}\n`;
+                    }
+                    break;
             }
         }
 

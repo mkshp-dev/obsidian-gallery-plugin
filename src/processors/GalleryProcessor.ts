@@ -8,7 +8,7 @@ import { ConfigValidator } from '../utils/ConfigValidator';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
 import { ImageLoader } from '../utils/ImageLoader';
-import { IImmichConnection } from '../models/interfaces';
+import { IImmichConnection, INextcloudConnection } from '../models/interfaces';
 
 export interface IGalleryProcessingOptions {
   errorDisplayMode?: 'full' | 'text' | 'hidden';
@@ -77,11 +77,17 @@ export class GalleryProcessor {
         ,captionMaxLines: 1
     };
 
-    constructor(contentScanner: IContentScanner, viewFactory: ViewFactory, getConnections: () => IImmichConnection[], getOptions?: () => IGalleryProcessingOptions) {
+    constructor(
+        contentScanner: IContentScanner,
+        viewFactory: ViewFactory,
+        getConnections: () => IImmichConnection[],
+        getNextcloudConnections: () => INextcloudConnection[],
+        getOptions?: () => IGalleryProcessingOptions
+    ) {
         this.contentScanner = contentScanner;
         this.viewFactory = viewFactory;
         this.getOptions = getOptions;
-        this.resolverRegistry = new SourceResolverRegistry(contentScanner, getConnections);
+        this.resolverRegistry = new SourceResolverRegistry(contentScanner, getConnections, getNextcloudConnections);
     }
 
     /**

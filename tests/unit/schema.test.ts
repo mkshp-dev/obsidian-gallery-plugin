@@ -79,7 +79,7 @@ class FakeViewFactory {
         view.type = type;
         return view;
     }
-    getSupportedTypes() { return ['thumbnail', 'carousel', 'grid']; }
+    getSupportedTypes() { return ['thumbnail', 'carousel', 'grid', 'embed']; }
     registerViewType() {}
 }
 
@@ -305,7 +305,7 @@ view: thumbnail`;
         });
 
         test('each supported view type works with v2 syntax', async () => {
-            const viewTypes = ['thumbnail', 'carousel', 'grid'];
+            const viewTypes = ['thumbnail', 'carousel', 'grid', 'embed'];
             for (const viewType of viewTypes) {
                 const factory = new FakeViewFactory();
                 const processor = new GalleryProcessor(fakeScanner as any, factory as any);

@@ -3,6 +3,7 @@ import { IGalleryView, IViewFactory } from '../models/interfaces';
 import { ThumbnailView } from './ThumbnailView';
 import { CarouselView } from './CarouselView';
 import { GridView } from './GridView';
+import { EmbedView } from './EmbedView';
 
 /**
  * Factory for creating gallery view renderers
@@ -28,6 +29,9 @@ export class ViewFactory implements IViewFactory {
             
         // Register real GridView implementation
         this.viewTypes.set('grid', GridView);
+
+        // Register EmbedView (continuous, borderless, native-embed feel)
+        this.viewTypes.set('embed', EmbedView);
     }
 
     /**
@@ -169,6 +173,11 @@ export class ViewFactory implements IViewFactory {
                 name: 'Masonry Grid',
                 description: 'Pinterest-style masonry grid with variable heights',
                 features: ['Masonry layout', 'Responsive columns', 'Preserve aspect ratios', 'Dynamic sizing']
+            },
+            embed: {
+                name: 'Embed',
+                description: 'Continuous, borderless vertical stack that feels like a native image embed',
+                features: ['Full-width images', 'No card chrome', 'Continuous page feel', 'Click to expand']
             }
         };
         

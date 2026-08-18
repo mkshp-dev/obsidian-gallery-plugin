@@ -7,6 +7,20 @@
   background: var(--background-secondary);
 }
 
+/* Embed view opts out of the box chrome entirely so images sit directly
+   in the note flow, like a native ![[image]] embed. Also cancels the
+   border/box-shadow added by the "Enhanced Visual Hierarchy" .gallery-container
+   rule further down this file, which otherwise still applies here. */
+.gallery-container.gallery-embed {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+
 .gallery-error {
   padding: 1em;
   background: var(--background-secondary);
@@ -310,6 +324,40 @@
   object-fit: cover;
 }
 
+/* Embed View: continuous, borderless, native-embed feel */
+/* This view intentionally opts out of the shared .gallery-container "box"
+   chrome (background/border-radius/overflow) so it reads as part of the
+   note rather than a distinct widget - see .gallery-container.gallery-embed
+   override below. */
+.gallery-embed-list {
+  display: block;
+}
+
+.gallery-embed-item {
+  display: block;
+  width: 100%;
+  margin: 0 0 1em 0;
+  cursor: pointer;
+}
+
+.gallery-embed-item:last-child {
+  margin-bottom: 0;
+}
+
+.gallery-embed-image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+}
+
+.gallery-embed-item .gallery-caption {
+  margin-top: 0.25em;
+  color: var(--text-muted);
+  font-size: 0.85em;
+  text-align: left;
+}
+
 /* Enhanced Responsive Design */
 
 /* Container Queries for Adaptive Layout */
@@ -541,6 +589,10 @@
 
 .theme-dark .gallery-container {
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+}
+
+.theme-dark .gallery-container.gallery-embed {
+  box-shadow: none;
 }
 
 /* RTL Support */

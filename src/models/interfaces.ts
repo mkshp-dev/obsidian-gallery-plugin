@@ -92,7 +92,7 @@ export interface INextcloudShareSourceConfig {
 export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichSourceConfig | INextcloudSourceConfig | INextcloudShareSourceConfig;
 
 export interface IViewConfig {
-  type: 'thumbnail' | 'carousel' | 'grid';
+  type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
   [key: string]: unknown;
 }
 
@@ -101,7 +101,7 @@ export interface IGalleryConfig {
   path: string;
 
   /** Display view type */
-  view?: 'thumbnail' | 'carousel' | 'grid' | IViewConfig;
+  view?: 'thumbnail' | 'carousel' | 'grid' | 'embed' | IViewConfig;
 
   /** Include subdirectories (default: true) */
   recursive?: boolean;
@@ -180,7 +180,7 @@ export interface IImageSource {
 
 export interface IGalleryView {
   /** View type identifier */
-  readonly type: 'thumbnail' | 'carousel' | 'grid';
+  readonly type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
 
   /** DOM container element */
   readonly container: HTMLElement;

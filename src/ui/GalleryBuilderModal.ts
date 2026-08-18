@@ -47,7 +47,8 @@ export class GalleryBuilderModal extends Modal {
                 .addOptions({
                     'grid': 'Grid (Masonry)',
                     'thumbnail': 'Thumbnail Grid',
-                    'carousel': 'Carousel (Slideshow)'
+                    'carousel': 'Carousel (Slideshow)',
+                    'embed': 'Embed (Continuous)'
                 })
                 .setValue(this.viewType)
                 .onChange(value => {

@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Embed View**: Added a new `embed` view type that renders images as a continuous, borderless vertical stack at natural size — no card chrome — so galleries feel like part of the note, similar to a native `![[image]]` embed.
+
 ## 2.3.0 - 2026-08-09
 
 - **Nextcloud Filters UI**: Wired `nextcloud` and `nextcloud-share` filter and sort UI controls into the Gallery Builder Modal.

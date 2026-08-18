@@ -168,7 +168,7 @@ export class GalleryEditorSuggest extends EditorSuggest<SuggestionItem> {
                 }
             }
         } else if (field === 'view') {
-            const views = ['grid', 'masonry', 'carousel'];
+            const views = ['grid', 'masonry', 'carousel', 'embed'];
             for (const v of views) {
                 if (v.includes(textLower)) {
                     suggestions.push({ label: v, value: v });

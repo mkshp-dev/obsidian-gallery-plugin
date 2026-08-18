@@ -32,7 +32,7 @@ const sidebars = {
         description: 'Supported gallery view types for Gallery View.',
         slug: '/category/views',
       },
-      items: ['views/thumbnail', 'views/carousel', 'views/grid'],
+      items: ['views/thumbnail', 'views/carousel', 'views/grid', 'views/embed'],
     },
     'settings',
     'troubleshooting',

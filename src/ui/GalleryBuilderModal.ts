@@ -34,8 +34,12 @@ export class GalleryBuilderModal extends Modal {
             text: 'Configure sources and view layout to insert interactive galleries into your note.'
         });
 
+        const body = contentEl.createDiv('gallery-builder-body');
+        const mainCol = body.createDiv('gallery-builder-main-col');
+        const sideCol = body.createDiv('gallery-builder-side-col');
+
         // 1. Layout & View Section
-        const viewSection = contentEl.createDiv('gallery-builder-section');
+        const viewSection = mainCol.createDiv('gallery-builder-section');
         const viewTitle = viewSection.createDiv('gallery-builder-section-title');
         viewTitle.createSpan({ cls: 'gallery-builder-badge', text: '1' });
         viewTitle.createEl('h3', { text: 'Layout & view' });
@@ -47,7 +51,8 @@ export class GalleryBuilderModal extends Modal {
                 .addOptions({
                     'grid': 'Grid (Masonry)',
                     'thumbnail': 'Thumbnail Grid',
-                    'carousel': 'Carousel (Slideshow)'
+                    'carousel': 'Carousel (Slideshow)',
+                    'embed': 'Embed (Continuous)'
                 })
                 .setValue(this.viewType)
                 .onChange(value => {
@@ -57,7 +62,7 @@ export class GalleryBuilderModal extends Modal {
             );
 
         // 2. Sources Section
-        const sourcesSection = contentEl.createDiv('gallery-builder-section');
+        const sourcesSection = mainCol.createDiv('gallery-builder-section');
         const sourcesHeader = sourcesSection.createDiv('gallery-builder-section-header');
 
         const sourcesTitle = sourcesHeader.createDiv('gallery-builder-section-title');
@@ -90,7 +95,7 @@ export class GalleryBuilderModal extends Modal {
         this.renderSources(sourcesContainer);
 
         // 3. Live Preview Section
-        const previewSection = contentEl.createDiv('gallery-builder-section');
+        const previewSection = sideCol.createDiv('gallery-builder-section');
         const previewTitle = previewSection.createDiv('gallery-builder-section-title');
         previewTitle.createSpan({ cls: 'gallery-builder-badge', text: '3' });
         previewTitle.createEl('h3', { text: 'Generated codeblock' });
@@ -407,10 +412,11 @@ export class GalleryBuilderModal extends Modal {
                 if (!connection) return;
 
                 // Static Filters
-                new Setting(filtersContainer).setName('Filter criteria').setHeading();
+                const criteriaContent = this.createCollapsibleSection(filtersContainer, 'Filter criteria', true);
 
-                new Setting(filtersContainer)
-                    .setName('Favorites only')
+                this.markPaired(new Setting(criteriaContent)
+                    .setName('Favorites & type')
+                    .setDesc('Favorites-only toggle and asset type.')
                     .addToggle(toggle => toggle
                         .setValue(source.filters?.isFavorite || false)
                         .onChange(value => {
@@ -421,12 +427,9 @@ export class GalleryBuilderModal extends Modal {
                             }
                             this.refreshLivePreview();
                         })
-                    );
-
-                new Setting(filtersContainer)
-                    .setName('Asset type')
+                    )
                     .addDropdown(dropdown => dropdown
-                        .addOptions({'': 'All', 'image': 'Image', 'video': 'Video'})
+                        .addOptions({'': 'All types', 'image': 'Image', 'video': 'Video'})
                         .setValue(source.filters?.assetType || '')
                         .onChange(value => {
                             if (value) {
@@ -436,43 +439,37 @@ export class GalleryBuilderModal extends Modal {
                             }
                             this.refreshLivePreview();
                         })
-                    );
+                    ));
 
-                new Setting(filtersContainer)
-                    .setName('Created after')
-                    .addText(text => text
-                        .setPlaceholder('YYYY-MM-DD')
-                        .setValue(source.filters?.createdAfter || '')
-                        .onChange(value => {
-                            if (value) {
-                                source.filters!.createdAfter = value;
-                            } else {
-                                delete source.filters!.createdAfter;
-                            }
-                            this.refreshLivePreview();
-                        })
-                    );
-
-                new Setting(filtersContainer)
-                    .setName('Created before')
-                    .addText(text => text
-                        .setPlaceholder('YYYY-MM-DD')
-                        .setValue(source.filters?.createdBefore || '')
-                        .onChange(value => {
-                            if (value) {
-                                source.filters!.createdBefore = value;
-                            } else {
-                                delete source.filters!.createdBefore;
-                            }
-                            this.refreshLivePreview();
-                        })
-                    );
+                this.createDateRangeSetting(
+                    criteriaContent,
+                    'Created',
+                    'Only include photos created within this range.',
+                    source.filters?.createdAfter || '',
+                    source.filters?.createdBefore || '',
+                    value => {
+                        if (value) {
+                            source.filters!.createdAfter = value;
+                        } else {
+                            delete source.filters!.createdAfter;
+                        }
+                        this.refreshLivePreview();
+                    },
+                    value => {
+                        if (value) {
+                            source.filters!.createdBefore = value;
+                        } else {
+                            delete source.filters!.createdBefore;
+                        }
+                        this.refreshLivePreview();
+                    }
+                );
 
                 const client = new ImmichClient(connection);
 
                 // Albums
-                new Setting(filtersContainer).setName('Albums').setHeading();
-                const albumsWrapper = filtersContainer.createDiv();
+                const albumsContent = this.createCollapsibleSection(filtersContainer, 'Albums', false);
+                const albumsWrapper = albumsContent.createDiv();
                 albumsWrapper.createEl('p', { text: 'Loading albums...' });
                 try {
                     const albums = await client.getAlbums();
@@ -492,8 +489,8 @@ export class GalleryBuilderModal extends Modal {
                 }
 
                 // Tags
-                new Setting(filtersContainer).setName('Tags').setHeading();
-                const tagsWrapper = filtersContainer.createDiv();
+                const tagsContent = this.createCollapsibleSection(filtersContainer, 'Tags', false);
+                const tagsWrapper = tagsContent.createDiv();
                 tagsWrapper.createEl('p', { text: 'Loading tags...' });
                 try {
                     const tags = await client.getTags();
@@ -516,8 +513,8 @@ export class GalleryBuilderModal extends Modal {
                 }
 
                 // People
-                new Setting(filtersContainer).setName('People').setHeading();
-                const peopleWrapper = filtersContainer.createDiv();
+                const peopleContent = this.createCollapsibleSection(filtersContainer, 'People', false);
+                const peopleWrapper = peopleContent.createDiv();
                 peopleWrapper.createEl('p', { text: 'Loading people...' });
                 try {
                     const people = await client.getPeople();
@@ -569,52 +566,13 @@ export class GalleryBuilderModal extends Modal {
             );
 
             // Display Section
-            new Setting(container).setName('Display').setHeading();
+            const displayContent = this.createCollapsibleSection(container, 'Display', true);
 
-            new Setting(container)
-                .setName('Modified after')
-                .setDesc('Only show images modified after this date (iso-8601, e.g. 2025-01-01)')
-                .addText(text => {
-                    const typedSource = source as unknown as INextcloudSourceConfig;
-                    return text
-                        .setPlaceholder('YYYY-MM-DD')
-                        .setValue(typedSource.filters?.modifiedAfter || '')
-                        .onChange(value => {
-                            if (!typedSource.filters) typedSource.filters = {};
-                            if (value.trim()) {
-                                typedSource.filters.modifiedAfter = value.trim();
-                            } else {
-                                delete typedSource.filters.modifiedAfter;
-                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
-                            }
-                            this.refreshLivePreview();
-                        });
-                });
-
-            new Setting(container)
-                .setName('Modified before')
-                .setDesc('Only show images modified before this date (iso-8601, e.g. 2025-12-31)')
-                .addText(text => {
-                    const typedSource = source as unknown as INextcloudSourceConfig;
-                    return text
-                        .setPlaceholder('YYYY-MM-DD')
-                        .setValue(typedSource.filters?.modifiedBefore || '')
-                        .onChange(value => {
-                            if (!typedSource.filters) typedSource.filters = {};
-                            if (value.trim()) {
-                                typedSource.filters.modifiedBefore = value.trim();
-                            } else {
-                                delete typedSource.filters.modifiedBefore;
-                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
-                            }
-                            this.refreshLivePreview();
-                        });
-                });
-
-            new Setting(container)
-                .setName('Limit')
-                .setDesc('Maximum number of items to fetch.')
+            this.markPaired(new Setting(displayContent)
+                .setName('Limit & sort')
+                .setDesc('Maximum items to fetch and their order.')
                 .addText(text => text
+                    .setPlaceholder('Limit')
                     .setValue(source.limit?.toString() || '')
                     .onChange(value => {
                         const parsed = parseInt(value, 10);
@@ -625,12 +583,9 @@ export class GalleryBuilderModal extends Modal {
                         }
                         this.refreshLivePreview();
                     })
-                );
-
-            new Setting(container)
-                .setName('Sort order')
+                )
                 .addDropdown(dropdown => dropdown
-                    .addOptions({'': 'Default (None)', 'asc': 'Oldest first', 'desc': 'Newest first'})
+                    .addOptions({'': 'Default order', 'asc': 'Oldest first', 'desc': 'Newest first'})
                     .setValue(source.sort?.order || '')
                     .onChange(value => {
                         if (value) {
@@ -640,7 +595,7 @@ export class GalleryBuilderModal extends Modal {
                         }
                         this.refreshLivePreview();
                     })
-                );
+                ));
 
             renderDynamicContent(source.connection).catch(e => console.error(e));
         } else if (source.type === 'nextcloud') {
@@ -714,9 +669,9 @@ export class GalleryBuilderModal extends Modal {
                     })
                 );
 
-            new Setting(container).setName('Filter criteria').setHeading();
+            const ncFilterContent = this.createCollapsibleSection(container, 'Filter criteria', false);
 
-            new Setting(container)
+            new Setting(ncFilterContent)
                 .setName('Filename filter')
                 .setDesc('Glob pattern for filenames (e.g. *.jpg)')
                 .addText(text => text
@@ -732,74 +687,44 @@ export class GalleryBuilderModal extends Modal {
                     })
                 );
 
-            new Setting(container)
-                .setName('Modified after')
-                .setDesc('Only show files modified after this date.')
-                .addText(text => {
-                    const typedSource = source as unknown as INextcloudSourceConfig;
-                    return text
-                        .setPlaceholder('YYYY-MM-DD')
-                        .setValue(typedSource.filters?.modifiedAfter || '')
-                        .onChange(value => {
-                            if (!typedSource.filters) typedSource.filters = {};
-                            if (value.trim()) {
-                                typedSource.filters.modifiedAfter = value.trim();
-                            } else {
-                                delete typedSource.filters.modifiedAfter;
-                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
-                            }
-                            this.refreshLivePreview();
-                        });
-                });
+            {
+                const typedSource = source as unknown as INextcloudSourceConfig;
+                this.createDateRangeSetting(
+                    ncFilterContent,
+                    'Modified',
+                    'Only show files modified within this range.',
+                    typedSource.filters?.modifiedAfter || '',
+                    typedSource.filters?.modifiedBefore || '',
+                    value => {
+                        if (!typedSource.filters) typedSource.filters = {};
+                        if (value) {
+                            typedSource.filters.modifiedAfter = value;
+                        } else {
+                            delete typedSource.filters.modifiedAfter;
+                            if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                        }
+                        this.refreshLivePreview();
+                    },
+                    value => {
+                        if (!typedSource.filters) typedSource.filters = {};
+                        if (value) {
+                            typedSource.filters.modifiedBefore = value;
+                        } else {
+                            delete typedSource.filters.modifiedBefore;
+                            if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                        }
+                        this.refreshLivePreview();
+                    }
+                );
+            }
 
-            new Setting(container)
-                .setName('Modified before')
-                .setDesc('Only show files modified before this date.')
+            this.markPaired(new Setting(ncFilterContent)
+                .setName('Min / max size (kb)')
+                .setDesc('File size range in kilobytes.')
                 .addText(text => {
                     const typedSource = source as unknown as INextcloudSourceConfig;
                     return text
-                        .setPlaceholder('YYYY-MM-DD')
-                        .setValue(typedSource.filters?.modifiedBefore || '')
-                        .onChange(value => {
-                            if (!typedSource.filters) typedSource.filters = {};
-                            if (value.trim()) {
-                                typedSource.filters.modifiedBefore = value.trim();
-                            } else {
-                                delete typedSource.filters.modifiedBefore;
-                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
-                            }
-                            this.refreshLivePreview();
-                        });
-                });
-
-            new Setting(container)
-                .setName('Max size (kb)')
-                .setDesc('Maximum file size in kilobytes.')
-                .addText(text => {
-                    const typedSource = source as unknown as INextcloudSourceConfig;
-                    return text
-                        .setPlaceholder('5000')
-                        .setValue(typedSource.filters?.maxSizeKb?.toString() || '')
-                        .onChange(value => {
-                            if (!typedSource.filters) typedSource.filters = {};
-                            const parsed = parseInt(value, 10);
-                            if (!isNaN(parsed) && parsed > 0) {
-                                typedSource.filters.maxSizeKb = parsed;
-                            } else {
-                                delete typedSource.filters.maxSizeKb;
-                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
-                            }
-                            this.refreshLivePreview();
-                        });
-                });
-
-            new Setting(container)
-                .setName('Min size (kb)')
-                .setDesc('Minimum file size in kilobytes.')
-                .addText(text => {
-                    const typedSource = source as unknown as INextcloudSourceConfig;
-                    return text
-                        .setPlaceholder('100')
+                        .setPlaceholder('Min (e.g. 100)')
                         .setValue(typedSource.filters?.minSizeKb?.toString() || '')
                         .onChange(value => {
                             if (!typedSource.filters) typedSource.filters = {};
@@ -812,9 +737,26 @@ export class GalleryBuilderModal extends Modal {
                             }
                             this.refreshLivePreview();
                         });
-                });
+                })
+                .addText(text => {
+                    const typedSource = source as unknown as INextcloudSourceConfig;
+                    return text
+                        .setPlaceholder('Max (e.g. 5000)')
+                        .setValue(typedSource.filters?.maxSizeKb?.toString() || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            const parsed = parseInt(value, 10);
+                            if (!isNaN(parsed) && parsed > 0) {
+                                typedSource.filters.maxSizeKb = parsed;
+                            } else {
+                                delete typedSource.filters.maxSizeKb;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                }));
 
-            new Setting(container)
+            new Setting(ncFilterContent)
                 .setName('Mime types')
                 .setDesc('Comma-separated list of mime types (e.g. Image/jpeg, image/png).')
                 .addText(text => {
@@ -833,11 +775,11 @@ export class GalleryBuilderModal extends Modal {
                         });
                 });
 
-            new Setting(container).setName('Sort').setHeading();
+            const ncSortContent = this.createCollapsibleSection(container, 'Sort', false);
 
-            new Setting(container)
-                .setName('Sort by')
-                .setDesc('Property to sort by.')
+            this.markPaired(new Setting(ncSortContent)
+                .setName('Sort by / order')
+                .setDesc('Property and direction to sort by.')
                 .addDropdown(dropdown => {
                     const typedSource = source as unknown as INextcloudSourceConfig;
                     return dropdown
@@ -850,11 +792,7 @@ export class GalleryBuilderModal extends Modal {
                             typedSource.sort.by = value as 'name' | 'lastModified' | 'size';
                             this.refreshLivePreview();
                         });
-                });
-
-            new Setting(container)
-                .setName('Sort order')
-                .setDesc('Sort direction.')
+                })
                 .addDropdown(dropdown => {
                     const typedSource = source as unknown as INextcloudSourceConfig;
                     return dropdown
@@ -866,7 +804,7 @@ export class GalleryBuilderModal extends Modal {
                             typedSource.sort.order = value as 'asc' | 'desc';
                             this.refreshLivePreview();
                         });
-                });
+                }));
 
         } else if (source.type === 'nextcloud-share') {
             new Setting(container)
@@ -892,9 +830,9 @@ export class GalleryBuilderModal extends Modal {
                         });
                 });
 
-            new Setting(container).setName('Filter criteria').setHeading();
+            const ncsFilterContent = this.createCollapsibleSection(container, 'Filter criteria', false);
 
-            new Setting(container)
+            new Setting(ncsFilterContent)
                 .setName('Filename filter')
                 .setDesc('Glob pattern for filenames (e.g. *.jpg)')
                 .addText(text => text
@@ -910,7 +848,7 @@ export class GalleryBuilderModal extends Modal {
                     })
                 );
 
-            new Setting(container)
+            new Setting(ncsFilterContent)
                 .setName('Mime types')
                 .setDesc('Comma-separated list of mime types (e.g. Image/jpeg, image/png).')
                 .addText(text => {
@@ -929,7 +867,7 @@ export class GalleryBuilderModal extends Modal {
                         });
                 });
 
-            new Setting(container)
+            new Setting(ncsFilterContent)
                 .setName('Limit')
                 .setDesc('Maximum number of items to fetch.')
                 .addText(text => text
@@ -945,11 +883,11 @@ export class GalleryBuilderModal extends Modal {
                     })
                 );
 
-            new Setting(container).setName('Sort').setHeading();
+            const ncsSortContent = this.createCollapsibleSection(container, 'Sort', false);
 
-            new Setting(container)
-                .setName('Sort by')
-                .setDesc('Property to sort by.')
+            this.markPaired(new Setting(ncsSortContent)
+                .setName('Sort by / order')
+                .setDesc('Property and direction to sort by.')
                 .addDropdown(dropdown => {
                     const typedSource = source as unknown as INextcloudShareSourceConfig;
                     return dropdown
@@ -962,11 +900,7 @@ export class GalleryBuilderModal extends Modal {
                             typedSource.sort.by = value as 'name' | 'lastModified' | 'size';
                             this.refreshLivePreview();
                         });
-                });
-
-            new Setting(container)
-                .setName('Sort order')
-                .setDesc('Sort direction.')
+                })
                 .addDropdown(dropdown => {
                     const typedSource = source as unknown as INextcloudShareSourceConfig;
                     return dropdown
@@ -978,8 +912,78 @@ export class GalleryBuilderModal extends Modal {
                             typedSource.sort.order = value as 'asc' | 'desc';
                             this.refreshLivePreview();
                         });
-                });
+                }));
         }
+    }
+
+    /**
+     * Creates a collapsible group (header + toggleable content) used to keep dense
+     * filter sections (Immich albums/tags/people, Nextcloud filters/sort, etc.) out
+     * of the way until the user actually wants them.
+     */
+    private createCollapsibleSection(container: HTMLElement, title: string, defaultOpen: boolean = false): HTMLElement {
+        const wrapper = container.createDiv('gallery-builder-collapsible');
+        const header = wrapper.createDiv('gallery-builder-collapsible-header');
+        const chevron = header.createSpan({ cls: 'gallery-builder-collapsible-chevron', text: '▸' });
+        header.createSpan({ cls: 'gallery-builder-collapsible-title', text: title });
+        const content = wrapper.createDiv('gallery-builder-collapsible-content');
+
+        const setOpen = (open: boolean) => {
+            wrapper.classList.toggle('is-open', open);
+            chevron.textContent = open ? '▾' : '▸';
+        };
+        setOpen(defaultOpen);
+
+        header.addEventListener('click', () => {
+            setOpen(!wrapper.classList.contains('is-open'));
+        });
+
+        return content;
+    }
+
+    /**
+     * Marks a Setting row so its controls split evenly across the row instead of
+     * stacking full-width — used to fit two related fields (e.g. min/max, sort
+     * by/order) on one line without crowding.
+     */
+    private markPaired(setting: Setting): Setting {
+        setting.settingEl.classList.add('gallery-builder-paired-row');
+        return setting;
+    }
+
+    /**
+     * Renders a compact "From / To" date range using native calendar (type=date)
+     * inputs on a single row, in place of two separate YYYY-MM-DD text rows.
+     */
+    private createDateRangeSetting(
+        container: HTMLElement,
+        name: string,
+        desc: string,
+        fromValue: string,
+        toValue: string,
+        onFromChange: (value: string) => void,
+        onToChange: (value: string) => void
+    ): Setting {
+        const setting = new Setting(container).setName(name).setDesc(desc);
+        setting.settingEl.classList.add('gallery-builder-paired-row');
+
+        const wrap = setting.controlEl.createDiv('gallery-builder-date-range');
+
+        const fromField = wrap.createDiv('gallery-builder-date-field');
+        fromField.createSpan({ cls: 'gallery-builder-date-field-label', text: 'From' });
+        const fromInput = fromField.createEl('input');
+        fromInput.type = 'date';
+        fromInput.value = fromValue;
+        fromInput.addEventListener('change', () => onFromChange(fromInput.value));
+
+        const toField = wrap.createDiv('gallery-builder-date-field');
+        toField.createSpan({ cls: 'gallery-builder-date-field-label', text: 'To' });
+        const toInput = toField.createEl('input');
+        toInput.type = 'date';
+        toInput.value = toValue;
+        toInput.addEventListener('change', () => onToChange(toInput.value));
+
+        return setting;
     }
 
     private createSearchableList(

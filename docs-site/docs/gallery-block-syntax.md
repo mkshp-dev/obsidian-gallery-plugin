@@ -31,7 +31,7 @@ See the [Sources](./category/sources) section for details on configuring specifi
 
 ### `view`
 
-**Optional**. Defaults to `{ type: 'thumbnail' }`. The `view` key defines how the gallery will be laid out. It can be a simple string (e.g., `thumbnail`) or an object containing a `type` property (`thumbnail`, `carousel`, or `grid`).
+**Optional**. Defaults to `{ type: 'thumbnail' }`. The `view` key defines how the gallery will be laid out. It can be a simple string (e.g., `thumbnail`) or an object containing a `type` property (`thumbnail`, `carousel`, `grid`, or `embed`).
 
 See the [Views](./category/views) section for details on specific view types.
 

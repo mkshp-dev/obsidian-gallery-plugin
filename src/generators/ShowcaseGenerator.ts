@@ -223,6 +223,19 @@ sources:
 view:
   type: carousel
 \`\`\`
+
+---
+
+### Embed View
+A continuous, borderless vertical stack at natural image size — feels like part of the note, similar to a native \`![[image]]\` embed.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+view:
+  type: embed
+\`\`\`
 `;
         await this.app.vault.create(`${this.basePath}/03 - Views.md`, content);
     }
@@ -876,7 +889,7 @@ view:
             '',
             '### 3 — Invalid view type',
             '> [!NOTE] Expected output',
-            '> `\u26a0\ufe0f gallery: View type must be one of: thumbnail, carousel, grid`',
+            '> `\u26a0\ufe0f gallery: View type must be one of: thumbnail, carousel, grid, embed`',
             '',
             '```obs-gallery',
             'sources:',

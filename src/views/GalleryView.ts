@@ -9,7 +9,7 @@ import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 export abstract class GalleryView implements IGalleryView {
     public readonly container: HTMLElement;
     protected _images: IImageSource[] = [];
-    protected _type: 'thumbnail' | 'carousel' | 'grid';
+    protected _type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
     protected _isDestroyed: boolean = false;
     protected _observers: IntersectionObserver[] = [];
     // Runtime options (common)
@@ -23,7 +23,7 @@ export abstract class GalleryView implements IGalleryView {
     protected slideshowInterval: number | null = null;
     protected slideshowPlaying: boolean = false;
 
-    constructor(type: 'thumbnail' | 'carousel' | 'grid', container: HTMLElement) {
+    constructor(type: 'thumbnail' | 'carousel' | 'grid' | 'embed', container: HTMLElement) {
         this._type = type;
         this.container = container;
         this.initializeContainer();
@@ -32,7 +32,7 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Get view type identifier
      */
-    get type(): 'thumbnail' | 'carousel' | 'grid' {
+    get type(): 'thumbnail' | 'carousel' | 'grid' | 'embed' {
         return this._type;
     }
 

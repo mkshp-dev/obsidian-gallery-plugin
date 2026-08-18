@@ -7,6 +7,20 @@
   background: var(--background-secondary);
 }
 
+/* Embed view opts out of the box chrome entirely so images sit directly
+   in the note flow, like a native ![[image]] embed. Also cancels the
+   border/box-shadow added by the "Enhanced Visual Hierarchy" .gallery-container
+   rule further down this file, which otherwise still applies here. */
+.gallery-container.gallery-embed {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+
 .gallery-error {
   padding: 1em;
   background: var(--background-secondary);
@@ -310,6 +324,40 @@
   object-fit: cover;
 }
 
+/* Embed View: continuous, borderless, native-embed feel */
+/* This view intentionally opts out of the shared .gallery-container "box"
+   chrome (background/border-radius/overflow) so it reads as part of the
+   note rather than a distinct widget - see .gallery-container.gallery-embed
+   override below. */
+.gallery-embed-list {
+  display: block;
+}
+
+.gallery-embed-item {
+  display: block;
+  width: 100%;
+  margin: 0 0 1em 0;
+  cursor: pointer;
+}
+
+.gallery-embed-item:last-child {
+  margin-bottom: 0;
+}
+
+.gallery-embed-image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+}
+
+.gallery-embed-item .gallery-caption {
+  margin-top: 0.25em;
+  color: var(--text-muted);
+  font-size: 0.85em;
+  text-align: left;
+}
+
 /* Enhanced Responsive Design */
 
 /* Container Queries for Adaptive Layout */
@@ -541,6 +589,10 @@
 
 .theme-dark .gallery-container {
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+}
+
+.theme-dark .gallery-container.gallery-embed {
+  box-shadow: none;
 }
 
 /* RTL Support */
@@ -1295,14 +1347,126 @@
    ========================================================================== */
 
 body .modal-container .modal.gallery-builder-modal-container {
-  width: 860px;
-  max-width: 90vw;
+  width: 1040px;
+  max-width: 92vw;
 }
 
 body .modal-container .modal-content.gallery-builder-modal {
   width: 100%;
   max-width: none;
   padding: 24px 28px;
+}
+
+/* Two-column layout: config on the left, generated code sticky on the right */
+.gallery-builder-body {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 28px;
+  align-items: start;
+}
+
+.gallery-builder-main-col {
+  min-width: 0;
+}
+
+.gallery-builder-side-col {
+  min-width: 0;
+  position: sticky;
+  top: 0;
+}
+
+@media (max-width: 760px) {
+  .gallery-builder-body {
+    grid-template-columns: 1fr;
+  }
+  .gallery-builder-side-col {
+    position: static;
+  }
+}
+
+/* Collapsible filter groups (Immich albums/tags/people, Nextcloud filters/sort) */
+.gallery-builder-collapsible {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  margin: 10px 0;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+
+.gallery-builder-collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  background: var(--background-secondary);
+  user-select: none;
+}
+
+.gallery-builder-collapsible-header:hover {
+  background: var(--background-modifier-hover);
+}
+
+.gallery-builder-collapsible-chevron {
+  display: inline-block;
+  width: 10px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.gallery-builder-collapsible-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.gallery-builder-collapsible-content {
+  display: none;
+  padding: 4px 12px 10px;
+}
+
+.gallery-builder-collapsible.is-open .gallery-builder-collapsible-content {
+  display: block;
+}
+
+/* Paired rows: fit two related fields (min/max, sort by/order, ...) on one line */
+.gallery-builder-paired-row .setting-item-control {
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.gallery-builder-paired-row .setting-item-control > input,
+.gallery-builder-paired-row .setting-item-control > select {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Compact "From / To" date range (native calendar inputs) */
+.gallery-builder-date-range {
+  display: flex;
+  gap: 10px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.gallery-builder-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.gallery-builder-date-field-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-faint);
+}
+
+.gallery-builder-date-field input[type="date"] {
+  width: 100%;
 }
 
 .gallery-builder-header {
@@ -1554,7 +1718,7 @@ button.gallery-builder-remove-icon-btn:hover {
 .gallery-builder-preview-code {
   margin: 0;
   padding: 14px;
-  max-height: 220px;
+  max-height: min(60vh, 520px);
   overflow-y: auto;
   font-family: var(--font-monospace);
   font-size: 0.84rem;

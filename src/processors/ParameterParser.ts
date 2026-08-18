@@ -21,7 +21,7 @@ class ConfigError extends Error implements IConfigError {
  */
 export class ParameterParser {
     private static readonly ALLOWED_KEYS = ['path', 'view', 'recursive', 'urls', 'sources'];
-    private static readonly VIEW_TYPES = ['thumbnail', 'carousel', 'grid'];
+    private static readonly VIEW_TYPES = ['thumbnail', 'carousel', 'grid', 'embed'];
 
     /**
      * Parse YAML content from code block

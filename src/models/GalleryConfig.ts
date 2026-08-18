@@ -38,7 +38,7 @@ export class GalleryConfig implements IGalleryConfig {
         if (config.view) {
             if (typeof config.view === 'string') {
                 viewType = config.view;
-                this.view = { type: viewType as 'thumbnail' | 'carousel' | 'grid' };
+                this.view = { type: viewType as 'thumbnail' | 'carousel' | 'grid' | 'embed' };
             } else if (typeof config.view === 'object' && config.view !== null) {
                 this.view = config.view;
                 viewType = this.view.type || 'thumbnail';
@@ -55,8 +55,8 @@ export class GalleryConfig implements IGalleryConfig {
         this.urls = config.urls;
 
         // Validate view type
-        if (!['thumbnail', 'carousel', 'grid'].includes(viewType)) {
-            throw new Error(`Invalid view type: ${viewType}. Must be one of: thumbnail, carousel, grid`);
+        if (!['thumbnail', 'carousel', 'grid', 'embed'].includes(viewType)) {
+            throw new Error(`Invalid view type: ${viewType}. Must be one of: thumbnail, carousel, grid, embed`);
         }
     }
 
@@ -87,8 +87,8 @@ export class GalleryConfig implements IGalleryConfig {
         const data = yamlData as Record<string, unknown>;
         let viewType: IViewConfig | undefined;
         if (data.view) {
-            if (typeof data.view === 'string' && ['thumbnail', 'carousel', 'grid'].includes(data.view)) {
-                viewType = { type: data.view as 'thumbnail' | 'carousel' | 'grid' };
+            if (typeof data.view === 'string' && ['thumbnail', 'carousel', 'grid', 'embed'].includes(data.view)) {
+                viewType = { type: data.view as 'thumbnail' | 'carousel' | 'grid' | 'embed' };
             } else if (typeof data.view === 'object' && data.view !== null) {
                 viewType = data.view as IViewConfig;
             }
@@ -109,7 +109,7 @@ export class GalleryConfig implements IGalleryConfig {
     isValid(): boolean {
         try {
             return this.sources.length > 0 &&
-                ['thumbnail', 'carousel', 'grid'].includes(this.view.type);
+                ['thumbnail', 'carousel', 'grid', 'embed'].includes(this.view.type);
         } catch {
             return false;
         }

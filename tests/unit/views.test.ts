@@ -1,5 +1,6 @@
 import { CarouselView } from '../../src/views/CarouselView';
 import { GridView } from '../../src/views/GridView';
+import { EmbedView } from '../../src/views/EmbedView';
 import { IImageSource } from '../../src/models/interfaces';
 
 // Minimal mock container that implements a subset of Obsidian's DOM helpers
@@ -102,6 +103,29 @@ describe('Gallery Views - getStats', () => {
 
     stats = (view as any).getStats();
     expect(stats.totalImages).toBe(2);
+  });
+
+  test('EmbedView renders a borderless vertical stack and reports correct stats', () => {
+    const container = createMockContainer();
+    const view = new EmbedView(container as any);
+
+    const images = [
+      makeImage('a.png', 'loaded'),
+      makeImage('b.png', 'pending'),
+      makeImage('c.png', 'error')
+    ];
+
+    view.update(images);
+    view.render();
+
+    expect(container.querySelector('.gallery-embed-list')).not.toBeNull();
+    expect(container.querySelectorAll('.gallery-embed-item').length).toBe(3);
+
+    const stats = (view as any).getStats();
+    expect(stats.totalImages).toBe(3);
+    expect(stats.loadedImages).toBe(1);
+    expect(stats.errorImages).toBe(1);
+    expect(stats.pendingImages).toBe(1);
   });
 });
 

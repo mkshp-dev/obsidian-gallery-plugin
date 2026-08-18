@@ -126,7 +126,7 @@ export class ConfigValidator {
      */
     private static validateView(view?: unknown): IConfigError[] {
         const errors: IConfigError[] = [];
-        const validViews = ['thumbnail', 'carousel', 'grid'];
+        const validViews = ['thumbnail', 'carousel', 'grid', 'embed'];
         
         if (view !== undefined) {
             let viewType = '';
@@ -272,11 +272,11 @@ export class ConfigValidator {
     static suggestCorrections(config: IGalleryConfig): IGalleryConfig {
         let viewType = 'thumbnail';
         if (config.view) {
-            if (typeof config.view === 'string' && ['thumbnail', 'carousel', 'grid'].includes(config.view)) {
+            if (typeof config.view === 'string' && ['thumbnail', 'carousel', 'grid', 'embed'].includes(config.view)) {
                 viewType = config.view;
             } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
                 const typeVal = (config.view as Record<string, unknown>).type;
-                if (typeof typeVal === 'string' && ['thumbnail', 'carousel', 'grid'].includes(typeVal)) {
+                if (typeof typeVal === 'string' && ['thumbnail', 'carousel', 'grid', 'embed'].includes(typeVal)) {
                     viewType = typeVal;
                 }
             }
@@ -284,7 +284,7 @@ export class ConfigValidator {
 
         return {
             path: this.sanitizePath(config.path),
-            view: { type: viewType as 'thumbnail' | 'carousel' | 'grid' },
+            view: { type: viewType as 'thumbnail' | 'carousel' | 'grid' | 'embed' },
             recursive: typeof config.recursive === 'boolean' 
                 ? config.recursive 
                 : true

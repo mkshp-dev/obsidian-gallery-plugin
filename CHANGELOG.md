@@ -3,6 +3,7 @@
 ## In-progress
 
 - **Embed View**: Added a new `embed` view type that renders images as a continuous, borderless vertical stack at natural size — no card chrome — so galleries feel like part of the note, similar to a native `![[image]]` embed.
+- **Gallery Builder Modal Redesign**: Two-column layout with a sticky generated-code panel, collapsible filter groups for Immich/Nextcloud, paired fields on shared rows (e.g. min/max size, sort by/order), and native calendar (`type=date`) pickers for date-range filters.
 
 ## 2.3.0 - 2026-08-09
 

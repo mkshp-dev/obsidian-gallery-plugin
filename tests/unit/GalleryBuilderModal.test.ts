@@ -14,7 +14,13 @@ if (typeof Element !== 'undefined' && !(Element.prototype as any).empty) {
 jest.mock('obsidian', () => {
     const original = jest.requireActual('obsidian');
     class MockSetting {
-        constructor() {}
+        settingEl: HTMLElement;
+        controlEl: HTMLElement;
+        constructor() {
+            this.settingEl = document.createElement('div');
+            this.controlEl = document.createElement('div');
+            this.settingEl.appendChild(this.controlEl);
+        }
         setName() { return this; }
         setDesc() { return this; }
         setHeading() { return this; }

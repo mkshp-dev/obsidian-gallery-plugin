@@ -32,6 +32,7 @@ export class ShowcaseGenerator {
             // Create showcase notes
             await this.createWelcomeNote();
             await this.createLocalSourceNote();
+            await this.createRelativePathNote();
             await this.createExternalUrlsNote();
             await this.createViewsNote();
             await this.createMixedSourcesNote();
@@ -92,6 +93,7 @@ These notes contain examples of how to configure image galleries inside your vau
 ### 🖼 Local & External Demos
 These notes render images immediately:
 - [[01 - Local source]] — Load images from a folder in your vault.
+- [[Nature (folder note demo)]] — Resolve \`path\` relative to the current note (\`.\`, \`./\`, \`../\`) instead of a hardcoded folder.
 - [[02 - External URLs]] — Load images from web URLs.
 - [[03 - Views]] — Three layout types: thumbnail, grid, carousel.
 - [[04 - Mixed sources]] — Combine local + external in one gallery.
@@ -149,6 +151,43 @@ view:
 - Add \`recursive: true\` to scan all sub-folders as well.
 `;
         await this.app.vault.create(`${this.basePath}/01 - Local source.md`, content);
+    }
+
+    private async createRelativePathNote(): Promise<void> {
+        const content = `\
+# Relative Path Demo (Folder Notes)
+
+Unlike the previous note, **this note lives inside \`${this.assetsPath}/Nature\`** — right next to its own images — instead of pointing at a hardcoded vault path. Rename or move this note along with the \`Nature\` folder and the galleries below keep working.
+
+### This folder's own images (\`path: "."\`)
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: "."
+view:
+  type: grid
+\`\`\`
+
+### A sibling folder's images (\`path: "../Travel"\`)
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: "../Travel"
+view:
+  type: thumbnail
+\`\`\`
+
+## How it works
+- \`path: "."\` resolves to the folder that contains **this note** — not a hardcoded vault path.
+- \`path: "./Subfolder"\` reaches into a subfolder of the note's folder.
+- \`path: "../Sibling"\` steps up one level per \`..\` and reaches into a sibling folder (\`../../Sibling\` steps up two levels, and so on).
+- Because the path is resolved relative to the note, renaming or moving this note together with its folder doesn't break the gallery — unlike a hardcoded path such as \`${this.assetsPath}/Nature\`.
+
+> This mirrors the classic "folder note" pattern, where a note shares a name with (and lives inside) the folder it describes.
+`;
+        await this.app.vault.create(`${this.assetsPath}/Nature/Nature (folder note demo).md`, content);
     }
 
     private async createExternalUrlsNote(): Promise<void> {

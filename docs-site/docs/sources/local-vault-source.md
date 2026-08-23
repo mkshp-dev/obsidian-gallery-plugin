@@ -60,3 +60,27 @@ view:
   type: thumbnail
 ```
 ````
+
+### Relative to the current note
+
+`path` can also be given relative to the note the gallery block is written in, instead of a full vault path. This is useful for folder notes, since the gallery keeps working if the note or folder is later renamed or moved.
+
+| Value | Resolves to |
+|-------|-------------|
+| `.` | The note's own folder |
+| `./Subfolder` | A subfolder of the note's folder |
+| `../Sibling` | A folder next to the note's folder (one `..` per level up) |
+
+For example, a folder note at `Gaming/Doom & Heretic/Log/2026/Altruze.md` with images stored alongside it:
+
+````markdown
+```obs-gallery
+sources:
+  - type: local
+    path: "."
+view:
+  type: grid
+```
+````
+
+Relative paths are only supported for `sources[].path` with `type: local` — not the legacy top-level `path:` shorthand.

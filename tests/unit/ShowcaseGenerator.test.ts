@@ -79,6 +79,7 @@ describe('ShowcaseGenerator', () => {
         // 3. Verify markdown notes were created
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/00 - Welcome.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/01 - Local source.md', expect.any(String));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/Assets/Nature/Nature (folder note demo).md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/02 - External URLs.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/03 - Views.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/04 - Mixed sources.md', expect.any(String));

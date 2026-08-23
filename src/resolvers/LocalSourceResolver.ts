@@ -1,5 +1,6 @@
 import { ILocalSourceConfig, IImageSource, IContentScanner } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
+import { NotePathResolver } from '../utils/NotePathResolver';
 
 export class LocalSourceResolver implements GallerySourceResolver<ILocalSourceConfig> {
     readonly type = 'local';
@@ -11,7 +12,8 @@ export class LocalSourceResolver implements GallerySourceResolver<ILocalSourceCo
             return { images: [], errors: [] };
         }
 
-        const resolvePromise = this.contentScanner.scanPath(source.path, source.recursive);
+        const resolvedPath = NotePathResolver.resolve(source.path, context.notePath);
+        const resolvePromise = this.contentScanner.scanPath(resolvedPath, source.recursive);
 
         if (context.timeoutMs) {
             const images = await Promise.race([

@@ -10,7 +10,8 @@ export class GalleryInstance implements IGalleryInstance {
     public readonly config: IGalleryConfig;
     public readonly container: HTMLElement;
     public readonly view: IGalleryView;
-    
+    public readonly notePath?: string;
+
     private _images: IImageSource[] = [];
     private _loadedCount: number = 0;
     private _errorCount: number = 0;
@@ -20,12 +21,14 @@ export class GalleryInstance implements IGalleryInstance {
         config: IGalleryConfig,
         container: HTMLElement,
         view: IGalleryView,
-        images: IImageSource[] = []
+        images: IImageSource[] = [],
+        notePath?: string
     ) {
         this.id = this.generateId();
         this.config = config;
         this.container = container;
         this.view = view;
+        this.notePath = notePath;
         this._images = [...images];
         
         // Initialize container

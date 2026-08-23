@@ -45,7 +45,8 @@ Each source type shows its own configuration fields after being added.
 
 | Field | Description |
 |-------|-------------|
-| **Path** | Vault-relative folder or file path, e.g. `Photos/Vacation`. |
+| **Path** | Pick a vault folder, or choose **"📍 Current note's folder"** to point at wherever this note lives. |
+| **Keep relative to this note** | Shown when a note is open. Stores the path relative to the current note (e.g. `../Sibling`) instead of an absolute vault path, so the gallery keeps working if the note or folder is renamed or moved. Toggling it converts whatever folder is currently selected above. |
 | **Recursive** | Toggle to include images in subfolders (default: on). |
 
 #### External URLs source options

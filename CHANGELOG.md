@@ -2,8 +2,13 @@
 
 ## In-progress
 
+- **Note-relative Local Paths** (#191): `local` source `path` can now be given relative to the note containing the gallery block — `.` (the note's folder), `./Subfolder`, and `../Sibling` (any number of levels up) — so folder-note galleries keep working when the note or folder is renamed or moved. The Gallery Builder modal's local source picker gained a matching **"Keep relative to this note"** toggle, and the showcase generator (`Create showcase notes`) now includes a live folder-note demo.
+
+## 2.4.0 - 2026-08-18
+
 - **Embed View**: Added a new `embed` view type that renders images as a continuous, borderless vertical stack at natural size — no card chrome — so galleries feel like part of the note, similar to a native `![[image]]` embed.
 - **Gallery Builder Modal Redesign**: Two-column layout with a sticky generated-code panel, collapsible filter groups for Immich/Nextcloud, paired fields on shared rows (e.g. min/max size, sort by/order), and native calendar (`type=date`) pickers for date-range filters.
+
 
 ## 2.3.0 - 2026-08-09
 

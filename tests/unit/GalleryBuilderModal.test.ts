@@ -10,6 +10,14 @@ if (typeof Element !== 'undefined' && !(Element.prototype as any).empty) {
     }
   };
 }
+if (typeof Element !== 'undefined' && !(Element.prototype as any).addClass) {
+  (Element.prototype as any).addClass = function(cls: string) {
+    this.classList.add(cls);
+  };
+  (Element.prototype as any).removeClass = function(cls: string) {
+    this.classList.remove(cls);
+  };
+}
 
 jest.mock('obsidian', () => {
     const original = jest.requireActual('obsidian');
@@ -42,6 +50,7 @@ jest.mock('obsidian', () => {
         }
         addDropdown(cb: any) {
             cb({
+                selectEl: document.createElement('select'),
                 addOptions: function() { return this; },
                 addOption: function() { return this; },
                 setValue: function() { return this; },
@@ -61,6 +70,40 @@ jest.mock('obsidian', () => {
         ...original,
         Setting: MockSetting
     };
+});
+
+describe('GalleryBuilderModal local source relative path', () => {
+    let mockApp: App;
+    let mockPlugin: GalleryPlugin;
+    let mockEditor: Editor;
+
+    beforeEach(() => {
+        mockApp = {
+            vault: { getAllLoadedFiles: () => [] },
+            workspace: { getActiveFile: () => ({ path: 'Notes/Sub/Foo.md' }) }
+        } as unknown as App;
+        mockPlugin = { settings: {} } as unknown as GalleryPlugin;
+        mockEditor = {} as Editor;
+    });
+
+    it('renders the local source config, including the "keep relative to note" toggle, without throwing when a note is open', () => {
+        const modal = new GalleryBuilderModal(mockApp, mockPlugin, mockEditor);
+        const container = document.createElement('div');
+
+        expect(() => (modal as any).addSource('local', container)).not.toThrow();
+        expect((modal as any).sources[0].type).toBe('local');
+    });
+
+    it('renders the local source config without throwing when no note is open', () => {
+        mockApp = {
+            vault: { getAllLoadedFiles: () => [] },
+            workspace: { getActiveFile: () => null }
+        } as unknown as App;
+        const modal = new GalleryBuilderModal(mockApp, mockPlugin, mockEditor);
+        const container = document.createElement('div');
+
+        expect(() => (modal as any).addSource('local', container)).not.toThrow();
+    });
 });
 
 describe('GalleryBuilderModal Nextcloud sources', () => {

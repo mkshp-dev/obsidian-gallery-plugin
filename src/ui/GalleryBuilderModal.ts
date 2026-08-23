@@ -3,6 +3,7 @@ import type GalleryPlugin from '../main';
 import { ISourceConfig, INextcloudSourceConfig, INextcloudShareSourceConfig } from '../models/interfaces';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
+import { NotePathResolver } from '../utils/NotePathResolver';
 
 export class GalleryBuilderModal extends Modal {
     private plugin: GalleryPlugin;
@@ -237,9 +238,13 @@ export class GalleryBuilderModal extends Modal {
                 .filter((f): f is TFolder => f instanceof TFolder)
                 .sort((a, b) => a.path.localeCompare(b.path));
 
-            const folderOptions: Record<string, string> = {
-                '/': '/ (Vault root)'
-            };
+            const activeFile = this.app.workspace.getActiveFile();
+
+            const folderOptions: Record<string, string> = {};
+            if (activeFile) {
+                folderOptions['.'] = "📍 Current note's folder";
+            }
+            folderOptions['/'] = '/ (Vault root)';
             folders.forEach(f => {
                 if (f.path && f.path !== '/') {
                     folderOptions[f.path] = f.path;
@@ -251,19 +256,41 @@ export class GalleryBuilderModal extends Modal {
             }
 
             const currentPath = source.path || '/';
+            const isRelative = NotePathResolver.isRelative(currentPath);
 
             new Setting(container)
                 .setName('Path')
-                .setDesc('Select vault folder.')
+                .setDesc('Select a vault folder, or "current note\'s folder" to stay relative to this note (keeps working if the note or folder is renamed).')
                 .addDropdown(dropdown => {
                     dropdown.addOptions(folderOptions);
                     dropdown.setValue(currentPath);
                     dropdown.onChange(value => {
-                        source.path = value;
+                        // Preserve "keep relative to note" mode across dropdown reselections,
+                        // so picking a different folder doesn't silently revert to an absolute path.
+                        if (activeFile && NotePathResolver.isRelative(source.path || '')) {
+                            source.path = NotePathResolver.toRelative(value, activeFile.path);
+                        } else {
+                            source.path = value;
+                        }
                         this.refreshLivePreview();
                     });
                     dropdown.selectEl.addClass('gallery-builder-wide-select');
                 });
+
+            if (activeFile) {
+                new Setting(container)
+                    .setName('Keep relative to this note')
+                    .setDesc('Store the path relative to this note (e.g. "../sibling") instead of an absolute vault path, so the gallery keeps working if this note or folder is renamed or moved.')
+                    .addToggle(toggle => toggle
+                        .setValue(isRelative)
+                        .onChange(value => {
+                            const absolute = NotePathResolver.resolve(source.path || '/', activeFile.path);
+                            source.path = value ? NotePathResolver.toRelative(absolute, activeFile.path) : absolute;
+                            this.renderSources(rootContainer);
+                            this.refreshLivePreview();
+                        })
+                    );
+            }
 
             new Setting(container)
                 .setName('Recursive')

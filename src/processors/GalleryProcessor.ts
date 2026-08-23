@@ -134,7 +134,7 @@ export class GalleryProcessor {
             }
 
             // Step 2: Scan for images
-            scannedImages = await this.scanForImages(config, result, opts, loadingManager);
+            scannedImages = await this.scanForImages(config, result, opts, loadingManager, ctx.sourcePath);
             if (scannedImages.length === 0) {
                 this.showProfessionalEmptyState(el, config, result);
                 result.processingTimeMs = Date.now() - startTime;
@@ -166,7 +166,7 @@ export class GalleryProcessor {
 
             // Step 4: Create and render gallery
             const galleryInstance = await this.createAndRenderGallery(
-                config, el, validImages, result, opts, loadingManager
+                config, el, validImages, result, opts, loadingManager, ctx.sourcePath
             );
 
             // Step 5: Render mixed-source inline error if needed
@@ -275,7 +275,8 @@ export class GalleryProcessor {
         config: IGalleryConfig,
         result: IGalleryRenderResult,
         options: Required<IGalleryProcessingOptions>,
-        loadingManager: LoadingManager | null
+        loadingManager: LoadingManager | null,
+        notePath?: string
     ) {
         if (loadingManager) {
             loadingManager.startLoading('scan', { type: 'dots', text: 'Scanning for images...' });
@@ -295,7 +296,7 @@ export class GalleryProcessor {
 
             if (config.sources) {
                 for (const source of config.sources) {
-                    const resolveContext = { timeoutMs: options.timeoutMs, viewType };
+                    const resolveContext = { timeoutMs: options.timeoutMs, viewType, notePath };
                     const { images: resolvedImages, errors: resolveErrors } = await this.resolverRegistry.resolveSource(source, resolveContext);
 
                     if (resolveErrors.length > 0) {
@@ -439,7 +440,8 @@ export class GalleryProcessor {
         images: IImageSource[],
         result: IGalleryRenderResult,
         options: Required<IGalleryProcessingOptions>,
-        loadingManager: LoadingManager | null
+        loadingManager: LoadingManager | null,
+        notePath?: string
     ): Promise<GalleryInstance> {
         if (loadingManager) {
             loadingManager.startLoading('render', { type: 'skeleton', text: `Rendering ${images.length} images...` });
@@ -472,13 +474,13 @@ export class GalleryProcessor {
                 }
             }
             const view = this.viewFactory.createView(viewType, container);
-            
+
             // Create gallery instance
-            const galleryInstance = new GalleryInstance(config, container, view, images);
-            
+            const galleryInstance = new GalleryInstance(config, container, view, images, notePath);
+
             // Store active gallery
             this.activeGalleries.set(galleryInstance.id, galleryInstance);
-            
+
             // Render gallery with retry logic
             let retryCount = 0;
             while (retryCount <= options.maxRetries) {
@@ -816,7 +818,8 @@ export class GalleryProcessor {
                 for (const source of gallery.config.sources) {
                     const { images: resolvedImages } = await this.resolverRegistry.resolveSource(source, {
                         timeoutMs: currentOpts.timeoutMs,
-                        viewType: gallery.view.type
+                        viewType: gallery.view.type,
+                        notePath: gallery.notePath
                     });
                     for (const img of resolvedImages) {
                         if (!images.find(existing => existing.path === img.path)) {

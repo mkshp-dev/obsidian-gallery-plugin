@@ -45,6 +45,36 @@ describe('Resolvers', () => {
             expect(result.errors).toEqual([]);
         });
 
+        it('should resolve "." against the current note\'s folder', async () => {
+            const resolver = new LocalSourceResolver(mockScanner);
+            const source: ILocalSourceConfig = { type: 'local', path: '.', recursive: true };
+            mockScanner.scanPath.mockResolvedValue([]);
+
+            await resolver.resolve(source, { notePath: 'Gaming/Altruze.md' });
+
+            expect(mockScanner.scanPath).toHaveBeenCalledWith('Gaming', true);
+        });
+
+        it('should resolve "../sibling" relative to the current note\'s folder', async () => {
+            const resolver = new LocalSourceResolver(mockScanner);
+            const source: ILocalSourceConfig = { type: 'local', path: '../Attachments', recursive: true };
+            mockScanner.scanPath.mockResolvedValue([]);
+
+            await resolver.resolve(source, { notePath: 'Notes/Sub/Foo.md' });
+
+            expect(mockScanner.scanPath).toHaveBeenCalledWith('Notes/Attachments', true);
+        });
+
+        it('should leave absolute paths unchanged even when notePath is provided', async () => {
+            const resolver = new LocalSourceResolver(mockScanner);
+            const source: ILocalSourceConfig = { type: 'local', path: 'Images/Gallery', recursive: true };
+            mockScanner.scanPath.mockResolvedValue([]);
+
+            await resolver.resolve(source, { notePath: 'Notes/Foo.md' });
+
+            expect(mockScanner.scanPath).toHaveBeenCalledWith('Images/Gallery', true);
+        });
+
         it('should handle mixed valid and invalid urls correctly by returning valid ones and recording errors', async () => {
             const resolver = new ExternalSourceResolver();
             const source: IExternalSourceConfig = { type: 'external', urls: ['http://example.com/img.jpg', 'invalid-url', 'http://example.com/img2.jpg'] };

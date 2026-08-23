@@ -6,6 +6,8 @@ import { ISourceConfig, IImageSource } from '../models/interfaces';
 export interface GallerySourceResolveContext {
     timeoutMs?: number;
     viewType?: string;
+    /** Vault-relative path of the note containing the gallery code block, used to resolve relative "local" source paths */
+    notePath?: string;
     // Any future context properties can be added here
 }
 

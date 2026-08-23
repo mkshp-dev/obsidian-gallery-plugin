@@ -254,6 +254,9 @@ export interface IGalleryInstance {
   /** Gallery configuration */
   readonly config: IGalleryConfig;
 
+  /** Vault-relative path of the note containing this gallery's code block, used to re-resolve relative source paths on refresh */
+  readonly notePath?: string;
+
   /** List of images to display */
   readonly images: IImageSource[];
 

@@ -18,6 +18,31 @@ describe('GalleryYamlGenerator', () => {
         expect(result).toContain('type: grid');
     });
 
+    it('should generate valid yaml for a local source with filters, sort, and limit', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            {
+                type: 'local',
+                path: 'Assets/Photos',
+                recursive: true,
+                filenameFilter: '*.jpg',
+                filters: { modifiedAfter: '2025-01-01', minSizeKb: 100 },
+                sort: { by: 'modified', order: 'desc' },
+                limit: 10
+            }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
+
+        expect(result).toContain('filenameFilter: *.jpg');
+        expect(result).toContain('filters:');
+        expect(result).toContain('modifiedAfter: 2025-01-01');
+        expect(result).toContain('minSizeKb: 100');
+        expect(result).toContain('sort:');
+        expect(result).toContain('by: modified');
+        expect(result).toContain('order: desc');
+        expect(result).toContain('limit: 10');
+    });
+
     it('should generate valid yaml for an external source', () => {
         const sources: Partial<ISourceConfig>[] = [
             { type: 'external', urls: ['https://example.com/1.jpg', 'https://example.com/2.jpg'] }

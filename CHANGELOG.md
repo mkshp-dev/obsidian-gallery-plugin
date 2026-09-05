@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Local Source Filters, Sort & Limit**: The `local` source now supports `filenameFilter` (glob), `filters` (`modifiedAfter`/`modifiedBefore`/`minSizeKb`/`maxSizeKb`), `sort` (`name`/`modified`/`size`, `asc`/`desc`), and `limit` — bringing it to parity with the `nextcloud` and `immich` sources. The Gallery Builder modal's local source panel gained matching controls, and the showcase generator (`Create showcase notes`) now demonstrates local sorting, limiting, and filtering alongside the existing Immich examples.
+
 ## 2.4.1 - 2026-08-23
 
 - **Note-relative Local Paths** (#191): `local` source `path` can now be given relative to the note containing the gallery block — `.` (the note's folder), `./Subfolder`, and `../Sibling` (any number of levels up) — so folder-note galleries keep working when the note or folder is renamed or moved. The Gallery Builder modal's local source picker gained a matching **"Keep relative to this note"** toggle, and the showcase generator (`Create showcase notes`) now includes a live folder-note demo.

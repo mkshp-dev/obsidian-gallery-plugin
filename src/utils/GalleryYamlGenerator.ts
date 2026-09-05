@@ -21,6 +21,32 @@ export class GalleryYamlGenerator {
                     if (source.recursive !== undefined) {
                         yaml += `    recursive: ${source.recursive}\n`;
                     }
+                    if (source.filenameFilter) {
+                        yaml += `    filenameFilter: ${source.filenameFilter}\n`;
+                    }
+                    if (source.filters && (source.filters.modifiedAfter || source.filters.modifiedBefore || source.filters.maxSizeKb !== undefined || source.filters.minSizeKb !== undefined)) {
+                        yaml += `    filters:\n`;
+                        if (source.filters.modifiedAfter) {
+                            yaml += `      modifiedAfter: ${source.filters.modifiedAfter}\n`;
+                        }
+                        if (source.filters.modifiedBefore) {
+                            yaml += `      modifiedBefore: ${source.filters.modifiedBefore}\n`;
+                        }
+                        if (source.filters.maxSizeKb !== undefined) {
+                            yaml += `      maxSizeKb: ${source.filters.maxSizeKb}\n`;
+                        }
+                        if (source.filters.minSizeKb !== undefined) {
+                            yaml += `      minSizeKb: ${source.filters.minSizeKb}\n`;
+                        }
+                    }
+                    if (source.limit) {
+                        yaml += `    limit: ${source.limit}\n`;
+                    }
+                    if (source.sort) {
+                        yaml += `    sort:\n`;
+                        yaml += `      by: ${source.sort.by}\n`;
+                        yaml += `      order: ${source.sort.order}\n`;
+                    }
                     break;
                 case 'external': {
                     const validUrls = source.urls ? source.urls.filter(u => typeof u === 'string' ? u.trim() : (u && typeof u.url === 'string' && u.url.trim())) : [];

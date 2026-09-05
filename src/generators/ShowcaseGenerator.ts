@@ -97,8 +97,8 @@ These notes render images immediately:
 - [[02 - External URLs]] — Load images from web URLs.
 - [[03 - Views]] — Three layout types: thumbnail, grid, carousel.
 - [[04 - Mixed sources]] — Combine local + external in one gallery.
-- [[05 - Sort and limit]] — Control order and count of displayed images.
-- [[06 - Recursive and filters]] — Scan sub-folders and filter by date or type.
+- [[05 - Sort and limit]] — Control order and count of displayed images, including local \`sort\`/\`limit\`.
+- [[06 - Recursive and filters]] — Scan sub-folders and filter by filename glob, size, or date — for local files and Immich.
 
 ### 🔐 Immich — Authenticated
 Connect to your own Immich server using an API key configured in plugin settings:
@@ -312,14 +312,31 @@ view:
 
 Control how many images are shown and in what order.
 
-### Most recent 4 images (newest first)
+### Local — Most recently modified 4 images
 
 \`\`\`obs-gallery
 sources:
   - type: local
     path: GalleryDemo/Assets
+    sort:
+      by: modified
+      order: desc
+    limit: 4
 view:
   type: thumbnail
+\`\`\`
+
+### Local — Alphabetical order, oldest naming first
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    sort:
+      by: name
+      order: asc
+view:
+  type: grid
 \`\`\`
 
 ### Immich — Latest 10 photos, sorted oldest to newest
@@ -337,11 +354,14 @@ view:
 \`\`\`
 
 ## Options
-| Key | Values | Description |
-|---|---|---|
-| \`limit\` | any number | Maximum images to display |
-| \`sort.by\` | \`createdAt\` | Field to sort by |
-| \`sort.order\` | \`asc\` / \`desc\` | Ascending or descending |
+| Source | Key | Values | Description |
+|---|---|---|---|
+| \`local\` | \`sort.by\` | \`name\` / \`modified\` / \`size\` | Field to sort files by |
+| \`local\` | \`sort.order\` | \`asc\` / \`desc\` | Ascending or descending |
+| \`local\` | \`limit\` | any number | Maximum images to display |
+| \`immich\` | \`sort.by\` | \`createdAt\` | Field to sort by |
+| \`immich\` | \`sort.order\` | \`asc\` / \`desc\` | Ascending or descending |
+| \`immich\` | \`limit\` | any number | Maximum images to display |
 `;
         await this.app.vault.create(`${this.basePath}/05 - Sort and limit.md`, content);
     }
@@ -377,6 +397,40 @@ view:
 
 ---
 
+### Local — Filename glob pattern
+
+Only load images whose names match the glob pattern \`demo-1*\`.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+    filenameFilter: "demo-1*"
+view:
+  type: thumbnail
+\`\`\`
+
+---
+
+### Local — Size and modified-date filters
+
+Only load images that are at least 1 KB, modified since the start of this year.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+    filters:
+      minSizeKb: 1
+      modifiedAfter: "2025-01-01"
+view:
+  type: grid
+\`\`\`
+
+---
+
 ### Immich — Images only, taken this year
 
 \`\`\`obs-gallery
@@ -392,6 +446,15 @@ view:
 \`\`\`
 
 ## Filter options
+
+### Local
+| Filter | Example | Description |
+|---|---|---|
+| \`filenameFilter\` | \`"IMG_*"\` / \`"*.png"\` | Glob pattern filter for file names |
+| \`filters.minSizeKb\` / \`maxSizeKb\` | \`10\` / \`5000\` | Filter by file size range in KB |
+| \`filters.modifiedAfter\` / \`modifiedBefore\` | \`"2024-01-01"\` | Filter by modification date |
+
+### Immich
 | Filter | Example | Description |
 |---|---|---|
 | \`assetType\` | \`image\` or \`video\` | Restrict to photos or videos |

@@ -88,6 +88,99 @@ describe('Resolvers', () => {
             expect(result.errors[0]).toContain('Invalid URL in external source urls list: invalid-url');
         });
 
+        describe('filters, sort, and limit', () => {
+            const makeImage = (name: string, size: number, mtime: number): IImageSource => {
+                const img = ImageSource.fromLocalPath(`folder/${name}`, name.replace(/\.[^/.]+$/, ''));
+                img.size = size;
+                img.mtime = mtime;
+                return img;
+            };
+
+            it('should filter by filenameFilter glob pattern', async () => {
+                const resolver = new LocalSourceResolver(mockScanner);
+                mockScanner.scanPath.mockResolvedValue([
+                    makeImage('1.jpg', 100, 1000),
+                    makeImage('2.png', 100, 1000),
+                    makeImage('3.jpg', 100, 1000)
+                ]);
+
+                const source: ILocalSourceConfig = { type: 'local', path: 'folder', filenameFilter: '*.jpg' };
+                const result = await resolver.resolve(source, {});
+
+                expect(result.images.map(i => i.path)).toEqual(['folder/1.jpg', 'folder/3.jpg']);
+            });
+
+            it('should filter by modifiedAfter / modifiedBefore', async () => {
+                const resolver = new LocalSourceResolver(mockScanner);
+                mockScanner.scanPath.mockResolvedValue([
+                    makeImage('1.jpg', 100, new Date('2025-01-01').getTime()),
+                    makeImage('2.jpg', 100, new Date('2025-06-15').getTime()),
+                    makeImage('3.jpg', 100, new Date('2025-12-31').getTime())
+                ]);
+
+                const source: ILocalSourceConfig = {
+                    type: 'local',
+                    path: 'folder',
+                    filters: { modifiedAfter: '2025-02-01', modifiedBefore: '2025-11-01' }
+                };
+                const result = await resolver.resolve(source, {});
+
+                expect(result.images.map(i => i.path)).toEqual(['folder/2.jpg']);
+            });
+
+            it('should filter by minSizeKb / maxSizeKb', async () => {
+                const resolver = new LocalSourceResolver(mockScanner);
+                mockScanner.scanPath.mockResolvedValue([
+                    makeImage('1.jpg', 500 * 1024, 1000),
+                    makeImage('2.jpg', 2000 * 1024, 1000),
+                    makeImage('3.jpg', 5000 * 1024, 1000)
+                ]);
+
+                const source: ILocalSourceConfig = {
+                    type: 'local',
+                    path: 'folder',
+                    filters: { minSizeKb: 1000, maxSizeKb: 4000 }
+                };
+                const result = await resolver.resolve(source, {});
+
+                expect(result.images.map(i => i.path)).toEqual(['folder/2.jpg']);
+            });
+
+            it('should sort by name, size, and modified in both directions', async () => {
+                const resolver = new LocalSourceResolver(mockScanner);
+                const images = [
+                    makeImage('b.jpg', 1000, new Date('2025-01-01').getTime()),
+                    makeImage('c.jpg', 100, new Date('2025-06-15').getTime()),
+                    makeImage('a.jpg', 500, new Date('2024-12-31').getTime())
+                ];
+
+                mockScanner.scanPath.mockResolvedValue([...images]);
+                let result = await resolver.resolve({ type: 'local', path: 'folder', sort: { by: 'name', order: 'asc' } }, {});
+                expect(result.images.map(i => i.displayName)).toEqual(['a', 'b', 'c']);
+
+                mockScanner.scanPath.mockResolvedValue([...images]);
+                result = await resolver.resolve({ type: 'local', path: 'folder', sort: { by: 'size', order: 'desc' } }, {});
+                expect(result.images.map(i => i.displayName)).toEqual(['b', 'a', 'c']);
+
+                mockScanner.scanPath.mockResolvedValue([...images]);
+                result = await resolver.resolve({ type: 'local', path: 'folder', sort: { by: 'modified', order: 'asc' } }, {});
+                expect(result.images.map(i => i.displayName)).toEqual(['a', 'b', 'c']);
+            });
+
+            it('should apply limit after filtering and sorting', async () => {
+                const resolver = new LocalSourceResolver(mockScanner);
+                mockScanner.scanPath.mockResolvedValue([
+                    makeImage('1.jpg', 100, 1000),
+                    makeImage('2.jpg', 100, 2000),
+                    makeImage('3.jpg', 100, 3000)
+                ]);
+
+                const source: ILocalSourceConfig = { type: 'local', path: 'folder', sort: { by: 'modified', order: 'desc' }, limit: 2 };
+                const result = await resolver.resolve(source, {});
+
+                expect(result.images.map(i => i.path)).toEqual(['folder/3.jpg', 'folder/2.jpg']);
+            });
+        });
     });
 
     describe('ExternalSourceResolver', () => {

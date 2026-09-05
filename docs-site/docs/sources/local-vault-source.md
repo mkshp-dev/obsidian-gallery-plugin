@@ -10,11 +10,38 @@ The local source type allows you to display images stored directly in your Obsid
 
 To use a local source, set the `type` to `local` and provide the `path` to the folder or file relative to your vault root.
 
+```yaml
+sources:
+  - type: local
+    path: Photos/Vacation2024
+    recursive: true
+    filenameFilter: "IMG_*"
+    filters:
+      minSizeKb: 10
+      maxSizeKb: 5000
+      modifiedAfter: "2024-01-01"
+      modifiedBefore: "2024-12-31"
+    sort:
+      by: modified  # name | size | modified
+      order: desc   # asc | desc
+    limit: 50
+view:
+  type: grid
+```
+
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `type` | string | — | **Required**. Must be `local`. |
 | `path` | string | — | **Required**. Vault-relative path to folder or file. |
 | `recursive` | boolean | `true` | Include images in subfolders. |
+| `filenameFilter` | string | — | Glob pattern for filename matching (e.g. `IMG_*`, `*.png`). |
+| `filters.minSizeKb` | number | — | Minimum file size in kilobytes. |
+| `filters.maxSizeKb` | number | — | Maximum file size in kilobytes. |
+| `filters.modifiedAfter` | string (ISO / YYYY-MM-DD) | — | Only include files modified after this date. |
+| `filters.modifiedBefore` | string (ISO / YYYY-MM-DD) | — | Only include files modified before this date. |
+| `sort.by` | `name`, `size`, or `modified` | — | Field to sort files by. |
+| `sort.order` | `asc` or `desc` | — | Sort order. `desc` = descending. |
+| `limit` | number | — | Maximum number of images to fetch. |
 
 ## Examples
 
@@ -42,6 +69,25 @@ sources:
   - type: local
     path: Projects
     recursive: true
+view:
+  type: grid
+```
+````
+
+### Recently modified photos, newest first
+
+Combine `sort`, `filters`, and `limit` to show only your 12 most recently modified screenshots:
+
+````markdown
+```obs-gallery
+sources:
+  - type: local
+    path: Screenshots
+    filenameFilter: "*.png"
+    sort:
+      by: modified
+      order: desc
+    limit: 12
 view:
   type: grid
 ```

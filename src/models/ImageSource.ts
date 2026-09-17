@@ -12,6 +12,7 @@ export class ImageSource implements IImageSource {
     public readonly displayName: string;
     public caption?: string;
     public size?: number;
+    public mtime?: number;
     public dimensions?: { width: number; height: number };
     public loadState: 'pending' | 'loading' | 'loaded' | 'error';
     public errorMessage?: string;

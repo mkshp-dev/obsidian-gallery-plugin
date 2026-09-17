@@ -17,6 +17,9 @@ export abstract class GalleryView implements IGalleryView {
     public allowRemoteImages: boolean = false;
     public showCaptions: boolean = true;
     public captionMaxLines: number = 1;
+    public paginationEnabled: boolean = false;
+    public itemsPerPage: number = 24;
+    protected currentPage: number = 1;
 
     protected lastFocusedElement: HTMLElement | null = null;
     protected activeModal: HTMLElement | null = null;
@@ -111,11 +114,94 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Apply runtime options to the view. Subclasses may override to react immediately.
      */
-    setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number } = {}): void {
+    setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number } = {}): void {
         if (typeof options.remoteLoadTimeoutMs === 'number') this.remoteLoadTimeoutMs = options.remoteLoadTimeoutMs;
         if (typeof options.allowRemoteImages === 'boolean') this.allowRemoteImages = options.allowRemoteImages;
         if (typeof options.showCaptions === 'boolean') this.showCaptions = options.showCaptions;
         if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
+        if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
+        if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
+    }
+
+    /**
+     * Total number of pages for the current image list, given itemsPerPage.
+     * Always at least 1.
+     */
+    protected get totalPages(): number {
+        if (!this.paginationEnabled || this.itemsPerPage <= 0) return 1;
+        return Math.max(1, Math.ceil(this._images.length / this.itemsPerPage));
+    }
+
+    /**
+     * The slice of images to render for the current page. Returns the full
+     * list unchanged when pagination is disabled.
+     */
+    protected getPageImages(): IImageSource[] {
+        if (!this.paginationEnabled || this.itemsPerPage <= 0) return this._images;
+
+        // Clamp currentPage in case the image list shrank since the last render
+        const pages = this.totalPages;
+        if (this.currentPage > pages) this.currentPage = pages;
+        if (this.currentPage < 1) this.currentPage = 1;
+
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        return this._images.slice(start, start + this.itemsPerPage);
+    }
+
+    /**
+     * Navigate to a specific page (clamped to valid range) and re-render.
+     */
+    protected goToPage(page: number): void {
+        const pages = this.totalPages;
+        const clamped = Math.min(Math.max(1, page), pages);
+        if (clamped === this.currentPage) return;
+        this.currentPage = clamped;
+        this.render();
+
+        // Scroll the gallery back into view so the new page is visible
+        // rather than leaving the viewport scrolled to where the old page ended.
+        try {
+            this.container.scrollIntoView({ block: 'nearest' });
+        } catch (error) { Logger.debug('Ignored error:', error); }
+    }
+
+    /**
+     * Render Prev/Next pagination controls into the given parent. No-op when
+     * pagination is disabled or there's only a single page.
+     */
+    protected renderPaginationControls(parent: HTMLElement): void {
+        if (!this.paginationEnabled || this.itemsPerPage <= 0) return;
+        const pages = this.totalPages;
+        if (pages <= 1) return;
+
+        const bar = this.createElement(parent, 'div', { cls: 'gallery-pagination' });
+
+        const prevBtn = this.createElement(bar, 'button', {
+            cls: 'gallery-pagination-btn gallery-pagination-prev',
+            attr: { 'aria-label': 'Previous page', 'title': 'Previous page' },
+            text: '‹ Prev'
+        }) as HTMLButtonElement;
+        prevBtn.disabled = this.currentPage <= 1;
+        prevBtn.addEventListener('click', (e: MouseEvent) => {
+            e.preventDefault();
+            this.goToPage(this.currentPage - 1);
+        });
+
+        this.createElement(bar, 'span', {
+            cls: 'gallery-pagination-status',
+            text: `Page ${this.currentPage} of ${pages}`
+        });
+
+        const nextBtn = this.createElement(bar, 'button', {
+            cls: 'gallery-pagination-btn gallery-pagination-next',
+            attr: { 'aria-label': 'Next page', 'title': 'Next page' },
+            text: 'Next ›'
+        }) as HTMLButtonElement;
+        nextBtn.disabled = this.currentPage >= pages;
+        nextBtn.addEventListener('click', (e: MouseEvent) => {
+            e.preventDefault();
+            this.goToPage(this.currentPage + 1);
+        });
     }
 
     /**
@@ -145,6 +231,7 @@ export abstract class GalleryView implements IGalleryView {
         }
 
         this._images = [...images];
+        this.currentPage = 1;
         this.render();
     }
 

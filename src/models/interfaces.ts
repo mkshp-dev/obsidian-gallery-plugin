@@ -7,6 +7,18 @@ export interface ILocalSourceConfig {
   type: 'local';
   path: string;
   recursive?: boolean;
+  limit?: number;
+  sort?: {
+    by: 'name' | 'modified' | 'size';
+    order: 'asc' | 'desc';
+  };
+  filenameFilter?: string; // Optional glob pattern for filenames
+  filters?: {
+    modifiedAfter?: string;
+    modifiedBefore?: string;
+    maxSizeKb?: number;
+    minSizeKb?: number;
+  };
 }
 
 export interface IExternalSourceConfig {
@@ -138,6 +150,9 @@ export interface IImageSource {
   /** File size in bytes (local files only) */
   size?: number;
 
+  /** Last modified timestamp in ms (local files only) */
+  mtime?: number;
+
   /** Image dimensions when available */
   dimensions?: {
     width: number;
@@ -207,7 +222,7 @@ export interface IGalleryView {
   isImageVisible(image: IImageSource): boolean;
 
   /** Optional runtime settings API */
-  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number }): void;
+  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number }): void;
 
   /** Optional runtime property for remote load timeout */
   remoteLoadTimeoutMs?: number;

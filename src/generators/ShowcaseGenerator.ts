@@ -95,10 +95,10 @@ These notes render images immediately:
 - [[01 - Local source]] — Load images from a folder in your vault.
 - [[Nature (folder note demo)]] — Resolve \`path\` relative to the current note (\`.\`, \`./\`, \`../\`) instead of a hardcoded folder.
 - [[02 - External URLs]] — Load images from web URLs.
-- [[03 - Views]] — Three layout types: thumbnail, grid, carousel.
+- [[03 - Views]] — Layout types (thumbnail, grid, carousel, embed) and pagination for large collections.
 - [[04 - Mixed sources]] — Combine local + external in one gallery.
-- [[05 - Sort and limit]] — Control order and count of displayed images.
-- [[06 - Recursive and filters]] — Scan sub-folders and filter by date or type.
+- [[05 - Sort and limit]] — Control order and count of displayed images, including local \`sort\`/\`limit\`.
+- [[06 - Recursive and filters]] — Scan sub-folders and filter by filename glob, size, or date — for local files and Immich.
 
 ### 🔐 Immich — Authenticated
 Connect to your own Immich server using an API key configured in plugin settings:
@@ -275,6 +275,24 @@ sources:
 view:
   type: embed
 \`\`\`
+
+---
+
+### Pagination
+For large collections, add \`pagination: true\` (with an optional \`itemsPerPage\`) to any of the views above to show a fixed number of images per page with Prev/Next controls, instead of lazy-loading everything into one long scroll. Below, \`itemsPerPage: 2\` splits this demo's 4 images across 2 pages so you can see the controls in action — in a real gallery you'd use a larger number like \`24\`.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: grid
+  pagination: true
+  itemsPerPage: 2
+\`\`\`
+
+Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination** — the per-gallery \`pagination\`/\`itemsPerPage\` keys shown above override that default.
 `;
         await this.app.vault.create(`${this.basePath}/03 - Views.md`, content);
     }
@@ -312,14 +330,31 @@ view:
 
 Control how many images are shown and in what order.
 
-### Most recent 4 images (newest first)
+### Local — Most recently modified 4 images
 
 \`\`\`obs-gallery
 sources:
   - type: local
     path: GalleryDemo/Assets
+    sort:
+      by: modified
+      order: desc
+    limit: 4
 view:
   type: thumbnail
+\`\`\`
+
+### Local — Alphabetical order, oldest naming first
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    sort:
+      by: name
+      order: asc
+view:
+  type: grid
 \`\`\`
 
 ### Immich — Latest 10 photos, sorted oldest to newest
@@ -337,11 +372,14 @@ view:
 \`\`\`
 
 ## Options
-| Key | Values | Description |
-|---|---|---|
-| \`limit\` | any number | Maximum images to display |
-| \`sort.by\` | \`createdAt\` | Field to sort by |
-| \`sort.order\` | \`asc\` / \`desc\` | Ascending or descending |
+| Source | Key | Values | Description |
+|---|---|---|---|
+| \`local\` | \`sort.by\` | \`name\` / \`modified\` / \`size\` | Field to sort files by |
+| \`local\` | \`sort.order\` | \`asc\` / \`desc\` | Ascending or descending |
+| \`local\` | \`limit\` | any number | Maximum images to display |
+| \`immich\` | \`sort.by\` | \`createdAt\` | Field to sort by |
+| \`immich\` | \`sort.order\` | \`asc\` / \`desc\` | Ascending or descending |
+| \`immich\` | \`limit\` | any number | Maximum images to display |
 `;
         await this.app.vault.create(`${this.basePath}/05 - Sort and limit.md`, content);
     }
@@ -377,6 +415,40 @@ view:
 
 ---
 
+### Local — Filename glob pattern
+
+Only load images whose names match the glob pattern \`demo-1*\`.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+    filenameFilter: "demo-1*"
+view:
+  type: thumbnail
+\`\`\`
+
+---
+
+### Local — Size and modified-date filters
+
+Only load images that are at least 1 KB, modified since the start of this year.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+    filters:
+      minSizeKb: 1
+      modifiedAfter: "2025-01-01"
+view:
+  type: grid
+\`\`\`
+
+---
+
 ### Immich — Images only, taken this year
 
 \`\`\`obs-gallery
@@ -392,6 +464,15 @@ view:
 \`\`\`
 
 ## Filter options
+
+### Local
+| Filter | Example | Description |
+|---|---|---|
+| \`filenameFilter\` | \`"IMG_*"\` / \`"*.png"\` | Glob pattern filter for file names |
+| \`filters.minSizeKb\` / \`maxSizeKb\` | \`10\` / \`5000\` | Filter by file size range in KB |
+| \`filters.modifiedAfter\` / \`modifiedBefore\` | \`"2024-01-01"\` | Filter by modification date |
+
+### Immich
 | Filter | Example | Description |
 |---|---|---|
 | \`assetType\` | \`image\` or \`video\` | Restrict to photos or videos |

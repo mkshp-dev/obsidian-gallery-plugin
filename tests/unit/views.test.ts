@@ -182,3 +182,99 @@ describe('Gallery Views - Caption Rendering', () => {
     expect(captionEl.textContent).toBe('Photo Title');
   });
 });
+
+describe('Gallery Views - Pagination', () => {
+  function makeImages(count: number): IImageSource[] {
+    return Array.from({ length: count }, (_, i) => makeImage(`img${i}.jpg`, 'pending'));
+  }
+
+  test('pagination disabled by default: renders all images, no controls', () => {
+    const container = createMockContainer();
+    const view = new GridView(container as any);
+
+    view.update(makeImages(30));
+
+    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(30);
+    expect(container.querySelector('.gallery-pagination')).toBeNull();
+  });
+
+  test('GridView paginates when enabled, showing only itemsPerPage images', () => {
+    const container = createMockContainer();
+    const view = new GridView(container as any);
+    view.setOptions({ pagination: true, itemsPerPage: 10 });
+
+    view.update(makeImages(25));
+
+    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(10);
+    const status = container.querySelector('.gallery-pagination-status');
+    expect(status).not.toBeNull();
+    expect(status.textContent).toBe('Page 1 of 3');
+
+    const prevBtn = container.querySelector('.gallery-pagination-prev') as HTMLButtonElement;
+    const nextBtn = container.querySelector('.gallery-pagination-next') as HTMLButtonElement;
+    expect(prevBtn.disabled).toBe(true);
+    expect(nextBtn.disabled).toBe(false);
+  });
+
+  test('Next/Prev buttons navigate pages and update status', () => {
+    const container = createMockContainer();
+    const view = new GridView(container as any);
+    view.setOptions({ pagination: true, itemsPerPage: 10 });
+
+    view.update(makeImages(25));
+
+    let nextBtn = container.querySelector('.gallery-pagination-next') as HTMLButtonElement;
+    nextBtn.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+
+    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(10);
+    expect(container.querySelector('.gallery-pagination-status').textContent).toBe('Page 2 of 3');
+
+    nextBtn = container.querySelector('.gallery-pagination-next') as HTMLButtonElement;
+    nextBtn.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+
+    // Last page has 5 remaining images (25 - 10 - 10)
+    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(5);
+    expect(container.querySelector('.gallery-pagination-status').textContent).toBe('Page 3 of 3');
+    expect((container.querySelector('.gallery-pagination-next') as HTMLButtonElement).disabled).toBe(true);
+
+    const prevBtn = container.querySelector('.gallery-pagination-prev') as HTMLButtonElement;
+    prevBtn.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+
+    expect(container.querySelector('.gallery-pagination-status').textContent).toBe('Page 2 of 3');
+  });
+
+  test('no pagination controls rendered when everything fits on one page', () => {
+    const container = createMockContainer();
+    const view = new GridView(container as any);
+    view.setOptions({ pagination: true, itemsPerPage: 50 });
+
+    view.update(makeImages(10));
+
+    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(10);
+    expect(container.querySelector('.gallery-pagination')).toBeNull();
+  });
+
+  test('update() resets pagination back to page 1', () => {
+    const container = createMockContainer();
+    const view = new GridView(container as any);
+    view.setOptions({ pagination: true, itemsPerPage: 10 });
+
+    view.update(makeImages(25));
+    const nextBtn = container.querySelector('.gallery-pagination-next') as HTMLButtonElement;
+    nextBtn.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+    expect(container.querySelector('.gallery-pagination-status').textContent).toBe('Page 2 of 3');
+
+    // Simulate a fresh data update (e.g. gallery refresh)
+    view.update(makeImages(25));
+    expect(container.querySelector('.gallery-pagination-status').textContent).toBe('Page 1 of 3');
+  });
+
+  test('EmbedView also respects pagination', () => {
+    const embedContainer = createMockContainer();
+    const embedView = new EmbedView(embedContainer as any);
+    embedView.setOptions({ pagination: true, itemsPerPage: 4 });
+    embedView.update(makeImages(10));
+    expect(embedContainer.querySelectorAll('.gallery-embed-item').length).toBe(4);
+    expect(embedContainer.querySelector('.gallery-pagination-status').textContent).toBe('Page 1 of 3');
+  });
+});

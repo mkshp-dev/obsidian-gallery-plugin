@@ -56,11 +56,14 @@ export class ThumbnailView extends GalleryView {
         });
 
         // Render each image thumbnail (pass index for size variations)
-        this._images.forEach((image, idx) => {
+        const pageImages = this.getPageImages();
+        pageImages.forEach((image, idx) => {
             this.renderThumbnailItem(gridContainer, image, idx);
         });
 
-        Logger.debug(`Thumbnail view rendered with ${this._images.length} images`);
+        this.renderPaginationControls(this.container);
+
+        Logger.debug(`Thumbnail view rendered with ${pageImages.length} of ${this._images.length} images`);
     }
 
     /**

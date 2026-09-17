@@ -13,7 +13,7 @@ export class GridView extends GalleryView {
   private loader: LazyLoader | null = null;
   // Runtime options are provided by GalleryView.setOptions (remoteLoadTimeoutMs, allowRemoteImages)
 
-  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number } = {}): void {
+  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number } = {}): void {
     // Apply base options
     super.setOptions(options);
     // If loader exists, propagate timeout change
@@ -45,7 +45,8 @@ export class GridView extends GalleryView {
 
     this.gridContainer = this.createElement(this.container, 'div', { cls: 'gallery-grid' });
 
-    this._images.forEach((img, idx) => {
+    const pageImages = this.getPageImages();
+    pageImages.forEach((img, idx) => {
       const wrapper = this.createElement(this.gridContainer!, 'div', {
         cls: 'gallery-grid-item',
         attr: {
@@ -107,6 +108,8 @@ export class GridView extends GalleryView {
       const src = (imgEl.dataset && (imgEl.dataset.src || imgEl.getAttribute('data-src'))) || (imgEl.getAttribute('src') || '');
       if (src) this.loader!.observe(imgEl, src);
     });
+
+    this.renderPaginationControls(this.container);
   }
 
   update(images: IImageSource[]): void {

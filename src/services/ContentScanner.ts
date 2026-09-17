@@ -78,7 +78,10 @@ export class ContentScanner implements IContentScanner {
                 // Single file - check if it's an image or extract links
                 if (this.isImageFile(abstractFile.path)) {
                     const resourcePath = this.vault.adapter.getResourcePath(abstractFile.path);
-                    images = [ImageSource.fromLocalPath(abstractFile.path, abstractFile.basename, resourcePath)];
+                    const singleImage = ImageSource.fromLocalPath(abstractFile.path, abstractFile.basename, resourcePath);
+                    singleImage.mtime = abstractFile.stat?.mtime;
+                    if (abstractFile.stat?.size) singleImage.validateSize(abstractFile.stat.size);
+                    images = [singleImage];
                 } else {
                     // Extract image links from markdown file
                     images = await this.extractLinksFromFile(abstractFile);

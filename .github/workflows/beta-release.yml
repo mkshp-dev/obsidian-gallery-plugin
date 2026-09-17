@@ -1,0 +1,119 @@
+name: Beta Release
+
+# Publishes a beta build for BRAT testers whenever a commit titled
+# "Beta-Release X.Y.Z-beta.W" is pushed to Dev. Entirely self-contained to
+# Dev: no PR, no touching main, no CHANGELOG rewrite, no versions.json /
+# docs-site changes — it only builds, tags, and publishes a GitHub
+# prerelease. Obsidian's own updater and the community-plugin directory only
+# ever look at manifest.json on the default branch (main), so nothing here
+# can surface as an official update regardless of this workflow's behavior.
+
+on:
+  push:
+    branches:
+      - Dev
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      is_beta: ${{ steps.check.outputs.is_beta }}
+      version: ${{ steps.check.outputs.version }}
+      tag_exists: ${{ steps.tag_exists.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit message
+        id: check
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+
+          if [[ "$MSG" =~ ^Beta-Release[[:space:]]v?([0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "is_beta=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "is_beta=false" >> $GITHUB_OUTPUT
+            echo "Not a beta release commit. Skipping."
+          fi
+
+      - name: Verify versions
+        if: steps.check.outputs.is_beta == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.version }}"
+
+          MANIFEST=$(jq -r '.version' manifest.json)
+          PACKAGE=$(jq -r '.version' package.json)
+
+          if [ "$VERSION" != "$MANIFEST" ]; then
+            echo "manifest.json mismatch ($VERSION vs $MANIFEST)"
+            exit 1
+          fi
+
+          if [ "$VERSION" != "$PACKAGE" ]; then
+            echo "package.json mismatch ($VERSION vs $PACKAGE)"
+            exit 1
+          fi
+
+      - name: Check if tag exists
+        id: tag_exists
+        if: steps.check.outputs.is_beta == 'true'
+        run: |
+          if git rev-parse "${{ steps.check.outputs.version }}" >/dev/null 2>&1; then
+            echo "Tag exists. Skipping beta release."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+  release:
+    needs: check
+    if: needs.check.outputs.is_beta == 'true' && needs.check.outputs.tag_exists == 'false'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Extract release notes
+        run: |
+          awk '
+          /^## In-progress/ {flag=1; next}
+          /^## / && flag {exit}
+          flag
+          ' CHANGELOG.md > release_notes.md
+
+          if [ ! -s release_notes.md ]; then
+            echo "_Beta build — no changelog entries yet. See commit history for details._" > release_notes.md
+          fi
+
+      - name: Create tag
+        run: |
+          git tag ${{ needs.check.outputs.version }}
+          git push origin ${{ needs.check.outputs.version }}
+
+      - name: Publish beta release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create \
+            "${{ needs.check.outputs.version }}" \
+            main.js \
+            manifest.json \
+            styles.css \
+            --prerelease \
+            --title "${{ needs.check.outputs.version }}" \
+            --notes-file release_notes.md

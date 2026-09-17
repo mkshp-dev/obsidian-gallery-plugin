@@ -145,7 +145,10 @@ export class FolderScanner {
         const resourcePath = this.vault.adapter.getResourcePath(file.path);
         // Keep original path for validation, pass resource URL separately
         const imageSource = ImageSource.fromLocalPath(file.path, file.basename, resourcePath);
-        
+
+        // TFile.stat is already available synchronously and carries mtime alongside size
+        imageSource.mtime = file.stat?.mtime;
+
         // Get file size
         try {
             const stat = await this.vault.adapter.stat(file.path);

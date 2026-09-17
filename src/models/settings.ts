@@ -14,6 +14,9 @@ export interface GalleryPluginSettings {
     enableLifecycleLogging?: boolean;
     showCaptions: boolean;
     captionMaxLines: number;
+    // Pagination defaults (can be overridden per-gallery via the view: config)
+    defaultPagination: boolean;
+    defaultItemsPerPage: number;
     immichConnections: IImmichConnection[];
     nextcloudConnections: INextcloudConnection[];
 }
@@ -27,6 +30,8 @@ export const DEFAULT_SETTINGS: GalleryPluginSettings = {
     enableLifecycleLogging: false,
     showCaptions: true,
     captionMaxLines: 1,
+    defaultPagination: false,
+    defaultItemsPerPage: 24,
     immichConnections: [],
     nextcloudConnections: []
 };

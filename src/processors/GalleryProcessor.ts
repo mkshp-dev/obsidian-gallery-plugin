@@ -25,6 +25,9 @@ export interface IGalleryProcessingOptions {
         // Caption settings
         showCaptions?: boolean;
         captionMaxLines?: number;
+        // Pagination defaults (overridable per-gallery via the view: config)
+        pagination?: boolean;
+        itemsPerPage?: number;
 }
 
 export interface IGalleryRenderResult {
@@ -75,6 +78,8 @@ export class GalleryProcessor {
         ,enableLifecycleLogging: false
         ,showCaptions: true
         ,captionMaxLines: 1
+        ,pagination: false
+        ,itemsPerPage: 24
     };
 
     constructor(
@@ -489,11 +494,14 @@ export class GalleryProcessor {
                     try {
                         // Preferred: view has a setOptions API
                         if (view.setOptions) {
+                            const paginationOverrides = GalleryProcessor.getViewPaginationOverrides(config);
                             view.setOptions({
                                 remoteLoadTimeoutMs: options.timeoutMs,
                                 allowRemoteImages: options.allowRemoteImages,
                                 showCaptions: options.showCaptions,
-                                captionMaxLines: options.captionMaxLines
+                                captionMaxLines: options.captionMaxLines,
+                                pagination: paginationOverrides.pagination ?? options.pagination,
+                                itemsPerPage: paginationOverrides.itemsPerPage ?? options.itemsPerPage
                             });
                         }
                     } catch (error) { Logger.debug('Ignored error:', error); }
@@ -631,6 +639,23 @@ export class GalleryProcessor {
             Logger.error('Error creating gallery:', error);
             throw new Error(`Gallery creation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
+    }
+
+    /**
+     * Extract per-gallery pagination overrides from the config's view: block,
+     * e.g. `view: { type: grid, pagination: true, itemsPerPage: 12 }`.
+     * Returns undefined values for anything not explicitly set, so callers can
+     * fall back to the plugin-wide defaults.
+     */
+    private static getViewPaginationOverrides(config: IGalleryConfig): { pagination?: boolean; itemsPerPage?: number } {
+        const view = config.view;
+        if (!view || typeof view !== 'object') return {};
+
+        const raw = view as Record<string, unknown>;
+        const overrides: { pagination?: boolean; itemsPerPage?: number } = {};
+        if (typeof raw.pagination === 'boolean') overrides.pagination = raw.pagination;
+        if (typeof raw.itemsPerPage === 'number' && raw.itemsPerPage > 0) overrides.itemsPerPage = raw.itemsPerPage;
+        return overrides;
     }
 
     /**
@@ -804,11 +829,14 @@ export class GalleryProcessor {
             const currentOpts = { ...this.DEFAULT_OPTIONS, ...(this.getOptions ? this.getOptions() : {}) };
 
             if (gallery.view.setOptions) {
+                const paginationOverrides = GalleryProcessor.getViewPaginationOverrides(gallery.config);
                 gallery.view.setOptions({
                     remoteLoadTimeoutMs: currentOpts.timeoutMs,
                     allowRemoteImages: currentOpts.allowRemoteImages,
                     showCaptions: currentOpts.showCaptions,
-                    captionMaxLines: currentOpts.captionMaxLines
+                    captionMaxLines: currentOpts.captionMaxLines,
+                    pagination: paginationOverrides.pagination ?? currentOpts.pagination,
+                    itemsPerPage: paginationOverrides.itemsPerPage ?? currentOpts.itemsPerPage
                 });
             }
 

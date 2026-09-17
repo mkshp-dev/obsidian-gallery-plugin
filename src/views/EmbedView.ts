@@ -18,7 +18,7 @@ export class EmbedView extends GalleryView {
     super('embed', container);
   }
 
-  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number } = {}): void {
+  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number } = {}): void {
     super.setOptions(options);
     if (this.loader && typeof options.remoteLoadTimeoutMs === 'number') {
       this.loader.updateOptions({ timeoutMs: options.remoteLoadTimeoutMs });
@@ -31,7 +31,8 @@ export class EmbedView extends GalleryView {
 
     this.embedContainer = this.createElement(this.container, 'div', { cls: 'gallery-embed-list' });
 
-    this._images.forEach((img, idx) => {
+    const pageImages = this.getPageImages();
+    pageImages.forEach((img, idx) => {
       const wrapper = this.createElement(this.embedContainer!, 'figure', {
         cls: 'gallery-embed-item',
         attr: {
@@ -85,6 +86,8 @@ export class EmbedView extends GalleryView {
       const src = (imgEl.dataset && (imgEl.dataset.src || imgEl.getAttribute('data-src'))) || (imgEl.getAttribute('src') || '');
       if (src) this.loader!.observe(imgEl, src);
     });
+
+    this.renderPaginationControls(this.container);
   }
 
   update(images: IImageSource[]): void {

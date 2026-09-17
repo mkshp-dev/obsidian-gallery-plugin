@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Editor, Notice, TFolder } from 'obsidian';
 import type GalleryPlugin from '../main';
-import { ISourceConfig, INextcloudSourceConfig, INextcloudShareSourceConfig } from '../models/interfaces';
+import { ISourceConfig, ILocalSourceConfig, INextcloudSourceConfig, INextcloudShareSourceConfig } from '../models/interfaces';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 import { NotePathResolver } from '../utils/NotePathResolver';
@@ -302,6 +302,140 @@ export class GalleryBuilderModal extends Modal {
                         this.refreshLivePreview();
                     })
                 );
+
+            new Setting(container)
+                .setName('Limit')
+                .setDesc('Maximum number of items to fetch.')
+                .addText(text => text
+                    .setValue(source.limit?.toString() || '')
+                    .onChange(value => {
+                        const parsed = parseInt(value, 10);
+                        if (!isNaN(parsed) && parsed > 0) {
+                            source.limit = parsed;
+                        } else {
+                            delete source.limit;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
+            const localFilterContent = this.createCollapsibleSection(container, 'Filter criteria', false);
+
+            new Setting(localFilterContent)
+                .setName('Filename filter')
+                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .addText(text => text
+                    .setPlaceholder('*.jpg')
+                    .setValue(source.filenameFilter || '')
+                    .onChange(value => {
+                        if (value) {
+                            source.filenameFilter = value;
+                        } else {
+                            delete source.filenameFilter;
+                        }
+                        this.refreshLivePreview();
+                    })
+                );
+
+            {
+                const typedSource = source as unknown as ILocalSourceConfig;
+                this.createDateRangeSetting(
+                    localFilterContent,
+                    'Modified',
+                    'Only show files modified within this range.',
+                    typedSource.filters?.modifiedAfter || '',
+                    typedSource.filters?.modifiedBefore || '',
+                    value => {
+                        if (!typedSource.filters) typedSource.filters = {};
+                        if (value) {
+                            typedSource.filters.modifiedAfter = value;
+                        } else {
+                            delete typedSource.filters.modifiedAfter;
+                            if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                        }
+                        this.refreshLivePreview();
+                    },
+                    value => {
+                        if (!typedSource.filters) typedSource.filters = {};
+                        if (value) {
+                            typedSource.filters.modifiedBefore = value;
+                        } else {
+                            delete typedSource.filters.modifiedBefore;
+                            if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                        }
+                        this.refreshLivePreview();
+                    }
+                );
+            }
+
+            this.markPaired(new Setting(localFilterContent)
+                .setName('Min / max size (kb)')
+                .setDesc('File size range in kilobytes.')
+                .addText(text => {
+                    const typedSource = source as unknown as ILocalSourceConfig;
+                    return text
+                        .setPlaceholder('Min (e.g. 100)')
+                        .setValue(typedSource.filters?.minSizeKb?.toString() || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            const parsed = parseInt(value, 10);
+                            if (!isNaN(parsed) && parsed >= 0) {
+                                typedSource.filters.minSizeKb = parsed;
+                            } else {
+                                delete typedSource.filters.minSizeKb;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                })
+                .addText(text => {
+                    const typedSource = source as unknown as ILocalSourceConfig;
+                    return text
+                        .setPlaceholder('Max (e.g. 5000)')
+                        .setValue(typedSource.filters?.maxSizeKb?.toString() || '')
+                        .onChange(value => {
+                            if (!typedSource.filters) typedSource.filters = {};
+                            const parsed = parseInt(value, 10);
+                            if (!isNaN(parsed) && parsed > 0) {
+                                typedSource.filters.maxSizeKb = parsed;
+                            } else {
+                                delete typedSource.filters.maxSizeKb;
+                                if (Object.keys(typedSource.filters).length === 0) delete typedSource.filters;
+                            }
+                            this.refreshLivePreview();
+                        });
+                }));
+
+            const localSortContent = this.createCollapsibleSection(container, 'Sort', false);
+
+            this.markPaired(new Setting(localSortContent)
+                .setName('Sort by / order')
+                .setDesc('Property and direction to sort by.')
+                .addDropdown(dropdown => {
+                    const typedSource = source as unknown as ILocalSourceConfig;
+                    return dropdown
+                        .addOption('name', 'Name')
+                        .addOption('modified', 'Last modified')
+                        .addOption('size', 'Size')
+                        .setValue(typedSource.sort?.by || 'name')
+                        .onChange(value => {
+                            if (!typedSource.sort) typedSource.sort = { by: 'name', order: 'asc' };
+                            typedSource.sort.by = value as 'name' | 'modified' | 'size';
+                            this.refreshLivePreview();
+                        });
+                })
+                .addDropdown(dropdown => {
+                    const typedSource = source as unknown as ILocalSourceConfig;
+                    return dropdown
+                        .addOption('asc', 'Ascending')
+                        .addOption('desc', 'Descending')
+                        .setValue(typedSource.sort?.order || 'asc')
+                        .onChange(value => {
+                            if (!typedSource.sort) typedSource.sort = { by: 'name', order: 'asc' };
+                            typedSource.sort.order = value as 'asc' | 'desc';
+                            this.refreshLivePreview();
+                        });
+                }));
         } else if (source.type === 'external') {
             const urlsContainer = container.createDiv('gallery-builder-urls');
 

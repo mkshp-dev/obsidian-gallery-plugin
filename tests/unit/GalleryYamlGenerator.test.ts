@@ -158,6 +158,41 @@ describe('GalleryYamlGenerator', () => {
         expect(result).toContain('- https://example.com/img.png');
     });
 
+    it('should not emit pagination keys by default', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'local', path: 'Assets/Photos' }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'grid');
+
+        expect(result).not.toContain('pagination:');
+        expect(result).not.toContain('itemsPerPage:');
+    });
+
+    it('should emit pagination and itemsPerPage when enabled', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'local', path: 'Assets/Photos' }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'grid', { pagination: true, itemsPerPage: 12 });
+
+        expect(result).toContain('view:');
+        expect(result).toContain('type: grid');
+        expect(result).toContain('pagination: true');
+        expect(result).toContain('itemsPerPage: 12');
+    });
+
+    it('should emit pagination without itemsPerPage when count is left unset', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'local', path: 'Assets/Photos' }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'grid', { pagination: true });
+
+        expect(result).toContain('pagination: true');
+        expect(result).not.toContain('itemsPerPage:');
+    });
+
     it('should throw an error if no sources are provided', () => {
         expect(() => {
             GalleryYamlGenerator.generateYaml([], 'grid');

@@ -2,7 +2,10 @@
 
 ## In-progress
 
+## 2.4.3 - 2026-09-17
+
 - **pagination** (#193): Added the support for it in the gallery builder.
+
 
 ## 2.4.2 - 2026-09-17
 

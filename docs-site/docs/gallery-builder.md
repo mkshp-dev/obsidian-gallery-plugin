@@ -27,6 +27,11 @@ Select the gallery layout from the **View type** dropdown:
 | **Grid** | Masonry-style layout with variable-height images. |
 | **Thumbnail** | Fixed-size thumbnail grid. Clicking an image opens the full-size modal viewer. |
 | **Carousel** | Horizontally scrolling view with previous/next navigation. |
+| **Embed** | Continuous, borderless vertical stack at natural image size — feels like part of the note, similar to a native `![[image]]` embed. |
+
+#### Pagination (optional)
+
+For Grid, Thumbnail, and Embed views, toggle **Enable pagination** to page through large collections with Prev/Next controls instead of lazy-loading everything into one continuous scroll. Once enabled, an **Images per page** field appears to set how many images are shown per page.
 
 ### 2. Add Sources
 

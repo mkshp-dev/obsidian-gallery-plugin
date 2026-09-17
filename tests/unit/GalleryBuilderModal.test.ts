@@ -205,3 +205,57 @@ describe('GalleryBuilderModal Nextcloud YAML generation', () => {
         expect(yaml).toContain('limit: 50');
     });
 });
+
+describe('GalleryBuilderModal pagination', () => {
+    let mockApp: App;
+    let mockPlugin: GalleryPlugin;
+    let mockEditor: Editor;
+
+    beforeEach(() => {
+        mockApp = {
+            vault: { getAllLoadedFiles: () => [] },
+            workspace: { getActiveFile: () => null }
+        } as unknown as App;
+        mockPlugin = { settings: {} } as unknown as GalleryPlugin;
+        mockEditor = { replaceSelection: jest.fn() } as unknown as Editor;
+    });
+
+    it('does not include pagination keys in the inserted gallery by default', () => {
+        const modal = new GalleryBuilderModal(mockApp, mockPlugin, mockEditor);
+        const container = document.createElement('div');
+        (modal as any).addSource('local', container);
+        (modal as any).sources[0].path = 'Assets/Photos';
+
+        (modal as any).insertGallery();
+
+        const inserted = (mockEditor.replaceSelection as jest.Mock).mock.calls[0][0];
+        expect(inserted).not.toContain('pagination:');
+        expect(inserted).not.toContain('itemsPerPage:');
+    });
+
+    it('includes pagination and itemsPerPage in the inserted gallery when enabled', () => {
+        const modal = new GalleryBuilderModal(mockApp, mockPlugin, mockEditor);
+        const container = document.createElement('div');
+        (modal as any).addSource('local', container);
+        (modal as any).sources[0].path = 'Assets/Photos';
+        (modal as any).pagination = true;
+        (modal as any).itemsPerPage = 12;
+
+        (modal as any).insertGallery();
+
+        const inserted = (mockEditor.replaceSelection as jest.Mock).mock.calls[0][0];
+        expect(inserted).toContain('pagination: true');
+        expect(inserted).toContain('itemsPerPage: 12');
+    });
+
+    it('renders pagination settings without throwing whether or not pagination is enabled', () => {
+        const modal = new GalleryBuilderModal(mockApp, mockPlugin, mockEditor);
+        const container = document.createElement('div');
+        (modal as any).livePreviewContainer = document.createElement('code');
+
+        expect(() => (modal as any).renderPaginationSettings(container)).not.toThrow();
+
+        (modal as any).pagination = true;
+        expect(() => (modal as any).renderPaginationSettings(container)).not.toThrow();
+    });
+});

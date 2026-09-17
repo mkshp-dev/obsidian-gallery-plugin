@@ -1,7 +1,11 @@
 import { ISourceConfig } from '../models/interfaces';
 
 export class GalleryYamlGenerator {
-    static generateYaml(sources: Partial<ISourceConfig>[], viewType: string): string {
+    static generateYaml(
+        sources: Partial<ISourceConfig>[],
+        viewType: string,
+        viewOptions: { pagination?: boolean; itemsPerPage?: number } = {}
+    ): string {
         if (!sources || sources.length === 0) {
             throw new Error('At least one source is required.');
         }
@@ -205,6 +209,12 @@ export class GalleryYamlGenerator {
 
         yaml += `view:\n`;
         yaml += `  type: ${viewType}\n`;
+        if (viewOptions.pagination) {
+            yaml += `  pagination: true\n`;
+            if (viewOptions.itemsPerPage !== undefined) {
+                yaml += `  itemsPerPage: ${viewOptions.itemsPerPage}\n`;
+            }
+        }
         yaml += '```\n';
 
         return yaml;

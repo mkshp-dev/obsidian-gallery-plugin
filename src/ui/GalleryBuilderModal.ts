@@ -10,6 +10,8 @@ export class GalleryBuilderModal extends Modal {
     private editor: Editor;
 
     private viewType: string = 'grid';
+    private pagination: boolean = false;
+    private itemsPerPage: number | undefined = undefined;
     private sources: Partial<ISourceConfig>[] = [];
     private livePreviewContainer!: HTMLElement;
 
@@ -61,6 +63,9 @@ export class GalleryBuilderModal extends Modal {
                     this.refreshLivePreview();
                 })
             );
+
+        const paginationSettingsContainer = viewSection.createDiv('gallery-builder-pagination-settings');
+        this.renderPaginationSettings(paginationSettingsContainer);
 
         // 2. Sources Section
         const sourcesSection = mainCol.createDiv('gallery-builder-section');
@@ -128,6 +133,42 @@ export class GalleryBuilderModal extends Modal {
         this.refreshLivePreview();
     }
 
+    /**
+     * Renders the "Enable pagination" toggle and, when enabled, an "Items per
+     * page" field. Applies to Grid, Thumbnail, and Embed views (page through
+     * large collections instead of lazy-loading everything at once).
+     */
+    private renderPaginationSettings(container: HTMLElement) {
+        container.empty();
+
+        new Setting(container)
+            .setName('Enable pagination')
+            .setDesc('Show prev/next page controls instead of lazy-loading the full image list. Applies to grid, thumbnail, and embed views.')
+            .addToggle(toggle => toggle
+                .setValue(this.pagination)
+                .onChange(value => {
+                    this.pagination = value;
+                    this.renderPaginationSettings(container);
+                    this.refreshLivePreview();
+                })
+            );
+
+        if (this.pagination) {
+            new Setting(container)
+                .setName('Images per page')
+                .setDesc('Number of images to display per page.')
+                .addText(text => text
+                    .setPlaceholder('24')
+                    .setValue(this.itemsPerPage?.toString() || '')
+                    .onChange(value => {
+                        const parsed = parseInt(value, 10);
+                        this.itemsPerPage = (!isNaN(parsed) && parsed > 0) ? parsed : undefined;
+                        this.refreshLivePreview();
+                    })
+                );
+        }
+    }
+
     private refreshLivePreview() {
         if (!this.livePreviewContainer) return;
         this.livePreviewContainer.empty();
@@ -136,7 +177,10 @@ export class GalleryBuilderModal extends Modal {
             return;
         }
         try {
-            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType);
+            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType, {
+                pagination: this.pagination,
+                itemsPerPage: this.itemsPerPage
+            });
             this.livePreviewContainer.setText(yaml);
         } catch (e) {
             this.livePreviewContainer.setText(`# Cannot generate preview: ${e instanceof Error ? e.message : String(e)}`);
@@ -1241,7 +1285,10 @@ export class GalleryBuilderModal extends Modal {
 
     private insertGallery() {
         try {
-            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType);
+            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType, {
+                pagination: this.pagination,
+                itemsPerPage: this.itemsPerPage
+            });
             this.editor.replaceSelection(yaml);
             this.close();
         } catch (e) {

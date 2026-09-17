@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **pagination** (#193): Added the support for it in the gallery builder.
+
 ## 2.4.2 - 2026-09-17
 
 - **Pagination** (#193): Grid, Thumbnail, and Embed views now support paging through large collections with Prev/Next controls instead of lazy-loading everything into one long scroll. Enable via `pagination`/`itemsPerPage` in a gallery's `view:` config, or set a plugin-wide default in Settings → Gallery View → Pagination. Off by default, so existing galleries render unchanged.

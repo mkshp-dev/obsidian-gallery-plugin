@@ -192,6 +192,20 @@ export class ParameterParser {
                     `View type must be a string (Use one of: ${this.VIEW_TYPES.join(', ')})`,
                     `Valid view types are: ${this.VIEW_TYPES.join(', ')}`);
             }
+
+            if (typeof view === 'object' && view !== null) {
+                const viewObj = view as Record<string, unknown>;
+                if (viewObj.pagination !== undefined && typeof viewObj.pagination !== 'boolean') {
+                    throw this.createConfigError('invalid_pagination',
+                        'view.pagination must be true or false',
+                        'Use "pagination: true" or "pagination: false" inside the view: block');
+                }
+                if (viewObj.itemsPerPage !== undefined && (typeof viewObj.itemsPerPage !== 'number' || viewObj.itemsPerPage <= 0)) {
+                    throw this.createConfigError('invalid_items_per_page',
+                        'view.itemsPerPage must be a positive number',
+                        'Use "itemsPerPage: 24" (or similar) inside the view: block');
+                }
+            }
         }
 
         // Validate recursive parameter

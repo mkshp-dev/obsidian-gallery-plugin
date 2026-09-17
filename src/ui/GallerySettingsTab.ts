@@ -106,6 +106,23 @@ export class GallerySettingsTab extends PluginSettingTab {
                         control: { type: 'number', key: 'captionMaxLines', defaultValue: DEFAULT_SETTINGS.captionMaxLines, min: 1, max: 10 }
                     }
                 ]
+            },
+            {
+                type: 'group',
+                heading: 'Pagination',
+                desc: 'Split large galleries into pages instead of lazy-loading everything in one continuous scroll. Can be overridden per-gallery via the "pagination" and "itemsPerPage" keys in the view: config.',
+                items: [
+                    {
+                        name: 'Enable pagination by default',
+                        desc: 'Show Prev/Next page controls instead of lazy-loading the full image list. Off by default to preserve existing gallery behavior.',
+                        control: { type: 'toggle', key: 'defaultPagination', defaultValue: DEFAULT_SETTINGS.defaultPagination }
+                    },
+                    {
+                        name: 'Images per page',
+                        desc: 'Number of images to display per page when pagination is enabled.',
+                        control: { type: 'number', key: 'defaultItemsPerPage', defaultValue: DEFAULT_SETTINGS.defaultItemsPerPage, min: 1 }
+                    }
+                ]
             }
         ];
     }

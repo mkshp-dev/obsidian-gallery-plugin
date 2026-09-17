@@ -200,7 +200,9 @@ export default class GalleryPlugin extends Plugin {
             gracePeriodMs: this.settings.gracePeriodMs || DEFAULT_SETTINGS.gracePeriodMs,
             enableLifecycleLogging: !!this.settings.enableLifecycleLogging,
             showCaptions: this.settings.showCaptions ?? DEFAULT_SETTINGS.showCaptions,
-            captionMaxLines: this.settings.captionMaxLines ?? DEFAULT_SETTINGS.captionMaxLines
+            captionMaxLines: this.settings.captionMaxLines ?? DEFAULT_SETTINGS.captionMaxLines,
+            pagination: this.settings.defaultPagination ?? DEFAULT_SETTINGS.defaultPagination,
+            itemsPerPage: this.settings.defaultItemsPerPage ?? DEFAULT_SETTINGS.defaultItemsPerPage
         };
     }
 

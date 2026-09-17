@@ -17,3 +17,7 @@ view:
   type: thumbnail
 ```
 ````
+
+### Pagination
+
+Add `pagination: true` (optionally with `itemsPerPage`) to page through large collections instead of lazy-loading the whole list. See the [Grid view](./grid.md#pagination) page for the config keys — they work the same way here.

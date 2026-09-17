@@ -95,7 +95,7 @@ These notes render images immediately:
 - [[01 - Local source]] — Load images from a folder in your vault.
 - [[Nature (folder note demo)]] — Resolve \`path\` relative to the current note (\`.\`, \`./\`, \`../\`) instead of a hardcoded folder.
 - [[02 - External URLs]] — Load images from web URLs.
-- [[03 - Views]] — Three layout types: thumbnail, grid, carousel.
+- [[03 - Views]] — Layout types (thumbnail, grid, carousel, embed) and pagination for large collections.
 - [[04 - Mixed sources]] — Combine local + external in one gallery.
 - [[05 - Sort and limit]] — Control order and count of displayed images, including local \`sort\`/\`limit\`.
 - [[06 - Recursive and filters]] — Scan sub-folders and filter by filename glob, size, or date — for local files and Immich.
@@ -275,6 +275,24 @@ sources:
 view:
   type: embed
 \`\`\`
+
+---
+
+### Pagination
+For large collections, add \`pagination: true\` (with an optional \`itemsPerPage\`) to any of the views above to show a fixed number of images per page with Prev/Next controls, instead of lazy-loading everything into one long scroll. Below, \`itemsPerPage: 2\` splits this demo's 4 images across 2 pages so you can see the controls in action — in a real gallery you'd use a larger number like \`24\`.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: grid
+  pagination: true
+  itemsPerPage: 2
+\`\`\`
+
+Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination** — the per-gallery \`pagination\`/\`itemsPerPage\` keys shown above override that default.
 `;
         await this.app.vault.create(`${this.basePath}/03 - Views.md`, content);
     }

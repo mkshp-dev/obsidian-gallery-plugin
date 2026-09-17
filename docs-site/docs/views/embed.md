@@ -15,3 +15,7 @@ view:
   type: embed
 ```
 ````
+
+### Pagination
+
+Add `pagination: true` (optionally with `itemsPerPage`) to page through large collections instead of stacking every image in one continuous scroll. See the [Grid view](./grid.md#pagination) page for the config keys — they work the same way here.

@@ -222,7 +222,7 @@ export interface IGalleryView {
   isImageVisible(image: IImageSource): boolean;
 
   /** Optional runtime settings API */
-  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number }): void;
+  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number }): void;
 
   /** Optional runtime property for remote load timeout */
   remoteLoadTimeoutMs?: number;

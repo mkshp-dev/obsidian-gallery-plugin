@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- **Pagination** (#193): Grid, Thumbnail, and Embed views now support paging through large collections with Prev/Next controls instead of lazy-loading everything into one long scroll. Enable via `pagination`/`itemsPerPage` in a gallery's `view:` config, or set a plugin-wide default in Settings → Gallery View → Pagination. Off by default, so existing galleries render unchanged.
 - **Local Source Filters, Sort & Limit**: The `local` source now supports `filenameFilter` (glob), `filters` (`modifiedAfter`/`modifiedBefore`/`minSizeKb`/`maxSizeKb`), `sort` (`name`/`modified`/`size`, `asc`/`desc`), and `limit` — bringing it to parity with the `nextcloud` and `immich` sources. The Gallery Builder modal's local source panel gained matching controls, and the showcase generator (`Create showcase notes`) now demonstrates local sorting, limiting, and filtering alongside the existing Immich examples.
 
 ## 2.4.1 - 2026-08-23

@@ -6,7 +6,7 @@
 const config = {
   title: 'Gallery View',
   tagline: 'Create interactive image galleries in your Obsidian notes.',
-  favicon: 'img/favicon.png',
+  favicon: 'img/favicon.ico',
 
   url: 'https://docs.mkshp.dev',
   baseUrl: '/obsidian-gallery-plugin/',
@@ -49,6 +49,10 @@ const config = {
     ({
       navbar: {
         title: 'Gallery View',
+        logo: {
+          alt: 'mkshp',
+          src: 'img/mkshp.png',
+        },
         items: [
           {
             type: 'docSidebar',

@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- **README**: Added an install button and a live downloads badge, and replaced the stale hardcoded version badges with ones read from `manifest.json`.
 - **pagination** (#193): Added the support for it in the gallery builder.
 
 ## 2.4.2 - 2026-09-17

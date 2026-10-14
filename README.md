@@ -2,7 +2,9 @@
 
 Create interactive image galleries in your Obsidian notes using simple code blocks. Display images from your vault folders with thumbnail grids and click-to-expand modal viewing.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue) ![Obsidian](https://img.shields.io/badge/obsidian-0.15.0+-purple)
+[![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=downloads&query=%24%5B%22gallery-view%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json)](https://obsidian.md/plugins?id=gallery-view) ![Version](https://img.shields.io/github/manifest-json/v/mkshp-dev/obsidian-gallery-plugin?label=version) ![Obsidian](https://img.shields.io/github/manifest-json/minAppVersion/mkshp-dev/obsidian-gallery-plugin?label=obsidian&color=purple)
+
+[![Install in Obsidian](https://img.shields.io/badge/Install-Obsidian%20Community%20Plugins-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md/plugins?id=gallery-view)
 
 ## Features
 

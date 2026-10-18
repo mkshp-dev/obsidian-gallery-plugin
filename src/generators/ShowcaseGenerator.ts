@@ -1,10 +1,32 @@
 import { App, Notice } from 'obsidian';
 import { DUMMY_ASSETS } from './DemoAssets';
+import { ANIMATED_GIF_BASE64, DemoImageSpec, renderDemoImage } from './DemoImageFactory';
+import { Logger } from '../utils/Logger';
+
+/** Mixed shapes, formats, and awkward file names for the local test lab */
+const TEST_LAB_IMAGES: DemoImageSpec[] = [
+    { name: 'landscape-16x9', width: 800, height: 450, format: 'png', hue: 200 },
+    { name: 'portrait-9x16', width: 450, height: 800, format: 'jpeg', hue: 20 },
+    { name: 'square', width: 600, height: 600, format: 'webp', hue: 140 },
+    { name: 'panorama', width: 1600, height: 320, format: 'jpeg', hue: 260 },
+    { name: 'tall-strip', width: 240, height: 1000, format: 'png', hue: 320 },
+    { name: 'tiny-icon', width: 48, height: 48, format: 'png', hue: 50 },
+    { name: 'large-photo', width: 2400, height: 1600, format: 'jpeg', hue: 170 },
+    { name: 'Bildschirmfoto 2026-10-17 um 09.20.05', width: 500, height: 700, format: 'png', hue: 0 },
+    { name: 'A really long file name that should be truncated with an ellipsis in captions', width: 640, height: 480, format: 'jpeg', hue: 90 },
+    { name: 'café – ünïcödé & spaces', width: 640, height: 480, format: 'webp', hue: 290 },
+    { name: 'UPPERCASE-EXTENSION', width: 480, height: 360, format: 'jpeg', hue: 230, upperCaseExt: true },
+];
+
+/** Number of small images generated for pagination / lazy-loading tests */
+const TEST_LAB_BULK_COUNT = 36;
+const BULK_SIZES: Array<[number, number]> = [[320, 240], [240, 320], [300, 300], [400, 200]];
 
 export class ShowcaseGenerator {
     private app: App;
     private basePath = 'GalleryDemo';
     private assetsPath = 'GalleryDemo/Assets';
+    private testLabPath = 'GalleryDemo/_assets';
 
     constructor(app: App) {
         this.app = app;
@@ -25,9 +47,12 @@ export class ShowcaseGenerator {
             await this.createFolderSafe(`${this.assetsPath}/Nature`);
             await this.createFolderSafe(`${this.assetsPath}/Travel`);
             await this.createFolderSafe(`${this.assetsPath}/EmptyFolder`);
+            await this.createFolderSafe(this.testLabPath);
+            await this.createFolderSafe(`${this.testLabPath}/Bulk`);
 
             // Write dummy assets into sub-folders too
             await this.writeDummyAssets();
+            await this.writeTestLabAssets();
 
             // Create showcase notes
             await this.createWelcomeNote();
@@ -47,6 +72,7 @@ export class ShowcaseGenerator {
             await this.createNextcloudRecursiveAndFiltersNote();
             await this.createNextcloudSharedLinkNote();
             await this.createErrorStatesNote();
+            await this.createLocalTestLabNote();
 
             new Notice('Gallery view showcase generated successfully in gallerydemo');
         } catch (error) {
@@ -75,6 +101,43 @@ export class ShowcaseGenerator {
             const folder = subFolders[i % subFolders.length];
             await this.app.vault.createBinary(`${folder}/demo-${i + 1}.jpg`, bytes.buffer);
         }
+    }
+
+    private async writeTestLabAssets(): Promise<void> {
+        const bulkSpecs: DemoImageSpec[] = Array.from({ length: TEST_LAB_BULK_COUNT }, (_, i) => {
+            const [width, height] = BULK_SIZES[i % BULK_SIZES.length];
+            return {
+                name: `bulk-${String(i + 1).padStart(2, '0')}`,
+                width,
+                height,
+                format: 'jpeg',
+                hue: Math.round((i * 360) / TEST_LAB_BULK_COUNT)
+            };
+        });
+
+        const batches: Array<[string, DemoImageSpec[]]> = [
+            [this.testLabPath, TEST_LAB_IMAGES],
+            [`${this.testLabPath}/Bulk`, bulkSpecs]
+        ];
+
+        for (const [folder, specs] of batches) {
+            for (const spec of specs) {
+                const file = await renderDemoImage(spec);
+                if (!file) {
+                    Logger.warn('Canvas rendering unavailable; skipping generated test lab images');
+                    return;
+                }
+                await this.app.vault.createBinary(`${folder}/${file.fileName}`, file.data);
+            }
+        }
+
+        // Animated GIF (canvas cannot encode GIFs, so this one is embedded)
+        const gif = Uint8Array.from(window.atob(ANIMATED_GIF_BASE64), c => c.charCodeAt(0));
+        await this.app.vault.createBinary(`${this.testLabPath}/animated.gif`, gif.buffer);
+
+        // A file with an image extension but invalid contents, to exercise the error tile
+        const broken = Uint8Array.from('This is not an image.', c => c.charCodeAt(0));
+        await this.app.vault.createBinary(`${this.testLabPath}/broken-image.jpg`, broken.buffer);
     }
 
     private async createWelcomeNote(): Promise<void> {
@@ -123,6 +186,10 @@ No connection settings required, just a public Nextcloud share URL:
 ### ⚠️ Error States Reference
 See every compact error the plugin can show — great for debugging your own galleries:
 - [[15 - Error states]] — One intentionally broken gallery per error type.
+
+### 🧪 Local Test Lab
+Generated images in many shapes, sizes, and formats for checking layouts by eye:
+- [[16 - Local test lab]] — Aspect ratios, formats (PNG/JPEG/WebP/GIF), long and Unicode file names, a broken file, and 36 extra images for pagination.
 
 ## Next Steps
 Want to learn more? Check out the full [Documentation](https://mkshp-dev.github.io/obsidian-gallery-plugin/)!
@@ -1261,5 +1328,204 @@ view:
 
         const content = lines.join('\n') + '\n';
         await this.app.vault.create(`${this.basePath}/15 - Error states.md`, content);
+    }
+
+    private async createLocalTestLabNote(): Promise<void> {
+        const content = `\
+# Local Test Lab
+
+A workbench for checking layouts by eye. The images in \`${this.testLabPath}/\` were generated with deliberately awkward properties, and each one is labelled with its own name, size, and format:
+
+| File | Size | Tests |
+|---|---|---|
+| \`landscape-16x9.png\` | 800×450 | Standard landscape |
+| \`portrait-9x16.jpg\` | 450×800 | Tall portrait |
+| \`square.webp\` | 600×600 | Square, WebP format |
+| \`panorama.jpg\` | 1600×320 | Extreme wide ratio |
+| \`tall-strip.png\` | 240×1000 | Extreme tall ratio |
+| \`tiny-icon.png\` | 48×48 | Smaller than a tile (upscaling) |
+| \`large-photo.jpg\` | 2400×1600 | Large file (size filters, sorting) |
+| \`Bildschirmfoto 2026-10-17 um 09.20.05.png\` | 500×700 | Spaces and dots in the name |
+| \`A really long file name … in captions.jpg\` | 640×480 | Caption truncation |
+| \`café – ünïcödé & spaces.webp\` | 640×480 | Unicode and symbols in the name |
+| \`UPPERCASE-EXTENSION.JPG\` | 480×360 | Upper-case extension |
+| \`animated.gif\` | 240×160 | Animated GIF |
+| \`broken-image.jpg\` | — | Not a real image: should show an error tile |
+
+The white corner squares and border show whether an image is being cropped. A further ${TEST_LAB_BULK_COUNT} images live in \`_assets/Bulk/\` for pagination tests.
+
+> 💡 Captions are controlled in **Settings → Gallery View → Captions**. Try toggling **Show captions** and changing **Caption max lines** while this note is open.
+
+---
+
+## Thumbnail view
+
+All tiles should be the same width, captions should end with an ellipsis when too long, and each card should be only as tall as its image box plus caption.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+    recursive: false
+view:
+  type: thumbnail
+\`\`\`
+
+---
+
+## Grid view
+
+Each image keeps its natural aspect ratio in a masonry layout.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+view:
+  type: grid
+\`\`\`
+
+---
+
+## Carousel view
+
+Check that the panorama and the tall strip don't break the slide height.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+view:
+  type: carousel
+\`\`\`
+
+---
+
+## Embed view
+
+Natural size, no card chrome. The tiny icon should stay small and the large photo should shrink to the note width.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+    filenameFilter: "{tiny,large,panorama,tall}*"
+view:
+  type: embed
+\`\`\`
+
+---
+
+## Pagination
+
+${TEST_LAB_BULK_COUNT} images, 12 per page: there should be 3 pages.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets/Bulk
+view:
+  type: thumbnail
+  pagination: true
+  itemsPerPage: 12
+\`\`\`
+
+Same images in the grid view, 10 per page (the last page is a partial page of 6):
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets/Bulk
+view:
+  type: grid
+  pagination: true
+  itemsPerPage: 10
+\`\`\`
+
+---
+
+## Recursive scan
+
+\`_assets\` plus \`_assets/Bulk\` together, with no pagination, to exercise lazy loading.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+    recursive: true
+view:
+  type: thumbnail
+\`\`\`
+
+---
+
+## Sort and limit
+
+The three largest files first (\`large-photo.jpg\` should lead):
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+    sort:
+      by: size
+      order: desc
+    limit: 3
+view:
+  type: thumbnail
+\`\`\`
+
+Reverse alphabetical order:
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+    sort:
+      by: name
+      order: desc
+view:
+  type: thumbnail
+\`\`\`
+
+---
+
+## Filters
+
+PNG files only (\`*.png\`):
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+    filenameFilter: "*.png"
+view:
+  type: thumbnail
+\`\`\`
+
+Match by extension regardless of case (\`*.{jpg,webp}\` also matches \`UPPERCASE-EXTENSION.JPG\`):
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+    filenameFilter: "*.{jpg,webp}"
+view:
+  type: thumbnail
+\`\`\`
+
+Files of at least 40 KB, which should leave just \`large-photo.jpg\`:
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+    filters:
+      minSizeKb: 40
+view:
+  type: thumbnail
+\`\`\`
+`;
+        await this.app.vault.create(`${this.basePath}/16 - Local test lab.md`, content);
     }
 }

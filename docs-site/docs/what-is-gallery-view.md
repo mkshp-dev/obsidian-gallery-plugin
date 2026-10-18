@@ -65,6 +65,8 @@ If you want a hands-on way to explore the plugin's features, Gallery View includ
 
 From the Obsidian command palette, run **Gallery View: Create showcase notes**. This will generate a safe-to-edit `GalleryDemo/` folder in your vault containing working examples of local sources, views, external URLs, and templates for Immich sharing.
 
+It also includes a **Local test lab** note backed by a `GalleryDemo/_assets/` folder of generated images. The images vary in aspect ratio, size and format (PNG, JPEG, WebP, animated GIF), and the folder includes awkward file names, a deliberately broken file, and a bulk set for pagination. Use it to check how each view handles real-world variety before pointing a gallery at your own folders.
+
 ## Where to go next
 
 - [Installation](./installation) — how to install the plugin

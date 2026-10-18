@@ -30,9 +30,11 @@ jobs:
 
       - name: Check commit message
         id: check
+        # Pass the message via env, never by interpolating it into the script:
+        # quotes in a commit message would otherwise break (or inject into) bash
+        env:
+          MSG: ${{ github.event.head_commit.message }}
         run: |
-          MSG="${{ github.event.head_commit.message }}"
-
           if [[ "$MSG" =~ ^Beta-Release[[:space:]]v?([0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+)$ ]]; then
             VERSION="${BASH_REMATCH[1]}"
             echo "is_beta=true" >> $GITHUB_OUTPUT

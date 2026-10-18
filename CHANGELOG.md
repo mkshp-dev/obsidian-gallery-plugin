@@ -7,6 +7,7 @@
 
 ## 2.4.3 - 2026-09-17
 
+- **README**: Added an install button and a live downloads badge, and replaced the stale hardcoded version badges with ones read from `manifest.json`.
 - **pagination** (#193): Added the support for it in the gallery builder.
 
 

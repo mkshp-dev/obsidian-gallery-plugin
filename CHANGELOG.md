@@ -2,8 +2,14 @@
 
 ## In-progress
 
+- **Thumbnail layout fix** (#198): Every thumbnail tile now has the same width and a uniform image box. Previously the first item (and every 12th after it) spanned two columns on wide screens. Cards are also no longer stretched to fill a 420px minimum grid height, which left large empty gaps above the captions. A tile whose image fails to load now shows its error inside the image box instead of growing taller and stretching every card in its row, and images smaller than the tile are no longer enlarged.
+- **Local test lab showcase**: `Create showcase notes` now also generates `16 - Local test lab` and a `GalleryDemo/_assets/` folder. The folder holds images in many aspect ratios and sizes, PNG/JPEG/WebP/animated GIF files, long, Unicode and upper-case-extension file names, an intentionally broken file, and 36 extra images for pagination tests. The images are drawn at runtime, so the plugin bundle stays small.
+
+## 2.4.3 - 2026-09-17
+
 - **README**: Added an install button and a live downloads badge, and replaced the stale hardcoded version badges with ones read from `manifest.json`.
 - **pagination** (#193): Added the support for it in the gallery builder.
+
 
 ## 2.4.2 - 2026-09-17
 

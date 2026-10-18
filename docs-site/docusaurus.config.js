@@ -8,7 +8,7 @@ const config = {
   tagline: 'Create interactive image galleries in your Obsidian notes.',
   favicon: 'img/favicon.png',
 
-  url: 'https://mkshp-dev.github.io',
+  url: 'https://docs.mkshp.dev',
   baseUrl: '/obsidian-gallery-plugin/',
 
   organizationName: 'mkshp-dev',

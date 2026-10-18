@@ -11,6 +11,21 @@ jest.mock('obsidian', () => {
     };
 });
 
+// jsdom has no canvas implementation, so stub the image renderer
+jest.mock('../../src/generators/DemoImageFactory', () => {
+    const actual = jest.requireActual('../../src/generators/DemoImageFactory');
+    return {
+        ...actual,
+        renderDemoImage: jest.fn(async (spec: { name: string; format: string; upperCaseExt?: boolean }) => {
+            const ext = spec.format === 'jpeg' ? 'jpg' : spec.format;
+            return {
+                fileName: `${spec.name}.${spec.upperCaseExt ? ext.toUpperCase() : ext}`,
+                data: new ArrayBuffer(8)
+            };
+        })
+    };
+});
+
 describe('ShowcaseGenerator', () => {
     // Setup global atob for jest environment
     beforeAll(() => {
@@ -71,10 +86,16 @@ describe('ShowcaseGenerator', () => {
         expect(mockApp.vault.adapter.mkdir).toHaveBeenCalledWith('GalleryDemo');
         expect(mockApp.vault.adapter.mkdir).toHaveBeenCalledWith('GalleryDemo/Assets');
 
-        // 2. Verify dummy assets were written (4 images)
-        expect(mockApp.vault.createBinary).toHaveBeenCalledTimes(4);
+        // 2. Verify dummy assets were written (4 bundled + 11 test lab + 36 bulk + GIF + broken file)
+        expect(mockApp.vault.createBinary).toHaveBeenCalledTimes(53);
         expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/Assets/demo-1.jpg', expect.any(ArrayBuffer));
         expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/Assets/demo-4.jpg', expect.any(ArrayBuffer));
+        expect(mockApp.vault.adapter.mkdir).toHaveBeenCalledWith('GalleryDemo/_assets/Bulk');
+        expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/_assets/portrait-9x16.jpg', expect.any(ArrayBuffer));
+        expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/_assets/UPPERCASE-EXTENSION.JPG', expect.any(ArrayBuffer));
+        expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/_assets/animated.gif', expect.any(ArrayBuffer));
+        expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/_assets/broken-image.jpg', expect.any(ArrayBuffer));
+        expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/_assets/Bulk/bulk-36.jpg', expect.any(ArrayBuffer));
 
         // 3. Verify markdown notes were created
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/00 - Welcome.md', expect.any(String));
@@ -94,6 +115,7 @@ describe('ShowcaseGenerator', () => {
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/13 - Nextcloud recursive and filters.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/14 - Nextcloud shared link.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/15 - Error states.md', expect.any(String));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/16 - Local test lab.md', expect.any(String));
 
         // 4. Verify success notice
         expect(Notice).toHaveBeenCalledWith('Gallery view showcase generated successfully in gallerydemo');

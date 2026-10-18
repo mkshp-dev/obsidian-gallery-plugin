@@ -57,10 +57,10 @@
   /* Let rows size to their content so items don't visually overlap */
   grid-auto-rows: auto;
   grid-auto-flow: row;
+  /* Pack rows at the top instead of stretching them to fill the grid */
+  align-content: start;
   container-type: inline-size;
   isolation: isolate;
-  /* Ensure the thumbnail area is visible even when images are loading */
-  min-height: 420px;
 }
 
 .gallery-thumbnail-item {
@@ -101,12 +101,11 @@
 }
 
 .gallery-thumbnail-image {
-  /* Preserve original aspect ratio and render images smaller */
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 180px; /* limit visual size to reduce blank space */
-  object-fit: contain;
+  /* Uniform image box per tile; scale-down preserves each image's aspect
+     ratio without enlarging images smaller than the box */
+  width: 100%;
+  height: 180px;
+  object-fit: scale-down;
   display: block;
   transition: all 0.2s ease;
   image-rendering: optimizeQuality;
@@ -152,19 +151,6 @@
   line-clamp: var(--gallery-caption-max-lines);
   word-break: break-word;
   width: 100%;
-}
-
-/* Size variation utility classes */
-.gallery-thumbnail-item--large { grid-column: span 1; }
-.gallery-thumbnail-item--wide { grid-column: span 1; }
-.gallery-thumbnail-item--tall {
-  /* tall items naturally expand within grid rows */
-}
-
-/* Make large/wide tiles span two columns only on wider viewports */
-@media (min-width: 1000px) {
-  .gallery-thumbnail-item--large { grid-column: span 2; }
-  .gallery-thumbnail-item--wide { grid-column: span 2; }
 }
 
 /* Enhanced Loading State */
@@ -1314,6 +1300,40 @@
 .gallery-item-error {
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border-hover);
+}
+
+/* Thumbnail tiles: overlay the error on the image box instead of appending
+   it below the caption, so a failed tile doesn't stretch its whole grid row */
+.gallery-thumbnail-item .gallery-error-placeholder {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  height: 180px;
+  min-height: 0;
+  padding: 0.5rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.gallery-thumbnail-item .gallery-error-placeholder .gallery-error-icon {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.gallery-thumbnail-item .gallery-error-placeholder .gallery-error-message,
+.gallery-thumbnail-item .gallery-error-placeholder .gallery-error-title {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  margin-bottom: 0.25rem;
+}
+
+.gallery-thumbnail-item .gallery-error-placeholder .gallery-error-details {
+  display: none;
+}
+
+.gallery-thumbnail-item .gallery-error-placeholder .gallery-error-retry {
+  margin-top: 0.25rem;
 }
 
 /* Error visibility animations */

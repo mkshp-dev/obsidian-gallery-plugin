@@ -55,10 +55,10 @@ export class ThumbnailView extends GalleryView {
             cls: 'gallery-thumbnail-grid'
         });
 
-        // Render each image thumbnail (pass index for size variations)
+        // Render each image thumbnail
         const pageImages = this.getPageImages();
-        pageImages.forEach((image, idx) => {
-            this.renderThumbnailItem(gridContainer, image, idx);
+        pageImages.forEach(image => {
+            this.renderThumbnailItem(gridContainer, image);
         });
 
         this.renderPaginationControls(this.container);
@@ -84,7 +84,7 @@ export class ThumbnailView extends GalleryView {
     /**
      * Render individual thumbnail item
      */
-    private renderThumbnailItem(container: HTMLElement, image: IImageSource, idx: number): void {
+    private renderThumbnailItem(container: HTMLElement, image: IImageSource): void {
         const itemEl = container.createDiv({
             cls: 'gallery-thumbnail-item',
             attr: {
@@ -93,15 +93,6 @@ export class ThumbnailView extends GalleryView {
                 'tabindex': '0'
             }
         });
-
-        // Add occasional larger/tall items for a more varied masonry look
-        // Use less frequent intervals so large items are rarer and don't
-        // dominate vertical space.
-        if (idx % 12 === 0) {
-            itemEl.classList.add('gallery-thumbnail-item--large');
-        } else if (idx % 23 === 0) {
-            itemEl.classList.add('gallery-thumbnail-item--tall');
-        }
 
         // Accessibility: expose as button and provide an accessible name
         itemEl.setAttribute('role', 'button');

@@ -191,7 +191,7 @@ export class GallerySettingsTab extends PluginSettingTab {
 
             new Setting(contentDiv)
                 .setName('Base URL')
-                .setDesc('The base URL of your immich server (e.g. Https://immich.example.com).')
+                .setDesc('The base URL of your server.')
                 .addText(text => text
                     .setPlaceholder('https://immich.example.com')
                     .setValue(conn.baseUrl)
@@ -202,10 +202,10 @@ export class GallerySettingsTab extends PluginSettingTab {
                 );
 
             new Setting(contentDiv)
-                .setName('Api key')
-                .setDesc('Your personal immich api key.')
+                .setName('API key')
+                .setDesc('Your personal API key.')
                 .addText(text => text
-                    .setPlaceholder('Your api key')
+                    .setPlaceholder('Your API key')
                     .setValue(conn.apiKey)
                     .onChange(async (value) => {
                         this.plugin.settings.immichConnections[index].apiKey = value;
@@ -288,7 +288,7 @@ export class GallerySettingsTab extends PluginSettingTab {
 
             new Setting(contentDiv)
                 .setName('Base URL')
-                .setDesc('The base URL of your nextcloud server (e.g. Https://cloud.example.com).')
+                .setDesc('The base URL of your server.')
                 .addText(text => text
                     .setPlaceholder('https://cloud.example.com')
                     .setValue(conn.baseUrl)

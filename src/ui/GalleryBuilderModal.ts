@@ -115,7 +115,7 @@ export class GalleryBuilderModal extends Modal {
             const codeText = this.livePreviewContainer?.innerText || '';
             if (codeText) {
                 void navigator.clipboard.writeText(codeText);
-                new Notice('Gallery yaml copied to clipboard!');
+                new Notice('Gallery YAML copied to clipboard!');
             }
         });
 
@@ -199,7 +199,7 @@ export class GalleryBuilderModal extends Modal {
             const emptyState = container.createDiv('gallery-builder-empty-state');
             emptyState.createDiv({ cls: 'gallery-builder-empty-icon', text: '🖼️' });
             emptyState.createEl('h4', { text: 'No image sources added yet' });
-            emptyState.createEl('p', { text: 'Click one of the buttons above to add local files, external URLs, or immich albums.' });
+            emptyState.createEl('p', { text: 'Click one of the buttons above to add an image source.' });
             return;
         }
 
@@ -367,7 +367,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(localFilterContent)
                 .setName('Filename filter')
-                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .setDesc('Glob pattern for filenames, such as *.jpg')
                 .addText(text => text
                     .setPlaceholder('*.jpg')
                     .setValue(source.filenameFilter || '')
@@ -878,7 +878,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(ncFilterContent)
                 .setName('Filename filter')
-                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .setDesc('Glob pattern for filenames, such as *.jpg')
                 .addText(text => text
                     .setPlaceholder('*.jpg')
                     .setValue(source.filenameFilter || '')
@@ -963,7 +963,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(ncFilterContent)
                 .setName('Mime types')
-                .setDesc('Comma-separated list of mime types (e.g. Image/jpeg, image/png).')
+                .setDesc('Comma-separated list of file types to include.')
                 .addText(text => {
                     const typedSource = source as unknown as INextcloudSourceConfig;
                     return text
@@ -1039,7 +1039,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(ncsFilterContent)
                 .setName('Filename filter')
-                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .setDesc('Glob pattern for filenames, such as *.jpg')
                 .addText(text => text
                     .setPlaceholder('*.jpg')
                     .setValue(source.filenameFilter || '')
@@ -1055,7 +1055,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(ncsFilterContent)
                 .setName('Mime types')
-                .setDesc('Comma-separated list of mime types (e.g. Image/jpeg, image/png).')
+                .setDesc('Comma-separated list of file types to include.')
                 .addText(text => {
                     const typedSource = source as unknown as INextcloudShareSourceConfig;
                     return text

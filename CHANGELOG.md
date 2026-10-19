@@ -2,6 +2,9 @@
 
 ## In-progress
 
+- **Linting matches the Obsidian review bot**: Upgraded `eslint-plugin-obsidianmd` to 0.4.2 and switched to its stock `recommended` config with no rule overrides, so `npm run lint` reports the same issues as the plugin review bot.
+- **Settings and builder text cleanup**: Fixed UI text that earlier lint autofixes had garbled (for example `Image/jpeg` and `Https://`), and reworded descriptions to pass the default sentence-case check: "API key", "Try again", "Gallery YAML copied to clipboard!", and shorter base-URL and MIME-type descriptions.
+
 ## 2.4.4 - 2026-10-18
 
 - **Thumbnail layout fix** (#198): Every thumbnail tile now has the same width and a uniform image box. Previously the first item (and every 12th after it) spanned two columns on wide screens. Cards are also no longer stretched to fill a 420px minimum grid height, which left large empty gaps above the captions. A tile whose image fails to load now shows its error inside the image box instead of growing taller and stretching every card in its row, and images smaller than the tile are no longer enlarged.

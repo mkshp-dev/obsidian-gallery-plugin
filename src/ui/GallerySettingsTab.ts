@@ -85,8 +85,8 @@ export class GallerySettingsTab extends PluginSettingTab {
                         control: { type: 'number', key: 'gracePeriodMs', defaultValue: DEFAULT_SETTINGS.gracePeriodMs, min: 0 }
                     },
                     {
-                        name: 'Enable lifecycle logging',
-                        desc: 'Enable verbose lifecycle logs (debug) for gallery attach/detach events. Useful for troubleshooting mode toggles.',
+                        name: 'Enable debug logging',
+                        desc: 'Write verbose debug logs to the developer console. Useful for troubleshooting.',
                         control: { type: 'toggle', key: 'enableLifecycleLogging', defaultValue: false }
                     }
                 ]

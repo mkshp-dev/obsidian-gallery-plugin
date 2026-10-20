@@ -4,6 +4,7 @@
 
 - **Linting matches the Obsidian review bot**: Upgraded `eslint-plugin-obsidianmd` to 0.4.2 and switched to its stock `recommended` config with no rule overrides, so `npm run lint` reports the same issues as the plugin review bot.
 - **Settings and builder text cleanup**: Fixed UI text that earlier lint autofixes had garbled (for example `Image/jpeg` and `Https://`), and reworded descriptions to pass the default sentence-case check: "API key", "Try again", "Gallery YAML copied to clipboard!", and shorter base-URL and MIME-type descriptions.
+- **Debug logging setting**: Debug logs were always on. They now follow the setting, renamed from **Enable lifecycle logging** to **Enable debug logging** (off by default).
 
 ## 2.4.4 - 2026-10-18
 

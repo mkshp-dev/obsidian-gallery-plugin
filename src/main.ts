@@ -26,8 +26,6 @@ export default class GalleryPlugin extends Plugin {
     private _onOpenSettingsRequested: ((e?: Event) => void) | null = null;
     
     async onload() {
-        Logger.setDebugEnabled(true);
-
         await this.loadSettings();
 
         // Initialize core services
@@ -139,9 +137,12 @@ export default class GalleryPlugin extends Plugin {
         } else {
             this.settings.nextcloudConnections = [];
         }
+
+        Logger.setDebugEnabled(!!this.settings.enableLifecycleLogging);
     }
 
     async saveSettings() {
+        Logger.setDebugEnabled(!!this.settings.enableLifecycleLogging);
         await this.saveData(this.settings);
     }
 

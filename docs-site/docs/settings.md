@@ -17,7 +17,7 @@ The General tab controls core plugin behavior and remote image handling.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Error display mode | `Full` | Controls how block-processing errors are shown. `Full` renders a styled error card. `Text only` outputs a plain-text message. `Hidden` silently suppresses all errors (useful for production vaults). |
-| Show captions | `On` | Controls persistent caption display under images in Grid, Thumbnail, and Carousel views. When toggled off, persistent captions are hidden. |
+| Show captions | `On` | Controls persistent caption display under images in Masonry, Thumbnail, and Carousel views, and on hover in the Justified view. When toggled off, persistent captions are hidden. |
 | Caption max lines | `1` | Controls the maximum number of text lines displayed for image captions before truncating with an ellipsis (configurable between 1 and 5). |
 | Allow remote images | Off | Enable loading images from external URLs. Disabled by default to protect your privacy. If disabled, any `external` sources in your blocks will be skipped. |
 | Remote load timeout (ms) | 30000 | How long the plugin waits for a remote image to load before giving up. Useful for slow network connections or slow remote servers. |

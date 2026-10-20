@@ -24,14 +24,15 @@ Select the gallery layout from the **View type** dropdown:
 
 | Option | Description |
 |--------|-------------|
-| **Grid** | Masonry-style layout with variable-height images. |
+| **Masonry** | Equal-width columns, each image at its natural height (Pinterest-style). |
+| **Justified** | Equal-height rows that fill the width, images uncropped (like Immich or Google Photos). |
 | **Thumbnail** | Fixed-size thumbnail grid. Clicking an image opens the full-size modal viewer. |
 | **Carousel** | Horizontally scrolling view with previous/next navigation. |
 | **Embed** | Continuous, borderless vertical stack at natural image size — feels like part of the note, similar to a native `![[image]]` embed. |
 
 #### Pagination (optional)
 
-For Grid, Thumbnail, and Embed views, toggle **Enable pagination** to page through large collections with Prev/Next controls instead of lazy-loading everything into one continuous scroll. Once enabled, an **Images per page** field appears to set how many images are shown per page.
+For Masonry, Justified, Thumbnail, and Embed views, toggle **Enable pagination** to page through large collections with Prev/Next controls instead of lazy-loading everything into one continuous scroll. Once enabled, an **Images per page** field appears to set how many images are shown per page.
 
 ### 2. Add Sources
 
@@ -102,7 +103,7 @@ Completions are triggered automatically when your cursor is inside an `obs-galle
 |-------|-------------|
 | `type:` | `local`, `immich`, `immich-share` |
 | `connection:` | Your configured Immich connection keys (with their base URLs shown as descriptions) |
-| `view:` | `grid`, `carousel`, `thumbnail` |
+| `view:` | `thumbnail`, `carousel`, `masonry`, `justified`, `embed` |
 | `assetType:` | `IMAGE`, `VIDEO` |
 | `sort.order:` | `asc`, `desc` |
 | Items in `albumIds:` list | Album names fetched live from Immich (inserts the UUID) |

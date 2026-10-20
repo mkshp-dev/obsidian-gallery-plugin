@@ -30,7 +30,7 @@ sources:
       order: asc        # asc | desc
     limit: 20
 view:
-  type: grid
+  type: masonry
 ```
 
 | Field | Type | Required | Description |
@@ -68,7 +68,7 @@ sources:
   - type: nextcloud-share
     url: https://use23.thegood.cloud/s/abc123456789
 view:
-  type: grid
+  type: masonry
 ```
 
 ### 2. Password-Protected Share Link

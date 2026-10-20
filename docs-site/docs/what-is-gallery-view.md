@@ -8,7 +8,7 @@ sidebar_position: 1
 
 ## Features
 
-- Display images in thumbnail grids, carousels, or masonry layouts
+- Display images in thumbnail grids, carousels, masonry columns, or justified rows
 - Click thumbnails to open a full-size modal viewer
 - Scan folders recursively for large collections
 - Load images from external URLs, Immich, or Nextcloud (shared links and authenticated connections)
@@ -44,7 +44,7 @@ Gallery View includes built-in editor tools to make writing gallery blocks faste
 ### Insert Gallery (Builder Modal)
 
 Instead of writing YAML by hand, use the **Gallery View: Insert gallery** command from the command palette. This opens an interactive modal where you can:
-- Choose a view type (Grid, Thumbnail, Carousel, Embed)
+- Choose a view type (Thumbnail, Carousel, Masonry, Justified, Embed)
 - Enable pagination and set images-per-page for large collections
 - Add and configure one or more sources using form fields
 - Preview the generated YAML in real time before inserting it.

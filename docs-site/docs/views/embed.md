@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 # Embed view
@@ -18,4 +18,4 @@ view:
 
 ### Pagination
 
-Add `pagination: true` (optionally with `itemsPerPage`) to page through large collections instead of stacking every image in one continuous scroll. See the [Grid view](./grid.md#pagination) page for the config keys — they work the same way here.
+Add `pagination: true` (optionally with `itemsPerPage`) to page through large collections instead of stacking every image in one continuous scroll. See the [Masonry view](./masonry.md#pagination) page for the config keys — they work the same way here.

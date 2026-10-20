@@ -18,7 +18,8 @@ See [Settings → Providers tab](../settings#providers-tab) for step-by-step ins
 
 ## Common Behavior
 
-- **View-Aware Loading**: The plugin intelligently fetches lighter thumbnail or preview assets depending on your active `view` to improve rendering speed, avoiding large original asset downloads for large grids.
+- **View-Aware Loading**: The plugin fetches lighter assets depending on your `view`: thumbnails for the `thumbnail`, `masonry` and `justified` views, and previews for `carousel`. This avoids downloading large originals for big galleries.
+- **Stable layouts**: Immich reports each photo's size, so the `masonry` and `justified` views place photos correctly before they download.
 - **Inline Error Behavior**: If an asset fails to load, the gallery handles it inline gracefully, and can retry if the asset becomes available.
 - **Separate from Shared Links**: The `immich` authenticated source is entirely separate from `immich-share` and does not use public shared links. It exclusively uses your securely stored API keys.
 
@@ -46,7 +47,7 @@ sources:
       by: createdAt
       order: desc  # or: asc
 view:
-  type: grid
+  type: masonry
 ```
 
 | Field | Type | Required | Description |
@@ -83,7 +84,7 @@ sources:
       albumIds:
         - 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
 view:
-  type: grid
+  type: masonry
 ```
 
 You can include **multiple albums** by listing more than one ID:
@@ -97,7 +98,7 @@ sources:
         - 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
         - a1b2c3d4-0000-1111-2222-333344445555
 view:
-  type: grid
+  type: masonry
 ```
 
 #### Finding your Album ID
@@ -119,7 +120,7 @@ sources:
     filters:
       isFavorite: true
 view:
-  type: grid
+  type: masonry
 ```
 
 **Note:** If you have no favorites in your Immich library, the gallery will be empty. This is expected behavior and will not produce an error.
@@ -137,7 +138,7 @@ sources:
       by: createdAt
       order: desc
 view:
-  type: grid
+  type: masonry
 ```
 
 **Note:** The assets returned will be empty if your library has no assets. This is expected behavior.
@@ -155,7 +156,7 @@ sources:
         - Photography
         - Family
 view:
-  type: grid
+  type: masonry
 ```
 
 ### Authenticated People
@@ -171,7 +172,7 @@ sources:
         - Alice
         - Bob
 view:
-  type: grid
+  type: masonry
 ```
 
 ### Date Range Filters
@@ -186,7 +187,7 @@ sources:
       createdAfter: 2025-01-01
       createdBefore: 2025-12-31
 view:
-  type: grid
+  type: masonry
 ```
 
 **Note:** Date filtering uses the *created date* (the date the asset was uploaded or created in the system), not the captured/taken date.
@@ -205,7 +206,7 @@ sources:
         - 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
       assetType: video
 view:
-  type: grid
+  type: masonry
 ```
 
 Favorite images only:
@@ -217,7 +218,7 @@ sources:
       isFavorite: true
       assetType: image
 view:
-  type: grid
+  type: masonry
 ```
 
 Recent videos:
@@ -232,7 +233,7 @@ sources:
       by: createdAt
       order: desc
 view:
-  type: grid
+  type: masonry
 ```
 
 ---

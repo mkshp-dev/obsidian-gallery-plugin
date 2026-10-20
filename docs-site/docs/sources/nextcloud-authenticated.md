@@ -42,7 +42,7 @@ sources:
       order: desc       # asc | desc
     limit: 50
 view:
-  type: grid
+  type: masonry
 ```
 
 | Field | Type | Required | Description |
@@ -65,7 +65,7 @@ view:
 
 ## Features
 
-- **WebDAV & Preview Integration**: Uses Nextcloud's native WebDAV protocol and efficient core preview API to render lightweight thumbnails fast.
+- **WebDAV & Preview Integration**: Uses Nextcloud's native WebDAV protocol and efficient core preview API to render lightweight thumbnails fast (for the `thumbnail`, `masonry` and `justified` views). Thumbnails keep each image's aspect ratio, so nothing is cropped.
 - **Recursive Scanning**: Discover images across subdirectories without manually listing each folder.
 - **Filename Globs & MIME Filtering**: Easily target specific file types or camera naming conventions.
 - **Automatic Caching**: Results are cached in memory for optimal performance and low server load.
@@ -82,7 +82,7 @@ sources:
     connection: my-cloud
     path: /Photos
 view:
-  type: grid
+  type: masonry
 ```
 
 ### 2. Recursive Subfolder Scan with Camera Glob Filter

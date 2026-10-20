@@ -18,9 +18,11 @@ sources:
   - type: immich-share
     url: https://photos.example.com/share/abc1234
 view:
-  type: grid
+  type: justified
 ```
 ````
+
+The [justified view](../views/justified.md) shows the photos in even rows, like Immich's own web page for the share. Use `masonry` for Pinterest-style columns, or any other view.
 
 ### Password-Protected Links
 
@@ -33,13 +35,13 @@ sources:
     url: https://photos.example.com/share/abc1234
     password: "your-album-password"
 view:
-  type: grid
+  type: masonry
 ```
 ````
 
 ## Features
 
-- Works seamlessly with all gallery views (`thumbnail`, `grid`, `carousel`).
+- Works seamlessly with all gallery views (`thumbnail`, `masonry`, `justified`, `carousel`, `embed`).
 - Supports the existing modal/lightbox behavior.
 - Can be mixed with other source types (`local`, `external`).
 

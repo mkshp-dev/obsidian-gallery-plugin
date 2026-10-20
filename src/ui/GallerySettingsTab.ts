@@ -228,7 +228,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     .onClick(async () => {
                         this.plugin.settings.immichConnections.splice(index, 1);
                         await this.plugin.saveSettings();
-                        this.plugin.refreshGalleries();
+                        this.plugin.refreshGalleries(['immich']);
                         this.update();
                     })
                 );
@@ -245,7 +245,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                         apiKey: ''
                     });
                     await this.plugin.saveSettings();
-                    this.plugin.refreshGalleries();
+                    this.plugin.refreshGalleries(['immich']);
                     this.update();
                 })
             );
@@ -338,7 +338,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     .onClick(async () => {
                         this.plugin.settings.nextcloudConnections.splice(index, 1);
                         await this.plugin.saveSettings();
-                        this.plugin.refreshGalleries();
+                        this.plugin.refreshGalleries(['nextcloud']);
                         this.update();
                     })
                 );
@@ -356,7 +356,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                         appPassword: ''
                     });
                     await this.plugin.saveSettings();
-                    this.plugin.refreshGalleries();
+                    this.plugin.refreshGalleries(['nextcloud']);
                     this.update();
                 })
             );
@@ -369,6 +369,9 @@ export class GallerySettingsTab extends PluginSettingTab {
     async setControlValue(key: string, value: unknown): Promise<void> {
         (this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
         await this.plugin.saveSettings();
-        this.plugin.refreshGalleries();
+        // Only the remote-image settings change which external images a gallery gets; every
+        // other general setting is a view option, so re-render without fetching anything again.
+        const affectsExternalSources = key === 'allowRemoteImages' || key === 'validateRemoteContentType';
+        this.plugin.refreshGalleries(affectsExternalSources ? ['external'] : 'none');
     }
 }

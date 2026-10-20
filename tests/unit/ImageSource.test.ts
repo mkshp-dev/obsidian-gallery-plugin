@@ -1,5 +1,5 @@
 import { ImageSource } from '../../src/models/ImageSource';
-import { ObjectUrlManager } from '../../src/utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../../src/utils/ObjectUrlManager';
 
 describe('ImageSource', () => {
     describe('getDisplayUrl', () => {
@@ -80,21 +80,87 @@ describe('ImageSource', () => {
         });
     });
 
+    describe('resolveDisplayUrl', () => {
+        it('should return the display URL directly when there is no loader', async () => {
+            const img = new ImageSource('images/pic.jpg', 'local', 'pic', 'app://local/images/pic.jpg');
+            await expect(img.resolveDisplayUrl()).resolves.toBe('app://local/images/pic.jpg');
+        });
+
+        it('should run the loader once, on first use, and remember the URL', async () => {
+            const loader = jest.fn().mockResolvedValue('blob:loaded');
+            const img = new ImageSource('nextcloud://conn/a.jpg', 'nextcloud', 'a', undefined, undefined, loader);
+
+            expect(loader).not.toHaveBeenCalled();
+            expect(img.resourceUrl).toBeUndefined();
+
+            const [first, second] = await Promise.all([img.resolveDisplayUrl(), img.resolveDisplayUrl()]);
+            expect(first).toBe('blob:loaded');
+            expect(second).toBe('blob:loaded');
+            await expect(img.resolveDisplayUrl()).resolves.toBe('blob:loaded');
+            expect(loader).toHaveBeenCalledTimes(1);
+            expect(img.getDisplayUrl()).toBe('blob:loaded');
+        });
+
+        it('should run the loader again after a failure, so retries work', async () => {
+            const loader = jest.fn()
+                .mockRejectedValueOnce(new Error('HTTP 503'))
+                .mockResolvedValueOnce('blob:second-try');
+            const img = new ImageSource('immich://conn/search/asset/1', 'immich', 'a', undefined, undefined, loader);
+
+            await expect(img.resolveDisplayUrl()).rejects.toThrow('HTTP 503');
+            await expect(img.resolveDisplayUrl()).resolves.toBe('blob:second-try');
+        });
+    });
+
     describe('destroy', () => {
-        it('should release nextcloud resourceUrl if provided', () => {
-            const spyRelease = jest.spyOn(ObjectUrlManager, 'releaseByUrl').mockImplementation(() => {});
-            const img = new ImageSource('nextcloud://conn/files/image.jpg', 'nextcloud', 'image', 'blob:nextcloud-test-url');
-            img.destroy();
-            expect(spyRelease).toHaveBeenCalledWith('blob:nextcloud-test-url');
+        let spyRelease: jest.SpyInstance;
+
+        beforeEach(() => {
+            spyRelease = jest.spyOn(ObjectUrlManager, 'releaseByUrl').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
             spyRelease.mockRestore();
         });
 
-        it('should not release nextcloud-share resourceUrl', () => {
-            const spyRelease = jest.spyOn(ObjectUrlManager, 'releaseByUrl').mockImplementation(() => {});
-            const img = new ImageSource('https://cloud.example.com/s/TOKEN', 'nextcloud-share', 'image', 'blob:nextcloud-test-url');
+        it('should release the URL its loader acquired, once', async () => {
+            const img = new ImageSource('nextcloud-share://TOKEN/a.jpg', 'nextcloud-share', 'a', undefined, undefined,
+                () => Promise.resolve('blob:share-url'));
+            await img.resolveDisplayUrl();
+
+            img.destroy();
+            img.destroy();
+
+            expect(spyRelease).toHaveBeenCalledTimes(1);
+            expect(spyRelease).toHaveBeenCalledWith('blob:share-url');
+            expect(img.resourceUrl).toBeUndefined();
+        });
+
+        it('should not release anything when the loader never ran', () => {
+            const img = new ImageSource('immich://conn/search/asset/1', 'immich', 'a', undefined, undefined, jest.fn());
             img.destroy();
             expect(spyRelease).not.toHaveBeenCalled();
-            spyRelease.mockRestore();
+        });
+
+        it('should release a URL that arrives after the image was destroyed', async () => {
+            let resolveLoad: (url: string) => void = () => {};
+            const img = new ImageSource('immich://conn/search/asset/1', 'immich', 'a', undefined, undefined,
+                () => new Promise<string>(resolve => { resolveLoad = resolve; }));
+
+            const pending = img.resolveDisplayUrl();
+            img.destroy();
+            resolveLoad('blob:late');
+
+            await expect(pending).rejects.toThrow('destroyed');
+            expect(spyRelease).toHaveBeenCalledWith('blob:late');
+            expect(img.resourceUrl).toBeUndefined();
+        });
+
+        it('should not release a URL it was given rather than acquired', () => {
+            const img = new ImageSource('images/pic.jpg', 'local', 'pic', 'app://local/images/pic.jpg');
+            img.destroy();
+            expect(spyRelease).not.toHaveBeenCalled();
+            expect(img.getDisplayUrl()).toBe('app://local/images/pic.jpg');
         });
     });
 

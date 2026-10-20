@@ -103,6 +103,9 @@ export interface INextcloudShareSourceConfig {
 
 export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichSourceConfig | INextcloudSourceConfig | INextcloudShareSourceConfig;
 
+/** Every source type a gallery block can use; also the type tag of the images it resolves to */
+export type SourceType = ISourceConfig['type'];
+
 export interface IViewConfig {
   type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
   [key: string]: unknown;
@@ -139,7 +142,7 @@ export interface IImageSource {
   resourceUrl?: string;
 
   /** Source type */
-  type: 'local' | 'external' | 'immich-share' | 'immich' | 'nextcloud' | 'nextcloud-share';
+  type: SourceType;
 
   /** Optional image caption */
   caption?: string;
@@ -185,6 +188,12 @@ export interface IImageSource {
 
   /** Get the URL that should be used for loading in the browser */
   getDisplayUrl(): string;
+
+  /**
+   * Get the display URL, fetching the image first if it is loaded on demand (remote sources).
+   * Views should prefer this over getDisplayUrl when about to show an image.
+   */
+  resolveDisplayUrl?(): Promise<string>;
 
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;

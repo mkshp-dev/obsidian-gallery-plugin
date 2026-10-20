@@ -1,7 +1,8 @@
 import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
-import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ObsidianDOMExtensions } from '../models/interfaces';
+import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceConfig, ObsidianDOMExtensions, SourceType } from '../models/interfaces';
+import { GallerySourceResolveContext } from '../resolvers/GallerySourceResolver';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { ConfigValidator } from '../utils/ConfigValidator';
@@ -37,8 +38,19 @@ export interface IGalleryRenderResult {
   imagesValid: number;
   imagesLoaded: number;
   errors: string[];
+  /** Errors reported by source resolvers (also included in `errors`), shown inline on the gallery */
+  sourceErrors?: string[];
   processingTimeMs: number;
 }
+
+/**
+ * Which sources a refresh re-resolves:
+ * - 'all': every source
+ * - a list of source types: only sources of those types; the other sources keep their
+ *   current images, and galleries with none of those types are left untouched
+ * - 'none': nothing is re-resolved; the view is re-rendered with its current images
+ */
+export type RefreshSources = 'all' | 'none' | SourceType[];
 
 /**
  * Gallery processor for handling obs-gallery code blocks
@@ -63,6 +75,10 @@ export class GalleryProcessor {
     private contentScanner: IContentScanner;
     private viewFactory: ViewFactory;
     private activeGalleries: Map<string, GalleryInstance> = new Map();
+    /** Images resolved for each gallery, per entry in its config.sources, so a refresh can re-resolve only some sources */
+    private sourceImages: Map<string, IImageSource[][]> = new Map();
+    /** Latest refresh generation per gallery; a refresh that finishes after a newer one started is discarded */
+    private refreshGenerations: Map<string, number> = new Map();
     private resolverRegistry: SourceResolverRegistry;
     private getOptions?: () => IGalleryProcessingOptions;
 
@@ -139,7 +155,8 @@ export class GalleryProcessor {
             }
 
             // Step 2: Scan for images
-            scannedImages = await this.scanForImages(config, result, opts, loadingManager, ctx.sourcePath);
+            const scanned = await this.scanForImages(config, result, opts, loadingManager, ctx.sourcePath);
+            scannedImages = scanned.images;
             if (scannedImages.length === 0) {
                 this.showProfessionalEmptyState(el, config, result);
                 result.processingTimeMs = Date.now() - startTime;
@@ -174,17 +191,15 @@ export class GalleryProcessor {
                 config, el, validImages, result, opts, loadingManager, ctx.sourcePath
             );
 
-            // Step 5: Render mixed-source inline error if needed
-            const sourceErrors = result.errors.filter(error =>
-                error.startsWith('Immich') ||
-                error.startsWith('Failed to fetch Immich') ||
-                error.startsWith('Error resolving Immich') ||
-                error.startsWith('Invalid URL in external source urls list:') ||
-                error.startsWith('Unsupported source type') ||
-                error.startsWith('Simulated source failure') || // For tests
-                error.startsWith('Simulated external source failure') // For tests
+            // Images that failed validation were destroyed; keep the rest per source for partial refreshes
+            const invalidImages = new Set(scannedImages.filter(img => !validImages.includes(img)));
+            this.sourceImages.set(
+                galleryInstance.id,
+                scanned.perSource.map(list => list.filter(img => !invalidImages.has(img)))
             );
 
+            // Step 5: Render mixed-source inline error if needed
+            const sourceErrors = result.sourceErrors ?? [];
             if (sourceErrors.length > 0) {
                 GalleryProcessor.renderCompactError(el, sourceErrors[0] + (sourceErrors.length > 1 ? ` (+${sourceErrors.length - 1} more)` : ''));
             }
@@ -282,7 +297,7 @@ export class GalleryProcessor {
         options: Required<IGalleryProcessingOptions>,
         loadingManager: LoadingManager | null,
         notePath?: string
-    ) {
+    ): Promise<{ images: IImageSource[]; perSource: IImageSource[][] }> {
         if (loadingManager) {
             loadingManager.startLoading('scan', { type: 'dots', text: 'Scanning for images...' });
         }
@@ -297,32 +312,28 @@ export class GalleryProcessor {
         }
 
         try {
-            let images: IImageSource[] = [];
+            const perSource: IImageSource[][] = [];
+            const resolveContext = { timeoutMs: options.timeoutMs, viewType, notePath };
 
-            if (config.sources) {
-                for (const source of config.sources) {
-                    const resolveContext = { timeoutMs: options.timeoutMs, viewType, notePath };
-                    const { images: resolvedImages, errors: resolveErrors } = await this.resolverRegistry.resolveSource(source, resolveContext);
+            for (const source of config.sources || []) {
+                const { images: resolvedImages, errors: resolveErrors } = await this.resolverRegistry.resolveSource(source, resolveContext);
 
-                    if (resolveErrors.length > 0) {
-                        result.errors.push(...resolveErrors);
-                    }
-
-                    for (const img of resolvedImages) {
-                        if (!images.find(existing => existing.path === img.path)) {
-                            images.push(img);
-                        }
-                    }
+                if (resolveErrors.length > 0) {
+                    result.errors.push(...resolveErrors);
+                    result.sourceErrors = [...(result.sourceErrors ?? []), ...resolveErrors];
                 }
+
+                perSource.push(resolvedImages);
             }
 
+            const images = GalleryProcessor.mergeSourceImages(perSource);
             result.imagesFound = images.length;
 
             if (loadingManager && images.length > 0) {
                 loadingManager.updateText('scan', `Found ${images.length} images`);
             }
 
-            return images;
+            return { images, perSource };
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -682,17 +693,9 @@ export class GalleryProcessor {
             while (container.firstChild) container.removeChild(container.firstChild);
         }
 
-        const sourceErrors = result.errors.filter(error =>
-            error.startsWith('Immich') ||
-            error.startsWith('Failed to fetch Immich') ||
-            error.startsWith('Error resolving Immich') ||
-            error.startsWith('Invalid URL in external source urls list:') ||
-            error.startsWith('Unsupported source type') ||
-            error.startsWith('Simulated source failure') ||
-            error.startsWith('Simulated external source failure')
-        );
+        const sourceErrors = result.sourceErrors ?? [];
 
-        const hasPathError     = result.errors.some(e => e.startsWith('Path not found'));
+        const hasPathError    = result.errors.some(e => e.startsWith('Path not found'));
         const hasExternalBlock = result.errors.some(e => e.includes('external URLs were present') || e.includes('External image blocked'));
         const hasPermission    = result.errors.some(e => e.includes('permission') || e.includes('Access'));
         const hasValidation    = result.errors.some(e => e.includes('validation') || e.includes('Validation'));
@@ -818,12 +821,24 @@ export class GalleryProcessor {
     /**
      * Refresh gallery by re-scanning content and updating view settings
      */
-    async refreshGallery(galleryId: string): Promise<void> {
+    async refreshGallery(galleryId: string, refreshSources: RefreshSources = 'all'): Promise<void> {
         const gallery = this.activeGalleries.get(galleryId);
         if (!gallery) {
             Logger.warn('Gallery not found for refresh:', galleryId);
             return;
         }
+
+        const sources = gallery.config.sources || [];
+        const shouldResolve = (source: ISourceConfig) =>
+            refreshSources === 'all' || (refreshSources !== 'none' && refreshSources.includes(source.type));
+
+        // A type-scoped refresh leaves galleries without a matching source untouched
+        if (Array.isArray(refreshSources) && !sources.some(shouldResolve)) {
+            return;
+        }
+
+        const generation = (this.refreshGenerations.get(galleryId) ?? 0) + 1;
+        this.refreshGenerations.set(galleryId, generation);
 
         try {
             const currentOpts = { ...this.DEFAULT_OPTIONS, ...(this.getOptions ? this.getOptions() : {}) };
@@ -840,24 +855,41 @@ export class GalleryProcessor {
                 });
             }
 
-            // Re-resolve sources for all configured sources (local, external, immich)
-            let images: IImageSource[] = [];
-            if (gallery.config.sources) {
-                for (const source of gallery.config.sources) {
-                    const { images: resolvedImages } = await this.resolverRegistry.resolveSource(source, {
-                        timeoutMs: currentOpts.timeoutMs,
-                        viewType: gallery.view.type,
-                        notePath: gallery.notePath
-                    });
-                    for (const img of resolvedImages) {
-                        if (!images.find(existing => existing.path === img.path)) {
-                            images.push(img);
-                        }
-                    }
-                }
+            if (refreshSources === 'none') {
+                // Re-render with the current images so view options (captions, pagination, ...) apply
+                gallery.update(gallery.images);
+                Logger.debug(`Gallery re-rendered: ${galleryId}`);
+                return;
             }
 
-            // Update gallery view
+            const context: GallerySourceResolveContext = {
+                timeoutMs: currentOpts.timeoutMs,
+                viewType: gallery.view.type,
+                notePath: gallery.notePath
+            };
+            const previous = this.sourceImages.get(galleryId);
+            const perSource: IImageSource[][] = [];
+            const freshlyResolved: IImageSource[] = [];
+
+            for (let i = 0; i < sources.length; i++) {
+                const reusable = previous?.[i];
+                if (reusable && !shouldResolve(sources[i])) {
+                    perSource.push(reusable);
+                    continue;
+                }
+                const { images: resolvedImages } = await this.resolverRegistry.resolveSource(sources[i], context);
+                freshlyResolved.push(...resolvedImages);
+                perSource.push(resolvedImages);
+            }
+
+            // The gallery was destroyed, or a newer refresh started, while sources were resolving
+            if (gallery.isDestroyed || this.refreshGenerations.get(galleryId) !== generation) {
+                freshlyResolved.forEach(img => img.destroy?.());
+                return;
+            }
+
+            const images = GalleryProcessor.mergeSourceImages(perSource);
+            this.sourceImages.set(galleryId, perSource);
             gallery.update(images);
 
             Logger.debug(`Gallery refreshed: ${galleryId} with ${images.length} images`);
@@ -876,6 +908,8 @@ export class GalleryProcessor {
         if (gallery) {
             gallery.destroy();
             this.activeGalleries.delete(galleryId);
+            this.sourceImages.delete(galleryId);
+            this.refreshGenerations.delete(galleryId);
             Logger.debug(`Gallery destroyed: ${galleryId}`);
         }
     }
@@ -904,14 +938,31 @@ export class GalleryProcessor {
     }
 
     /**
-     * Refresh all galleries
+     * Refresh all galleries, re-resolving only the sources selected by `refreshSources`
      */
-    async refreshAllGalleries(): Promise<void> {
+    async refreshAllGalleries(refreshSources: RefreshSources = 'all'): Promise<void> {
         const refreshPromises = Array.from(this.activeGalleries.keys())
-            .map(id => this.refreshGallery(id));
-        
+            .map(id => this.refreshGallery(id, refreshSources));
+
         await Promise.allSettled(refreshPromises);
         Logger.debug('All galleries refreshed');
+    }
+
+    /**
+     * Combine per-source image lists into one gallery list, keeping the first image for each path
+     */
+    private static mergeSourceImages(perSource: IImageSource[][]): IImageSource[] {
+        const seen = new Set<string>();
+        const merged: IImageSource[] = [];
+        for (const list of perSource) {
+            for (const img of list) {
+                if (!seen.has(img.path)) {
+                    seen.add(img.path);
+                    merged.push(img);
+                }
+            }
+        }
+        return merged;
     }
 
     /**

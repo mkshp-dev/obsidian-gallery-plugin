@@ -179,14 +179,16 @@ export class GalleryInstance implements IGalleryInstance {
         
         const added = newImages.filter(img => !oldPaths.has(img.path));
         const removed = oldImages.filter(img => !newPaths.has(img.path));
-        
+
         if (added.length > 0) changes.push('images_added');
-        if (removed.length > 0) {
-            changes.push('images_removed');
-            // Clean up resources for removed images
-            removed.forEach(img => img.destroy?.());
-        }
-        
+        if (removed.length > 0) changes.push('images_removed');
+
+        // Clean up resources for every old image object that is no longer displayed. This compares
+        // objects, not paths: a re-resolved image keeps its path but is a new object holding its own
+        // resources, so the old object must still be released.
+        const kept = new Set(newImages);
+        oldImages.filter(img => !kept.has(img)).forEach(img => img.destroy?.());
+
         return changes;
     }
 

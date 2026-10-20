@@ -3,7 +3,7 @@ import { Logger } from "./utils/Logger";
 import { Plugin, App, MarkdownPostProcessorContext, MarkdownView, Notice } from 'obsidian';
 import { ContentScanner } from './services/ContentScanner';
 import { ViewFactory } from './views/ViewFactory';
-import { GalleryProcessor } from './processors/GalleryProcessor';
+import { GalleryProcessor, RefreshSources } from './processors/GalleryProcessor';
 import { VaultWatcher } from './utils/VaultWatcher';
 import { LazyLoader } from './utils/LazyLoader';
 import { ShowcaseGenerator } from './generators/ShowcaseGenerator';
@@ -47,14 +47,15 @@ export default class GalleryPlugin extends Plugin {
             retryDelay: 1000
         });
 
-        // Initialize vault watcher for automatic gallery updates
+        // Initialize vault watcher for automatic gallery updates. Vault image changes only
+        // affect local sources, so remote sources are not fetched again.
         this.vaultWatcher = new VaultWatcher(
             this.app.vault,
             {
-                onFileAdded: () => this.refreshGalleries(),
-                onFileDeleted: () => this.refreshGalleries(),
-                onFileRenamed: () => this.refreshGalleries(),
-                onFileModified: () => this.refreshGalleries()
+                onFileAdded: () => this.refreshGalleries(['local']),
+                onFileDeleted: () => this.refreshGalleries(['local']),
+                onFileRenamed: () => this.refreshGalleries(['local']),
+                onFileModified: () => this.refreshGalleries(['local'])
             },
             {
                 debounceMs: 1000,
@@ -208,14 +209,15 @@ export default class GalleryPlugin extends Plugin {
     }
 
     /**
-     * Refresh all active galleries (professional version)
+     * Refresh all active galleries. `refreshSources` picks which sources are re-resolved
+     * (fetched again); see RefreshSources.
      */
-    public refreshGalleries(): void {
+    public refreshGalleries(refreshSources: RefreshSources = 'all'): void {
         if (!this.galleryProcessor) {
             return;
         }
 
-        this.galleryProcessor.refreshAllGalleries().catch(error => {
+        this.galleryProcessor.refreshAllGalleries(refreshSources).catch(error => {
             console.error('Error refreshing galleries:', error);
         });
     }

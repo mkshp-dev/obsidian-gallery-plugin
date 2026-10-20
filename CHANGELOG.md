@@ -4,6 +4,13 @@
 
 - **Linting matches the Obsidian review bot**: Upgraded `eslint-plugin-obsidianmd` to 0.4.2 and switched to its stock `recommended` config with no rule overrides, so `npm run lint` reports the same issues as the plugin review bot.
 - **Settings and builder text cleanup**: Fixed UI text that earlier lint autofixes had garbled (for example `Image/jpeg` and `Https://`), and reworded descriptions to pass the default sentence-case check: "API key", "Try again", "Gallery YAML copied to clipboard!", and shorter base-URL and MIME-type descriptions.
+- **Remote images load on demand**: Immich and Nextcloud galleries (authenticated and share links) no longer download every image before the gallery appears. Each image is fetched when it scrolls into view, the current pagination page is shown, or a carousel slide comes near. An image that fails to fetch now shows the error tile with a retry button instead of silently disappearing. Authenticated Immich galleries also stop making one extra request per photo to look up captions.
+- **Fewer refetches**: Adding, changing or removing an image in the vault now refreshes only local sources; remote sources keep their images. Changing a view setting (captions, pagination, timeout) re-renders galleries without fetching anything again, and editing a provider connection refreshes only galleries that use that provider.
+- **Immich share links fixed**: `immich-share` images were downloaded twice (once by the plugin, then again by the browser), were treated as external URLs so they needed **Allow remote images**, and failed to load for password-protected shares. They are now downloaded once through the share session and no longer depend on that setting.
+- **Memory leaks fixed**: Blob URLs for `immich-share` and `nextcloud-share` images were never released, and refreshing any remote gallery leaked one reference per image. Images now release their blob URLs when they are removed or the gallery closes.
+- **Nextcloud thumbnail fallback**: When the Nextcloud preview endpoint fails (for example, preview generation is disabled), thumbnails now fall back to the original file as intended instead of failing.
+- **Thumbnail pagination fix**: Going back to a page you had already viewed in the thumbnail view no longer shows blank tiles.
+- **Source errors for every provider**: A failing source in a mixed gallery now shows its inline error for Nextcloud and local sources too, not just Immich.
 - **Debug logging setting**: Debug logs were always on. They now follow the setting, renamed from **Enable lifecycle logging** to **Enable debug logging** (off by default).
 
 ## 2.4.4 - 2026-10-18

@@ -4,7 +4,7 @@ import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySou
 import { ImageSource } from '../models/ImageSource';
 import { extractImmichCaption } from './ImmichSourceResolver';
 import { ImmichAsset, ImmichAlbum, ImmichShareResponse } from '../models/immich/ImmichTypes';
-import { ObjectUrlManager } from '../utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 
 export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichShareSourceConfig> {
     readonly type = 'immich-share';
@@ -32,6 +32,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
             const basePath = shareMatch[1]; // could be empty string
             const shareKey = shareMatch[2];
+            const apiBase = `${urlObj.origin}${basePath}/api`;
 
             let activeCookie: string | undefined;
             let activeToken: string | undefined;
@@ -39,7 +40,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
             // Password authentication if password is provided
             if (source.password !== undefined && source.password !== null && String(source.password).trim() !== '') {
                 const passwordStr = String(source.password).trim();
-                const loginUrl = `${urlObj.origin}${basePath}/api/shared-links/login?key=${shareKey}`;
+                const loginUrl = `${apiBase}/shared-links/login?key=${shareKey}`;
                 try {
                     const loginRes = await requestUrl({
                         url: loginUrl,
@@ -85,27 +86,21 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                 }
             }
 
+            // Sent with every request after login: the share key, plus the session from a password login
+            const authHeaders: Record<string, string> = { 'x-immich-share-key': shareKey };
+            if (activeCookie) authHeaders['Cookie'] = activeCookie;
+            if (activeToken) authHeaders['Authorization'] = `Bearer ${activeToken}`;
+            const jsonHeaders = { 'Accept': 'application/json', ...authHeaders };
+
             // In Immich API, to get shared link details, we can use `/api/shared-links/me` with `x-immich-share-key` header
             // This returns the shared link details including assets. We also append the key as a query parameter
             // to ensure the backend controller maps and retrieves the correct assets.
-            const apiUrl = `${urlObj.origin}${basePath}/api/shared-links/me?key=${shareKey}`;
-
             let response: RequestUrlResponse;
             try {
-                const requestHeaders: Record<string, string> = {
-                    'Accept': 'application/json',
-                    'x-immich-share-key': shareKey
-                };
-                if (activeCookie) {
-                    requestHeaders['Cookie'] = activeCookie;
-                }
-                if (activeToken) {
-                    requestHeaders['Authorization'] = `Bearer ${activeToken}`;
-                }
                 response = await requestUrl({
-                    url: apiUrl,
+                    url: `${apiBase}/shared-links/me?key=${shareKey}`,
                     method: 'GET',
-                    headers: requestHeaders
+                    headers: jsonHeaders
                 });
             } catch (err) {
                 const status = typeof err === 'object' && err !== null && 'status' in err
@@ -146,21 +141,12 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
             if (assets.length === 0) {
                 if (!Array.isArray(data) && data.album && typeof data.album === 'object' && typeof data.album.id === 'string') {
                     const albumId = String(data.album.id);
-                    const searchUrl = `${urlObj.origin}${basePath}/api/search/metadata?key=${shareKey}`;
                     try {
-                        const requestHeaders: Record<string, string> = {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            'x-immich-share-key': shareKey
-                        };
-                        if (activeCookie) requestHeaders['Cookie'] = activeCookie;
-                        if (activeToken) requestHeaders['Authorization'] = `Bearer ${activeToken}`;
-
                         const searchRes = await requestUrl({
-                            url: searchUrl,
+                            url: `${apiBase}/search/metadata?key=${shareKey}`,
                             method: 'POST',
-                            headers: requestHeaders,
-                            body: JSON.stringify({ albumIds: [albumId] })
+                            headers: { ...jsonHeaders, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ albumIds: [albumId], withExif: true })
                         });
                         if (searchRes.status === 200) {
                             const searchData = searchRes.json as { assets?: { items?: ImmichAsset[] }; items?: ImmichAsset[] };
@@ -175,19 +161,11 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
                     // Fallback to GET /api/albums/{id} if search endpoint didn't return items
                     if (assets.length === 0) {
-                        const albumInfoUrl = `${urlObj.origin}${basePath}/api/albums/${albumId}?key=${shareKey}`;
                         try {
-                            const requestHeaders: Record<string, string> = {
-                                'Accept': 'application/json',
-                                'x-immich-share-key': shareKey
-                            };
-                            if (activeCookie) requestHeaders['Cookie'] = activeCookie;
-                            if (activeToken) requestHeaders['Authorization'] = `Bearer ${activeToken}`;
-
                             const albumRes = await requestUrl({
-                                url: albumInfoUrl,
+                                url: `${apiBase}/albums/${albumId}?key=${shareKey}`,
                                 method: 'GET',
-                                headers: requestHeaders
+                                headers: jsonHeaders
                             });
                             if (albumRes.status === 200) {
                                 const albumData = albumRes.json as ImmichAlbum;
@@ -203,19 +181,11 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
                 // If still empty, try GET /api/assets
                 if (assets.length === 0) {
-                    const genericAssetsUrl = `${urlObj.origin}${basePath}/api/assets?key=${shareKey}`;
                     try {
-                        const requestHeaders: Record<string, string> = {
-                            'Accept': 'application/json',
-                            'x-immich-share-key': shareKey
-                        };
-                        if (activeCookie) requestHeaders['Cookie'] = activeCookie;
-                        if (activeToken) requestHeaders['Authorization'] = `Bearer ${activeToken}`;
-
                         const genericRes = await requestUrl({
-                            url: genericAssetsUrl,
+                            url: `${apiBase}/assets?key=${shareKey}`,
                             method: 'GET',
-                            headers: requestHeaders
+                            headers: jsonHeaders
                         });
                         if (genericRes.status === 200) {
                             const genericData = genericRes.json as unknown;
@@ -244,28 +214,21 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
             const resolvedImages = await Promise.all(assets.map(async (asset) => {
                 if (!asset || typeof asset !== 'object' || !asset.id) return null;
+                const assetId = asset.id;
 
-                const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
+                const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(assetId);
                 let description = extractImmichCaption(asset);
 
-                if (!description && asset.id) {
+                // An asset that includes exifInfo but no caption has none; only look up assets without exifInfo
+                if (!description && asset.exifInfo === undefined) {
                     try {
-                        const detailUrl = `${urlObj.origin}${basePath}/api/assets/${asset.id}?key=${shareKey}`;
-                        const detailHeaders: Record<string, string> = {
-                            'Accept': 'application/json',
-                            'x-immich-share-key': shareKey
-                        };
-                        if (activeCookie) detailHeaders['Cookie'] = activeCookie;
-                        if (activeToken) detailHeaders['Authorization'] = `Bearer ${activeToken}`;
-
                         const detailRes = await requestUrl({
-                            url: detailUrl,
+                            url: `${apiBase}/assets/${assetId}?key=${shareKey}`,
                             method: 'GET',
-                            headers: detailHeaders
+                            headers: jsonHeaders
                         });
                         if (detailRes.status === 200) {
-                            const detailedAsset = detailRes.json as ImmichAsset;
-                            description = extractImmichCaption(detailedAsset);
+                            description = extractImmichCaption(detailRes.json as ImmichAsset);
                         }
                     } catch {
                         // ignore detail fetch fallback error
@@ -274,50 +237,25 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
                 let assetUrl: string;
                 if (representation === 'thumbnail') {
-                    assetUrl = `${urlObj.origin}${basePath}/api/assets/${asset.id}/thumbnail?key=${shareKey}`;
+                    assetUrl = `${apiBase}/assets/${assetId}/thumbnail?key=${shareKey}`;
                 } else if (representation === 'preview') {
-                    assetUrl = `${urlObj.origin}${basePath}/api/assets/${asset.id}/thumbnail?size=preview&key=${shareKey}`;
+                    assetUrl = `${apiBase}/assets/${assetId}/thumbnail?size=preview&key=${shareKey}`;
                 } else {
-                    assetUrl = `${urlObj.origin}${basePath}/api/assets/${asset.id}/original?key=${shareKey}`;
+                    assetUrl = `${apiBase}/assets/${assetId}/original?key=${shareKey}`;
                 }
 
-                // Attempt fetching blob via requestUrl (bypasses browser CORS & auth headers limits)
-                try {
-                    const cacheKey = `immich-share:${shareKey}:${asset.id}:${representation}`;
-                    let blobUrl = ObjectUrlManager.acquire(cacheKey);
-
-                    if (!blobUrl) {
-                        const assetHeaders: Record<string, string> = {
-                            'x-immich-share-key': shareKey
-                        };
-                        if (activeCookie) assetHeaders['Cookie'] = activeCookie;
-                        if (activeToken) assetHeaders['Authorization'] = `Bearer ${activeToken}`;
-
-                        const blobRes = await requestUrl({
-                            url: assetUrl,
-                            method: 'GET',
-                            headers: assetHeaders
-                        });
-
-                        if (blobRes.status === 200) {
-                            const blob = new Blob([blobRes.arrayBuffer]);
-                            blobUrl = ObjectUrlManager.create(cacheKey, blob);
-                        }
+                // Fetched lazily, when a view first displays the asset. requestUrl bypasses browser CORS
+                // and sends the share session, which a plain <img> URL could not do for password-protected shares.
+                const cacheKey = `immich-share:${shareKey}:${assetId}:${representation}`;
+                const loader = () => ObjectUrlManager.getOrCreate(cacheKey, async () => {
+                    const blobRes = await requestUrl({ url: assetUrl, method: 'GET', headers: authHeaders });
+                    if (blobRes.status !== 200) {
+                        throw new Error(`Failed to fetch Immich share asset '${assetId}': HTTP ${blobRes.status}`);
                     }
+                    return new Blob([blobRes.arrayBuffer]);
+                });
 
-                    if (blobUrl) {
-                        return ImageSource.fromLocalPath(
-                            `immich-share://${shareKey}/${asset.id}`,
-                            originalFileName,
-                            blobUrl,
-                            description
-                        );
-                    }
-                } catch {
-                    // Fallback to direct URL if blob fetch fails
-                }
-
-                return ImageSource.fromUrl(assetUrl, originalFileName, description);
+                return new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loader);
             }));
 
             for (const img of resolvedImages) {

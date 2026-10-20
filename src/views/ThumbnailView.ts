@@ -8,9 +8,14 @@ import { IImageSource } from '../models/interfaces';
  */
 export class ThumbnailView extends GalleryView {
     private lazyLoadObserver: IntersectionObserver | null = null;
+    /** Paths whose load has started or is queued in the current render */
     private loadedImages: Set<string> = new Set();
     private readonly maxConcurrentLoads = 10;
     private currentLoads = 0;
+    /** Loads waiting for a free slot (at most maxConcurrentLoads run at once) */
+    private loadQueue: Array<{ imagePath: string; container: HTMLElement }> = [];
+    /** Bumped on every render so loads started for replaced DOM are ignored */
+    private renderGeneration = 0;
 
 
     constructor(container: HTMLElement) {
@@ -28,7 +33,7 @@ export class ThumbnailView extends GalleryView {
                     if (entry.isIntersecting) {
                         const imagePath = entry.target.getAttribute('data-image-path');
                         if (imagePath && !this.loadedImages.has(imagePath)) {
-                            void this.loadImage(imagePath, entry.target as HTMLElement);
+                            this.loadImage(imagePath, entry.target as HTMLElement);
                         }
                     }
                 });
@@ -42,8 +47,14 @@ export class ThumbnailView extends GalleryView {
     render(): void {
         if (this._isDestroyed) return;
 
-        // Clear existing content
+        // Clear existing content and forget loads tied to the previous DOM. Every render
+        // (including page changes) creates new tiles, so each needs loading again.
         this.container.empty();
+        this.lazyLoadObserver?.disconnect();
+        this.loadedImages.clear();
+        this.loadQueue = [];
+        this.currentLoads = 0;
+        this.renderGeneration++;
         
         if (this._images.length === 0) {
             this.renderEmptyState();
@@ -154,7 +165,7 @@ export class ThumbnailView extends GalleryView {
             this.lazyLoadObserver.observe(itemEl);
         } else {
             // Fallback: load immediately if no IntersectionObserver
-            void this.loadImage(image.path, itemEl);
+            this.loadImage(image.path, itemEl);
         }
 
         // Add loading spinner
@@ -162,62 +173,68 @@ export class ThumbnailView extends GalleryView {
     }
 
     /**
-     * Load image with concurrency control
+     * Load image with concurrency control: at most maxConcurrentLoads run at once, the rest queue
      */
-    private async loadImage(imagePath: string, container: HTMLElement): Promise<void> {
-        if (this.loadedImages.has(imagePath) || this.currentLoads >= this.maxConcurrentLoads) {
+    private loadImage(imagePath: string, container: HTMLElement): void {
+        if (this.loadedImages.has(imagePath)) {
             return;
         }
-
-        this.currentLoads++;
         this.loadedImages.add(imagePath);
 
+        if (this.currentLoads >= this.maxConcurrentLoads) {
+            this.loadQueue.push({ imagePath, container });
+            return;
+        }
+        this.startLoad(imagePath, container);
+    }
+
+    private startLoad(imagePath: string, container: HTMLElement): void {
         const image = this._images.find(img => img.path === imagePath);
         if (!image) {
-            this.currentLoads--;
             return;
         }
 
-        try {
-            image.startLoading();
-            
-            // Create new image element for loading
-            const img = new Image();
-            // Set timeout for external URLs (use view-provided timeout when available)
-            let timeoutHandle: number | undefined = undefined;
+        const generation = this.renderGeneration;
+        const isCurrent = () => generation === this.renderGeneration && !this._isDestroyed;
+        this.currentLoads++;
 
-            img.onload = () => {
-                window.clearTimeout(timeoutHandle);
-                this.onImageLoaded(image, container, img);
-            };
-
-            img.onerror = () => {
-                window.clearTimeout(timeoutHandle);
-                this.onImageError(image, container, new Error('Failed to load image'));
-            };
-
-            // Block external images when remote loading is disabled
-            if (image.type === 'external' && !this.allowRemoteImages) {
-                this.onImageError(image, container, new Error('External images are blocked by settings'));
-            } else {
-                if (image.type === 'external') {
-                    const timeoutMs = this.remoteLoadTimeoutMs ?? 10000;
-                    timeoutHandle = window.setTimeout(() => {
-                        if (image.loadState === 'loading') {
-                            img.onload = null;
-                            img.onerror = null;
-                            this.onImageError(image, container, new Error('Image loading timed out'));
-                        }
-                    }, timeoutMs);
-                }
-
-                img.src = image.getDisplayUrl();
-            }
-
-        } catch (error) {
-            this.onImageError(image, container, error as Error);
-        } finally {
+        // Frees the slot once the image has loaded or failed (fetch and decode both count)
+        const done = () => {
+            if (!isCurrent()) return;
             this.currentLoads--;
+            const next = this.loadQueue.shift();
+            if (next) this.startLoad(next.imagePath, next.container);
+        };
+
+        image.startLoading();
+
+        // Block external images when remote loading is disabled
+        if (image.type === 'external' && !this.allowRemoteImages) {
+            this.onImageError(image, container, new Error('External images are blocked by settings'));
+            done();
+            return;
+        }
+
+        const onLoad = (img: HTMLImageElement) => {
+            if (isCurrent()) this.onImageLoaded(image, container, img);
+            done();
+        };
+        const onError = (error: Error) => {
+            if (isCurrent()) this.onImageError(image, container, error);
+            done();
+        };
+
+        if (image.type === 'local') {
+            // Vault files: no network involved, so no timeout
+            const img = new Image();
+            img.onload = () => onLoad(img);
+            img.onerror = () => onError(new Error('Failed to load image'));
+            this.resolveImageUrl(image)
+                .then(url => { img.src = url; })
+                .catch((e: unknown) => onError(e instanceof Error ? e : new Error(String(e))));
+        } else {
+            // Remote images (fetched on demand or loaded from a URL) honor the remote load timeout
+            this.loadWithTimeout(image, onLoad, onError);
         }
     }
 
@@ -273,6 +290,7 @@ export class ThumbnailView extends GalleryView {
         }
         
         this.loadedImages.clear();
+        this.loadQueue = [];
         super.destroy();
     }
 

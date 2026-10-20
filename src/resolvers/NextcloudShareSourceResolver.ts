@@ -2,7 +2,7 @@ import { INextcloudShareSourceConfig, IImageSource } from '../models/interfaces'
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
-import { ObjectUrlManager } from '../utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 import { requestUrl } from 'obsidian';
 import { globToRegex } from '../utils/globToRegex';
 
@@ -174,20 +174,23 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                         files = files.slice(0, source.limit);
                     }
 
-                    const resolvedImages = await Promise.all(files.map(async (file) => {
+                    const fileHeaders: Record<string, string> = strat.requiresAuth ? {
+                        'Authorization': strat.headers['Authorization'],
+                        'X-Requested-With': 'XMLHttpRequest'
+                    } : {};
+
+                    for (const file of files) {
                         try {
                             const fileUrl = `${urlObj.origin}${file.href}`;
                             const cacheKey = `nextcloud-share:${token}:${file.href}`;
-                            let blobUrl = ObjectUrlManager.acquire(cacheKey);
+                            const logicalPath = `nextcloud-share://${token}${file.href}`;
 
-                            if (!blobUrl) {
+                            // File contents are fetched lazily, when a view first displays the image
+                            const loader = () => ObjectUrlManager.getOrCreate(cacheKey, async () => {
                                 const fileRes = await requestUrl({
                                     url: fileUrl,
                                     method: 'GET',
-                                    headers: strat.requiresAuth ? {
-                                        'Authorization': strat.headers['Authorization'],
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    } : {}
+                                    headers: fileHeaders
                                 });
 
                                 if (fileRes.status !== 200) {
@@ -195,24 +198,12 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                                 }
 
                                 const contentType = typeof fileRes.headers['content-type'] === 'string' ? fileRes.headers['content-type'] : 'image/jpeg';
-                                const blob = new Blob([fileRes.arrayBuffer], { type: contentType });
-                                blobUrl = ObjectUrlManager.create(cacheKey, blob);
-                            }
+                                return new Blob([fileRes.arrayBuffer], { type: contentType });
+                            });
 
-                            if (blobUrl) {
-                                const logicalPath = `nextcloud-share://${token}${file.href}`;
-                                return new ImageSource(logicalPath, 'nextcloud-share', file.name, blobUrl, undefined);
-                            }
-                            return null;
+                            images.push(new ImageSource(logicalPath, 'nextcloud-share', file.name, undefined, undefined, loader));
                         } catch (e) {
-                            Logger.warn(`Failed to load file ${file.href} for Nextcloud share: ${e instanceof Error ? e.message : String(e)}`);
-                            return null;
-                        }
-                    }));
-
-                    for (const img of resolvedImages) {
-                        if (img !== null) {
-                            images.push(img);
+                            Logger.warn(`Failed to resolve file ${file.href} for Nextcloud share: ${e instanceof Error ? e.message : String(e)}`);
                         }
                     }
 

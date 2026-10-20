@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Editor, Notice, TFolder } from 'obsidian';
 import type GalleryPlugin from '../main';
-import { ISourceConfig, ILocalSourceConfig, INextcloudSourceConfig, INextcloudShareSourceConfig } from '../models/interfaces';
+import { ISourceConfig, ILocalSourceConfig, INextcloudSourceConfig, INextcloudShareSourceConfig, SourceType } from '../models/interfaces';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 import { NotePathResolver } from '../utils/NotePathResolver';
@@ -203,7 +203,7 @@ export class GalleryBuilderModal extends Modal {
             return;
         }
 
-        const iconMap: Record<string, string> = {
+        const iconMap: Record<SourceType, string> = {
             'local': '📁',
             'external': '🌐',
             'immich-share': '🔗',
@@ -212,7 +212,7 @@ export class GalleryBuilderModal extends Modal {
             'nextcloud-share': '🔗'
         };
 
-        const nameMap: Record<string, string> = {
+        const nameMap: Record<SourceType, string> = {
             'local': 'Local Vault',
             'external': 'External URLs',
             'immich-share': 'Immich Share Link',

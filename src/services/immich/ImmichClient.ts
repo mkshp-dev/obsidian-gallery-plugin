@@ -4,7 +4,7 @@ import { IImmichConnection } from '../../models/interfaces';
 import { Logger } from '../../utils/Logger';
 import { ImmichAsset, ImmichAlbum, ImmichTag, ImmichPerson } from '../../models/immich/ImmichTypes';
 import { ImmichHelpers } from '../../utils/immich/ImmichHelpers';
-import { ObjectUrlManager } from '../../utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../../utils/ObjectUrlManager';
 
 interface CacheEntry<T> {
     promise: Promise<T>;
@@ -88,7 +88,8 @@ export class ImmichClient {
     public async searchMetadata(filters?: Record<string, unknown>, limit?: number, sort?: Record<string, unknown>): Promise<ImmichAsset[]> {
         const url = `${this.baseUrl}/api/search/metadata`;
         try {
-            const body: Record<string, unknown> = {};
+            // withExif includes each asset's description, so captions need no per-asset request
+            const body: Record<string, unknown> = { withExif: true };
             if (limit) {
                 body.size = limit;
             }
@@ -314,11 +315,10 @@ export class ImmichClient {
 
     public async getAssetBlobUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): Promise<string> {
         const key = `immich:${this.connection.key}:${assetId}:${representation}`;
-        const existingUrl = ObjectUrlManager.acquire(key);
-        if (existingUrl) {
-            return existingUrl;
-        }
+        return ObjectUrlManager.getOrCreate(key, () => this.fetchAssetBlob(assetId, representation));
+    }
 
+    private async fetchAssetBlob(assetId: string, representation: 'thumbnail' | 'preview' | 'original'): Promise<Blob> {
         const url = this.getAssetUrl(assetId, representation);
         try {
             const response = await requestUrl({
@@ -328,8 +328,7 @@ export class ImmichClient {
             });
 
             if (response.status === 200) {
-                const blob = new Blob([response.arrayBuffer]);
-                return ObjectUrlManager.create(key, blob);
+                return new Blob([response.arrayBuffer]);
             }
             if (response.status === 401 || response.status === 403) {
                 throw new Error(`Authentication failed for asset '${assetId}' (HTTP ${response.status})`);

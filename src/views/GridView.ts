@@ -45,6 +45,17 @@ export class GridView extends GalleryView {
 
     this.gridContainer = this.createElement(this.container, 'div', { cls: 'gallery-grid' });
 
+    // LazyLoader resolves each image's URL (fetching remote images) only once it nears the viewport
+    this.loader?.disconnect();
+    this.loader = new LazyLoader({
+      placeholderSrc: '',
+      loadingClass: 'gallery-loading',
+      loadedClass: 'gallery-loaded',
+      errorClass: 'gallery-error',
+      timeoutMs: this.remoteLoadTimeoutMs ?? 10000
+    });
+    const loader = this.loader;
+
     const pageImages = this.getPageImages();
     pageImages.forEach((img, idx) => {
       const wrapper = this.createElement(this.gridContainer!, 'div', {
@@ -80,33 +91,15 @@ export class GridView extends GalleryView {
         // Mark state so getStats / processor can observe
         this.updateImageElement(wrapper, img, 'error');
       } else {
-        // Otherwise store as dataset for lazy loader
-        try { el.dataset.src = img.getDisplayUrl(); } catch { el.setAttribute('data-src', img.getDisplayUrl()); }
-
         // Wire up load/error handlers to propagate state to GalleryView
         el.addEventListener('load', () => this.handleImageLoad(img));
         el.addEventListener('error', () => this.handleImageError(img, new Error('Failed to load')));
+
+        loader.observe(el, () => this.resolveImageUrl(img), (error) => this.handleImageError(img, error));
       }
 
       // Render caption below image
       this.renderCaption(wrapper, img);
-    });
-
-    // Use LazyLoader to observe images (observe existing img elements)
-    this.loader?.disconnect();
-    this.loader = new LazyLoader({
-      placeholderSrc: '',
-      loadingClass: 'gallery-loading',
-      loadedClass: 'gallery-loaded',
-      errorClass: 'gallery-error',
-      timeoutMs: this.remoteLoadTimeoutMs ?? 10000
-    });
-
-    // Observe all images we just created
-    const imgs = Array.from(this.gridContainer.querySelectorAll('img'));
-    imgs.forEach((imgEl) => {
-      const src = (imgEl.dataset && (imgEl.dataset.src || imgEl.getAttribute('data-src'))) || (imgEl.getAttribute('src') || '');
-      if (src) this.loader!.observe(imgEl, src);
     });
 
     this.renderPaginationControls(this.container);
@@ -138,29 +131,10 @@ export class GridView extends GalleryView {
     }
 
     // Use a temporary image to honor timeout
-    const temp = new Image();
-    let timeoutHandle: number | undefined = undefined;
-
-    const onLoad = () => {
-      window.clearTimeout(timeoutHandle);
+    this.loadWithTimeout(image, (temp) => {
       try { imgEl.src = temp.src; } catch (error) { Logger.debug('Ignored error:', error); }
       this.handleImageLoad(image);
-      cleanup();
-    };
-
-    const onError = (err?: Error) => {
-      window.clearTimeout(timeoutHandle);
-      this.handleImageError(image, err || new Error('Failed to load'));
-      cleanup();
-    };
-
-    const cleanup = () => { temp.onload = null; temp.onerror = null; };
-
-    temp.onload = onLoad;
-    temp.onerror = () => onError(new Error('Failed to load'));
-
-    timeoutHandle = window.setTimeout(() => onError(new Error('Image loading timed out')), this.remoteLoadTimeoutMs ?? 10000);
-    try { temp.src = image.getDisplayUrl(); } catch (e) { onError(e as Error); }
+    }, (error) => this.handleImageError(image, error));
   }
 
   /**

@@ -135,20 +135,21 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                 representation = 'preview';
             }
 
-            // Fetch preview blobs for the MVP authenticated image delivery.
-            // We use Promise.all to fetch concurrently, but we must map the results back
-            // to preserve the original sorting order of the album.
+            // Image data is fetched lazily, when a view first displays each asset. Promise.all keeps
+            // the album's sort order while the (rare) caption lookups below run concurrently.
             const resolvedImages = await Promise.all(assets.map(async (asset) => {
                 if (!asset.id) return null;
+                const assetId = asset.id;
 
                 try {
-                    const blobUrl = await client.getAssetBlobUrl(asset.id, representation);
-                    const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
-                    
+                    const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(assetId);
+
+                    // Search results include exifInfo (withExif), so a missing caption there means the
+                    // asset has none. Only look the asset up when the server left exifInfo out.
                     let description = extractImmichCaption(asset);
-                    if (!description && asset.id) {
+                    if (!description && asset.exifInfo === undefined) {
                         try {
-                            const detailedAsset = await client.getAssetInfo(asset.id);
+                            const detailedAsset = await client.getAssetInfo(assetId);
                             if (detailedAsset) {
                                 description = extractImmichCaption(detailedAsset);
                             }
@@ -157,12 +158,13 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                         }
                     }
 
-                    // The path is logical, resourceUrl is the blob Object URL
-                    const logicalPath = `immich://${connection.key}/search/asset/${asset.id}`;
+                    // The path is logical; the loader fetches the blob Object URL used for display
+                    const logicalPath = `immich://${connection.key}/search/asset/${assetId}`;
 
-                    return new ImageSource(logicalPath, 'immich', originalFileName, blobUrl, description);
+                    return new ImageSource(logicalPath, 'immich', originalFileName, undefined, description,
+                        () => client.getAssetBlobUrl(assetId, representation));
                 } catch (e) {
-                    Logger.warn(`Failed to load asset ${asset.id} for Immich source: ${e instanceof Error ? e.message : String(e)}`);
+                    Logger.warn(`Failed to resolve asset ${assetId} for Immich source: ${e instanceof Error ? e.message : String(e)}`);
                     // We don't necessarily want to fail the whole album if one asset fails
                     return null;
                 }

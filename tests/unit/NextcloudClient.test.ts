@@ -1,7 +1,7 @@
 import { NextcloudClient } from '../../src/services/nextcloud/NextcloudClient';
 import { INextcloudConnection } from '../../src/models/interfaces';
 import { requestUrl } from 'obsidian';
-import { ObjectUrlManager } from '../../src/utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../../src/utils/ObjectUrlManager';
 
 jest.mock('obsidian', () => ({
   requestUrl: jest.fn()
@@ -15,11 +15,9 @@ jest.mock('../../src/utils/Logger', () => ({
     }
 }));
 
-jest.mock('../../src/utils/immich/ObjectUrlManager', () => ({
+jest.mock('../../src/utils/ObjectUrlManager', () => ({
     ObjectUrlManager: {
-        acquire: jest.fn(),
-        create: jest.fn(),
-        revoke: jest.fn()
+        getOrCreate: jest.fn()
     }
 }));
 
@@ -98,28 +96,24 @@ describe('NextcloudClient', () => {
     });
 
     describe('getFileBlobUrl', () => {
+        let createdBlobs: Array<{ key: string; blob: Blob }>;
+
         beforeEach(() => {
-            (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
-            (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
+            // Behaves like an empty cache: runs the fetch and returns a new URL
+            createdBlobs = [];
+            (ObjectUrlManager.getOrCreate as jest.Mock).mockImplementation(async (key: string, fetchBlob: () => Promise<Blob>) => {
+                createdBlobs.push({ key, blob: await fetchBlob() });
+                return 'blob:test';
+            });
         });
 
-        it('should return cached url if available', async () => {
-            (ObjectUrlManager.acquire as jest.Mock).mockReturnValue('blob:existing');
-
-            // Mock to prevent fetch failure when object url manager doesn't prevent fetch
-            (requestUrl as jest.Mock).mockResolvedValueOnce({
-                status: 200,
-                arrayBuffer: new ArrayBuffer(10),
-                headers: { 'content-type': 'image/jpeg' }
-            });
+        it('should return cached url without downloading the file again', async () => {
+            (ObjectUrlManager.getOrCreate as jest.Mock).mockResolvedValueOnce('blob:existing');
 
             const result = await client.getFileBlobUrl('/test.jpg', 'original');
 
             expect(result).toBe('blob:existing');
-            // Depending on implementation, requestUrl might not be called, or it might be.
-            // The file NextcloudClient.ts line 163 shows existingUrl check *after* requestUrl
-            // which means it always fetches, then checks cache. That's a bug in NextcloudClient,
-            // but we'll adapt our test to match its current behavior.
+            expect(requestUrl).not.toHaveBeenCalled();
         });
 
         it('should fetch original file and create blob url', async () => {
@@ -136,7 +130,7 @@ describe('NextcloudClient', () => {
                 method: 'GET',
                 url: 'https://cloud.example.com/remote.php/dav/files/testuser/Photos/test.jpg'
             }));
-            expect(ObjectUrlManager.create).toHaveBeenCalledWith('nextcloud:test:original:/Photos/test.jpg', expect.any(Blob));
+            expect(createdBlobs).toEqual([{ key: 'nextcloud:test:original:/Photos/test.jpg', blob: expect.any(Blob) }]);
         });
 
         it('should fallback to original if thumbnail fetch fails', async () => {
@@ -152,15 +146,16 @@ describe('NextcloudClient', () => {
 
             expect(result).toBe('blob:test');
             expect(requestUrl).toHaveBeenCalledTimes(2);
-            // first call to thumbnail endpoint
+            // first call to thumbnail endpoint, which must not throw on an error status so the fallback can run
             expect(requestUrl).toHaveBeenNthCalledWith(1, expect.objectContaining({
-                url: 'https://cloud.example.com/index.php/core/preview?fileId=1234&x=256&y=256'
+                url: 'https://cloud.example.com/index.php/core/preview?fileId=1234&x=256&y=256',
+                throw: false
             }));
             // second call to original endpoint
             expect(requestUrl).toHaveBeenNthCalledWith(2, expect.objectContaining({
                 url: 'https://cloud.example.com/remote.php/dav/files/testuser/Photos/test.jpg'
             }));
-            expect(ObjectUrlManager.create).toHaveBeenCalledWith('nextcloud:test:thumbnail:/Photos/test.jpg', expect.any(Blob));
+            expect(createdBlobs).toEqual([{ key: 'nextcloud:test:thumbnail:/Photos/test.jpg', blob: expect.any(Blob) }]);
         });
 
         it('should throw error on fetch failure', async () => {

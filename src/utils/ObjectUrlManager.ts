@@ -5,12 +5,49 @@ interface ObjectUrlEntry {
 }
 
 /**
- * Manages the lifecycle of Object URLs to prevent memory leaks,
- * specifically for authenticated image blobs (e.g., Immich).
+ * Manages the lifecycle of Object URLs to prevent memory leaks, for image blobs
+ * fetched from remote providers (Immich, Nextcloud, and their share links).
  */
 export class ObjectUrlManager {
     private static entriesByKey: Map<string, ObjectUrlEntry> = new Map();
     private static entriesByUrl: Map<string, ObjectUrlEntry> = new Map();
+    /** Blob fetches in progress, so concurrent requests for the same key download once */
+    private static pendingByKey: Map<string, Promise<void>> = new Map();
+
+    /**
+     * Returns an object URL for `key`, acquiring the existing one or fetching and creating it.
+     * Concurrent calls for the same key share one fetch. Each successful call holds one
+     * reference, which the caller must give back with releaseByUrl.
+     * @param key A stable identifier for the underlying resource
+     * @param fetchBlob Downloads the resource; only called when no URL exists or is being fetched
+     */
+    public static async getOrCreate(key: string, fetchBlob: () => Promise<Blob>): Promise<string> {
+        const existing = this.acquire(key);
+        if (existing) {
+            return existing;
+        }
+
+        let pending = this.pendingByKey.get(key);
+        if (!pending) {
+            pending = fetchBlob()
+                .then(blob => {
+                    // Registered without a reference; every waiting caller acquires its own below
+                    const url = URL.createObjectURL(blob);
+                    const entry: ObjectUrlEntry = { url, refCount: 0, key };
+                    this.entriesByKey.set(key, entry);
+                    this.entriesByUrl.set(url, entry);
+                })
+                .finally(() => this.pendingByKey.delete(key));
+            this.pendingByKey.set(key, pending);
+        }
+
+        await pending;
+        const url = this.acquire(key);
+        if (!url) {
+            throw new Error(`Object URL for '${key}' was revoked before it could be used`);
+        }
+        return url;
+    }
 
     /**
      * Tries to acquire an existing object URL for the given key.
@@ -79,5 +116,6 @@ export class ObjectUrlManager {
         }
         this.entriesByKey.clear();
         this.entriesByUrl.clear();
+        this.pendingByKey.clear();
     }
 }

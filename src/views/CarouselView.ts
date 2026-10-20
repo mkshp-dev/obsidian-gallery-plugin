@@ -11,6 +11,8 @@ export class CarouselView extends GalleryView {
     private containerEl: HTMLElement | null = null;
     private currentIndex = 0;
     private trackEl: HTMLElement | null = null;
+    /** Slide image elements in render order; loaded on demand around the current slide */
+    private slides: Array<{ imgEl: HTMLImageElement; image: IImageSource; requested: boolean }> = [];
 
     // Runtime options inherited from GalleryView (remoteLoadTimeoutMs, allowRemoteImages)
 
@@ -32,13 +34,14 @@ export class CarouselView extends GalleryView {
         this.trackEl = this.createElement(this.viewport, 'div', { cls: 'gallery-carousel-container' });
 
         // Render items
+        this.slides = [];
+        if (this.currentIndex >= this._images.length) this.currentIndex = 0;
         this._images.forEach((img) => {
             const item = this.createElement(this.trackEl!, 'div', { cls: 'gallery-carousel-item', attr: { 'data-image-path': img.path } });
             const el = this.createElement(item, 'img', { cls: 'gallery-carousel-image', attr: { alt: img.displayName } });
 
-            // Defer actual loading to view-level logic so we can honor
-            // `allowRemoteImages` and `remoteLoadTimeoutMs` settings.
-            this.loadImageElement(el as HTMLImageElement, img);
+            // Loaded on demand (see loadAround) so only slides near the current one are fetched
+            this.slides.push({ imgEl: el as HTMLImageElement, image: img, requested: false });
 
             // Render caption below carousel image
             this.renderCaption(item, img);
@@ -85,15 +88,17 @@ export class CarouselView extends GalleryView {
 
         // Touch support - basic swipe
         this.addTouchSupport(this.viewport);
+
+        this.loadAround(this.currentIndex);
     }
 
     update(images: IImageSource[]): void {
+        // The base update re-renders
         super.update(images);
-        // Re-render to reflect new images
-        this.render();
     }
 
     destroy(): void {
+        this.slides = [];
         this.trackEl = null;
         this.viewport = null;
         this.containerEl = null;
@@ -113,6 +118,7 @@ export class CarouselView extends GalleryView {
         if (index < 0 || index >= this._images.length) return;
 
         this.currentIndex = index;
+        this.loadAround(index);
         const width = this.viewport.clientWidth;
         if (this.trackEl) { this.trackEl.style.transform = `translateX(-${index * width}px)`; }
 
@@ -150,6 +156,19 @@ export class CarouselView extends GalleryView {
     }
 
     /**
+     * Load the slide at `index` and its neighbours, so the next slide is ready before it is shown
+     */
+    private loadAround(index: number): void {
+        for (const i of [index, index + 1, index - 1]) {
+            const slide = this.slides[i];
+            if (slide && !slide.requested) {
+                slide.requested = true;
+                this.loadImageElement(slide.imgEl, slide.image);
+            }
+        }
+    }
+
+    /**
      * Load an image into an existing img element respecting remote settings
      */
     private loadImageElement(imgEl: HTMLImageElement, image: IImageSource) {
@@ -163,57 +182,24 @@ export class CarouselView extends GalleryView {
         }
 
         // For local images we can set src directly
-        if (image.type !== 'external') {
-            try {
-                imgEl.src = image.getDisplayUrl();
-            } catch (e) {
-                this.handleImageError(image, e as Error);
-            }
+        if (image.type === 'local') {
             // Attach load/error handlers to update state
             imgEl.addEventListener('load', () => this.handleImageLoad(image));
             imgEl.addEventListener('error', () => this.handleImageError(image, new Error('Failed to load')));
+            this.resolveImageUrl(image)
+                .then(url => { imgEl.src = url; })
+                .catch((e: unknown) => this.handleImageError(image, e instanceof Error ? e : new Error(String(e))));
             return;
         }
 
-        // External images: use a temporary Image to implement timeout and
-        // avoid attaching src directly until successfully loaded.
-        const temp = new Image();
-        let timeoutHandle: number | undefined = undefined;
-
-        const onLoad = () => {
-            window.clearTimeout(timeoutHandle);
+        // Remote images (fetched on demand or loaded from a URL): load through a temporary Image
+        // to implement the timeout, and only attach the src once it has loaded.
+        this.loadWithTimeout(image, (temp) => {
             try {
                 imgEl.src = temp.src;
             } catch (error) { Logger.debug('Ignored error:', error); }
             this.handleImageLoad(image);
-            cleanup();
-        };
-
-        const onError = (err?: Error) => {
-            window.clearTimeout(timeoutHandle);
-            this.handleImageError(image, err || new Error('Failed to load'));
-            cleanup();
-        };
-
-        const cleanup = () => {
-            temp.onload = null;
-            temp.onerror = null;
-        };
-
-        temp.onload = onLoad;
-        temp.onerror = () => onError(new Error('Failed to load'));
-
-        // Timeout
-        timeoutHandle = window.setTimeout(() => {
-            onError(new Error('Image loading timed out'));
-        }, this.remoteLoadTimeoutMs ?? 10000);
-
-        // Start loading
-        try {
-            temp.src = image.getDisplayUrl();
-        } catch (e) {
-            onError(e as Error);
-        }
+        }, (error) => this.handleImageError(image, error));
     }
 
     /**

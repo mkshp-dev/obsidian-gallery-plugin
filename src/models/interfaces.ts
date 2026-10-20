@@ -3,6 +3,8 @@
  * Based on contracts defined in contracts/interfaces.md
  */
 
+import type { ViewType, ViewTypeName } from './viewTypes';
+
 export interface ILocalSourceConfig {
   type: 'local';
   path: string;
@@ -107,7 +109,8 @@ export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmich
 export type SourceType = ISourceConfig['type'];
 
 export interface IViewConfig {
-  type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
+  /** View name as written; GalleryConfig normalizes aliases (grid) to their view type */
+  type: ViewTypeName;
   [key: string]: unknown;
 }
 
@@ -116,7 +119,7 @@ export interface IGalleryConfig {
   path: string;
 
   /** Display view type */
-  view?: 'thumbnail' | 'carousel' | 'grid' | 'embed' | IViewConfig;
+  view?: ViewTypeName | IViewConfig;
 
   /** Include subdirectories (default: true) */
   recursive?: boolean;
@@ -204,7 +207,7 @@ export interface IImageSource {
 
 export interface IGalleryView {
   /** View type identifier */
-  readonly type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
+  readonly type: ViewType;
 
   /** DOM container element */
   readonly container: HTMLElement;

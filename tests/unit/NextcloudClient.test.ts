@@ -148,7 +148,7 @@ describe('NextcloudClient', () => {
             expect(requestUrl).toHaveBeenCalledTimes(2);
             // first call to thumbnail endpoint, which must not throw on an error status so the fallback can run
             expect(requestUrl).toHaveBeenNthCalledWith(1, expect.objectContaining({
-                url: 'https://cloud.example.com/index.php/core/preview?fileId=1234&x=256&y=256',
+                url: 'https://cloud.example.com/index.php/core/preview?fileId=1234&x=256&y=256&a=1',
                 throw: false
             }));
             // second call to original endpoint

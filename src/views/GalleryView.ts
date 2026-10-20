@@ -1,6 +1,7 @@
 import { Logger } from "../utils/Logger";
 import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
+import type { ViewType } from '../models/viewTypes';
 
 /**
  * Abstract base class for gallery view renderers
@@ -9,7 +10,7 @@ import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 export abstract class GalleryView implements IGalleryView {
     public readonly container: HTMLElement;
     protected _images: IImageSource[] = [];
-    protected _type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
+    protected _type: ViewType;
     protected _isDestroyed: boolean = false;
     protected _observers: IntersectionObserver[] = [];
     // Runtime options (common)
@@ -26,7 +27,7 @@ export abstract class GalleryView implements IGalleryView {
     protected slideshowInterval: number | null = null;
     protected slideshowPlaying: boolean = false;
 
-    constructor(type: 'thumbnail' | 'carousel' | 'grid' | 'embed', container: HTMLElement) {
+    constructor(type: ViewType, container: HTMLElement) {
         this._type = type;
         this.container = container;
         this.initializeContainer();
@@ -35,7 +36,7 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Get view type identifier
      */
-    get type(): 'thumbnail' | 'carousel' | 'grid' | 'embed' {
+    get type(): ViewType {
         return this._type;
     }
 

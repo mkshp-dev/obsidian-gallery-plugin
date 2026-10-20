@@ -42,7 +42,7 @@ class RecordingView {
 class RecordingViewFactory {
     public views: RecordingView[] = [];
     createView() { const v = new RecordingView(); this.views.push(v); return v; }
-    getSupportedTypes() { return ['thumbnail', 'carousel', 'grid', 'embed']; }
+    getSupportedTypes() { return ['thumbnail', 'carousel', 'masonry', 'justified', 'embed']; }
     registerViewType() {}
 }
 

@@ -1,6 +1,7 @@
 import { parseYaml, stringifyYaml } from 'obsidian';
 import { IGalleryConfig, IConfigError } from '../models/interfaces';
 import { GalleryConfig } from '../models/GalleryConfig';
+import { VIEW_TYPES, getViewTypeName, normalizeViewType } from '../models/viewTypes';
 
 class ConfigError extends Error implements IConfigError {
     readonly type = 'config' as const;
@@ -21,7 +22,6 @@ class ConfigError extends Error implements IConfigError {
  */
 export class ParameterParser {
     private static readonly ALLOWED_KEYS = ['path', 'view', 'recursive', 'urls', 'sources'];
-    private static readonly VIEW_TYPES = ['thumbnail', 'carousel', 'grid', 'embed'];
 
     /**
      * Parse YAML content from code block
@@ -181,16 +181,10 @@ export class ParameterParser {
         // Validate view type if provided
         const view = config.view;
         if (view) {
-            let viewType = '';
-            if (typeof view === 'string') {
-                viewType = view;
-            } else if (typeof view === 'object' && view !== null && 'type' in view) {
-                viewType = (view as { type: string }).type;
-            }
-            if (viewType && !this.VIEW_TYPES.includes(viewType)) {
+            if (!this.isValidView(view)) {
                 throw this.createConfigError('invalid_view',
-                    `View type must be a string (Use one of: ${this.VIEW_TYPES.join(', ')})`,
-                    `Valid view types are: ${this.VIEW_TYPES.join(', ')}`);
+                    `View type must be a string (Use one of: ${VIEW_TYPES.join(', ')})`,
+                    `Valid view types are: ${VIEW_TYPES.join(', ')}`);
             }
 
             if (typeof view === 'object' && view !== null) {
@@ -217,6 +211,18 @@ export class ParameterParser {
     }
 
     /**
+     * A view value is valid when it names a known view or alias. An object without a type uses the
+     * default view; an object with a non-string type is invalid.
+     */
+    private static isValidView(view: unknown): boolean {
+        if (typeof view === 'object' && view !== null && 'type' in view && typeof view.type !== 'string') {
+            return false;
+        }
+        const name = getViewTypeName(view);
+        return name === undefined || normalizeViewType(name) !== undefined;
+    }
+
+    /**
      * Create structured configuration error
      */
     private static createConfigError(field: string, message: string, suggestion?: string): ConfigError {
@@ -238,18 +244,10 @@ export class ParameterParser {
         }
 
         // View validation
-        if (config.view) {
-            let viewType = '';
-            if (typeof config.view === 'string') {
-                viewType = config.view;
-            } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
-                viewType = (config.view as { type: string }).type;
-            }
-            if (viewType && !this.VIEW_TYPES.includes(viewType)) {
-                errors.push(this.createConfigError('view',
-                    `View type must be a string (Use one of: ${this.VIEW_TYPES.join(', ')})`,
-                    `Valid types: ${this.VIEW_TYPES.join(', ')}`));
-            }
+        if (config.view && !this.isValidView(config.view)) {
+            errors.push(this.createConfigError('view',
+                `View type must be a string (Use one of: ${VIEW_TYPES.join(', ')})`,
+                `Valid types: ${VIEW_TYPES.join(', ')}`));
         }
 
         // Recursive validation
@@ -364,7 +362,7 @@ export class ParameterParser {
      * Get supported view types
      */
     static getSupportedViewTypes(): string[] {
-        return [...this.VIEW_TYPES];
+        return [...VIEW_TYPES];
     }
 
     /**

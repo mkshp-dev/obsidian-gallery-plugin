@@ -1,4 +1,5 @@
 import { IGalleryConfig, ISourceConfig, IViewConfig } from './interfaces';
+import { DEFAULT_VIEW_TYPE, VIEW_TYPES, ViewTypeName, getViewTypeName, normalizeViewType } from './viewTypes';
 
 /**
  * Gallery configuration parsed from code block parameters
@@ -33,31 +34,21 @@ export class GalleryConfig implements IGalleryConfig {
             throw new Error('Gallery sources are required (either in sources array, or via path/urls)');
         }
 
-        // Set up the view object
-        let viewType: string = 'thumbnail';
-        if (config.view) {
-            if (typeof config.view === 'string') {
-                viewType = config.view;
-                this.view = { type: viewType as 'thumbnail' | 'carousel' | 'grid' | 'embed' };
-            } else if (typeof config.view === 'object' && config.view !== null) {
-                this.view = config.view;
-                viewType = this.view.type || 'thumbnail';
-            } else {
-                this.view = { type: 'thumbnail' };
-            }
-        } else {
-            this.view = { type: 'thumbnail' };
+        // Set up the view object. Aliases (grid) are normalized here, so everything downstream
+        // only ever sees view types.
+        const viewName = getViewTypeName(config.view) ?? DEFAULT_VIEW_TYPE;
+        const viewType = normalizeViewType(viewName);
+        if (!viewType) {
+            throw new Error(`Invalid view type: ${viewName}. Must be one of: ${VIEW_TYPES.join(', ')}`);
         }
+        this.view = typeof config.view === 'object' && config.view !== null
+            ? { ...config.view, type: viewType }
+            : { type: viewType };
 
         // Set properties for backward compatibility
         this.path = config.path && typeof config.path === 'string' ? this.sanitizePath(config.path.trim()) : '';
         this.recursive = config.recursive !== undefined ? config.recursive : true;
         this.urls = config.urls;
-
-        // Validate view type
-        if (!['thumbnail', 'carousel', 'grid', 'embed'].includes(viewType)) {
-            throw new Error(`Invalid view type: ${viewType}. Must be one of: thumbnail, carousel, grid, embed`);
-        }
     }
 
     /**
@@ -87,8 +78,8 @@ export class GalleryConfig implements IGalleryConfig {
         const data = yamlData as Record<string, unknown>;
         let viewType: IViewConfig | undefined;
         if (data.view) {
-            if (typeof data.view === 'string' && ['thumbnail', 'carousel', 'grid', 'embed'].includes(data.view)) {
-                viewType = { type: data.view as 'thumbnail' | 'carousel' | 'grid' | 'embed' };
+            if (typeof data.view === 'string') {
+                viewType = { type: data.view as ViewTypeName };
             } else if (typeof data.view === 'object' && data.view !== null) {
                 viewType = data.view as IViewConfig;
             }
@@ -109,7 +100,7 @@ export class GalleryConfig implements IGalleryConfig {
     isValid(): boolean {
         try {
             return this.sources.length > 0 &&
-                ['thumbnail', 'carousel', 'grid', 'embed'].includes(this.view.type);
+                normalizeViewType(this.view.type) !== undefined;
         } catch {
             return false;
         }

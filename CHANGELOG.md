@@ -12,6 +12,9 @@
 - **Thumbnail pagination fix**: Going back to a page you had already viewed in the thumbnail view no longer shows blank tiles.
 - **Source errors for every provider**: A failing source in a mixed gallery now shows its inline error for Nextcloud and local sources too, not just Immich.
 - **Debug logging setting**: Debug logs were always on. They now follow the setting, renamed from **Enable lifecycle logging** to **Enable debug logging** (off by default).
+- **New masonry and justified views**: `view: masonry` lays images out in equal-width columns at their natural heights (Pinterest-style), filling the shortest column next so there are no gaps under short images. `view: justified` lays them out in equal-height rows that exactly fill the width, uncropped, like Immich or Google Photos. Both reflow when the note is resized. Immich galleries know each image's size up front, so their rows don't shift as images load.
+- **`grid` now renders as masonry**: The old grid view was documented as masonry but was a plain grid, which left gaps under every image shorter than the tallest one in its row. Existing `view: grid` blocks keep working and now get the real masonry layout. The builder, autocomplete and docs use `masonry` from now on.
+- **Uncropped Nextcloud thumbnails**: Nextcloud previews were requested cropped to a square. They now keep the image's aspect ratio, which the masonry and justified views need.
 
 ## 2.4.4 - 2026-10-18
 

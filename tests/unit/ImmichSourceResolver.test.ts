@@ -105,6 +105,12 @@ describe('ImmichSourceResolver', () => {
         await (await resolver.resolve(source, { viewType: 'grid' })).images[0].resolveDisplayUrl!();
         expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'thumbnail');
 
+        for (const viewType of ['masonry', 'justified']) {
+            getBlobUrlMock.mockClear();
+            await (await resolver.resolve(source, { viewType })).images[0].resolveDisplayUrl!();
+            expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'thumbnail');
+        }
+
         getBlobUrlMock.mockClear();
 
         await (await resolver.resolve(source, {})).images[0].resolveDisplayUrl!();

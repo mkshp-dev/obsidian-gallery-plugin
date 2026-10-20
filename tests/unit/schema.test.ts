@@ -3,6 +3,7 @@ import { ParameterParser } from '../../src/processors/ParameterParser';
 import { GalleryProcessor } from '../../src/processors/GalleryProcessor';
 import { ImageSource } from '../../src/models/ImageSource';
 import { IContentScanner } from '../../src/models/interfaces';
+import { VIEW_TYPES } from '../../src/models/viewTypes';
 
 // Minimal mock view factory and mock view for testing rendering behavior
 function createMockContainer(): HTMLElement & any {
@@ -79,7 +80,7 @@ class FakeViewFactory {
         view.type = type;
         return view;
     }
-    getSupportedTypes() { return ['thumbnail', 'carousel', 'grid', 'embed']; }
+    getSupportedTypes() { return ['thumbnail', 'carousel', 'masonry', 'justified', 'embed']; }
     registerViewType() {}
 }
 
@@ -133,7 +134,7 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
                 path: 'Images/Screenshots',
                 recursive: false
             });
-            expect(config.view).toEqual({ type: 'grid' });
+            expect(config.view).toEqual({ type: 'masonry' });
         });
 
         test('new v2 external block parses correctly', () => {
@@ -149,16 +150,16 @@ describe('Gallery Schema Hardening & v2 Schema Validation', () => {
             expect(config.view).toEqual({ type: 'carousel' });
         });
 
-        test('legacy view: "grid" normalizes to view.type = "grid"', () => {
+        test('legacy view: "grid" normalizes to view.type = "masonry"', () => {
             const yaml = `path: photos\nview: grid`;
             const config = ParameterParser.parseAndValidate(yaml);
-            expect(config.view).toEqual({ type: 'grid' });
+            expect(config.view).toEqual({ type: 'masonry' });
         });
 
         test('new view: { type: ... } parses correctly', () => {
             const yaml = `path: photos\nview:\n  type: grid\n  columns: 4`;
             const config = ParameterParser.parseAndValidate(yaml);
-            expect(config.view).toEqual({ type: 'grid', columns: 4 });
+            expect(config.view).toEqual({ type: 'masonry', columns: 4 });
         });
     });
 
@@ -305,8 +306,7 @@ view: thumbnail`;
         });
 
         test('each supported view type works with v2 syntax', async () => {
-            const viewTypes = ['thumbnail', 'carousel', 'grid', 'embed'];
-            for (const viewType of viewTypes) {
+            for (const viewType of VIEW_TYPES) {
                 const factory = new FakeViewFactory();
                 const processor = new GalleryProcessor(fakeScanner as any, factory as any);
                 const container = createMockContainer();
@@ -319,6 +319,29 @@ view: thumbnail`;
                 expect(result.success).toBe(true);
                 expect(factory.lastViewTypeCreated).toBe(viewType);
             }
+        });
+
+        test('legacy grid view renders as masonry', async () => {
+            const factory = new FakeViewFactory();
+            const processor = new GalleryProcessor(fakeScanner as any, factory as any);
+            const result = await processor.processCodeBlock(
+                `sources:
+  - type: local
+    path: photos
+view:
+  type: grid`,
+                createMockContainer(),
+                createMockMarkdownPostProcessorContext() as any
+            );
+
+            expect(result.success).toBe(true);
+            expect(factory.lastViewTypeCreated).toBe('masonry');
+        });
+
+        test('unknown view type is rejected with the current view names', () => {
+            expect(() => ParameterParser.parseAndValidate(`path: photos
+view: slideshow`))
+                .toThrow('thumbnail, carousel, masonry, justified, embed');
         });
 
         test('mixed-source block renders inline error when some sources fail', async () => {
@@ -457,7 +480,7 @@ view: grid`;
                 id: 'abc123'
             }
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
 
     it('new v2 immich favorites block parses correctly', () => {
@@ -476,7 +499,7 @@ view: grid`;
                 type: 'favorites'
             }
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
 
     it('new v2 immich recent block parses correctly', () => {
@@ -495,7 +518,7 @@ view: grid`;
                 type: 'recent'
             }
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
 
     it('new v2 immich tags block parses correctly', () => {
@@ -516,7 +539,7 @@ view: grid`;
                 tagIds: ['t1', 't2']
             }
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
 
     it('new v2 immich human-readable tags block parses correctly', () => {
@@ -537,7 +560,7 @@ view: grid`;
                 tags: ['Photography', 'Family']
             }
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
 
 
@@ -559,7 +582,7 @@ view: grid`;
                 personIds: ['p1', 'p2']
             }
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
 
     it('new v2 immich human-readable people block parses correctly', () => {
@@ -580,7 +603,7 @@ view: grid`;
                 people: ['Alice', 'Bob']
             }
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
     it('new v2 immich recent block with limit parses correctly', () => {
         const yaml = `sources:
@@ -600,7 +623,7 @@ view: grid`;
                 limit: 15
             }
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
 
     it('new v2 nextcloud block parses correctly', () => {
@@ -620,7 +643,7 @@ view: grid`;
             recursive: false,
             limit: 10
         });
-        expect(config.view.type).toBe('grid');
+        expect(config.view.type).toBe('masonry');
     });
 
     it('new v2 nextcloud-share block parses correctly', () => {

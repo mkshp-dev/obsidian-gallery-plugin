@@ -137,9 +137,10 @@ export class NextcloudClient {
 
     let response: RequestUrlResponse;
     if (representation === 'thumbnail' && fileId) {
+      // a=1 keeps the image's aspect ratio (Nextcloud crops previews to x*y by default).
       // throw: false so a failed preview (e.g. preview generation disabled) reaches the fallback below
       response = await requestUrl({
-        url: `${this.baseUrl}/index.php/core/preview?fileId=${fileId}&x=256&y=256`,
+        url: `${this.baseUrl}/index.php/core/preview?fileId=${fileId}&x=256&y=256&a=1`,
         method: 'GET',
         headers: this.getHeaders(),
         throw: false

@@ -1,8 +1,10 @@
 import { Logger } from "../utils/Logger";
 import { IGalleryView, IViewFactory } from '../models/interfaces';
+import { DEFAULT_VIEW_TYPE, normalizeViewType } from '../models/viewTypes';
 import { ThumbnailView } from './ThumbnailView';
 import { CarouselView } from './CarouselView';
-import { GridView } from './GridView';
+import { MasonryView } from './MasonryView';
+import { JustifiedView } from './JustifiedView';
 import { EmbedView } from './EmbedView';
 
 /**
@@ -27,8 +29,9 @@ export class ViewFactory implements IViewFactory {
         // Register CarouselView (real implementation)
         this.viewTypes.set('carousel', CarouselView);
             
-        // Register real GridView implementation
-        this.viewTypes.set('grid', GridView);
+        // Masonry (also used for the legacy `grid` name) and justified rows
+        this.viewTypes.set('masonry', MasonryView);
+        this.viewTypes.set('justified', JustifiedView);
 
         // Register EmbedView (continuous, borderless, native-embed feel)
         this.viewTypes.set('embed', EmbedView);
@@ -38,7 +41,8 @@ export class ViewFactory implements IViewFactory {
      * Create a view renderer of the specified type
      */
     createView(type: string, container: HTMLElement): IGalleryView {
-        const ViewClass = this.viewTypes.get(type);
+        // Accept aliases (grid -> masonry); custom registered types are looked up as given
+        const ViewClass = this.viewTypes.get(normalizeViewType(type) ?? type);
         
         if (!ViewClass) {
             throw new Error(`Unknown view type: ${type}. Supported types: ${this.getSupportedTypes().join(', ')}`);
@@ -107,14 +111,14 @@ export class ViewFactory implements IViewFactory {
      * Check if view type is supported
      */
     isViewTypeSupported(type: string): boolean {
-        return this.viewTypes.has(type);
+        return this.viewTypes.has(normalizeViewType(type) ?? type);
     }
 
     /**
      * Get default view type
      */
     getDefaultViewType(): string {
-        return 'thumbnail';
+        return DEFAULT_VIEW_TYPE;
     }
 
     /**
@@ -169,10 +173,15 @@ export class ViewFactory implements IViewFactory {
                 description: 'Horizontal scrolling carousel with navigation controls',
                 features: ['Horizontal scrolling', 'Navigation arrows', 'Touch gestures', 'Keyboard navigation']
             },
-            grid: {
-                name: 'Masonry Grid',
-                description: 'Pinterest-style masonry grid with variable heights',
-                features: ['Masonry layout', 'Responsive columns', 'Preserve aspect ratios', 'Dynamic sizing']
+            masonry: {
+                name: 'Masonry',
+                description: 'Pinterest-style columns of equal width; each image keeps its height',
+                features: ['Masonry layout', 'Responsive columns', 'Preserve aspect ratios', 'Reading order kept']
+            },
+            justified: {
+                name: 'Justified',
+                description: 'Rows of equal height that fill the width, like Immich or Google Photos',
+                features: ['Justified rows', 'Uncropped images', 'Preserve aspect ratios', 'Responsive rows']
             },
             embed: {
                 name: 'Embed',
@@ -181,7 +190,7 @@ export class ViewFactory implements IViewFactory {
             }
         };
         
-        return viewTypeInfo[type] || null;
+        return viewTypeInfo[normalizeViewType(type) ?? type] || null;
     }
 
     /**

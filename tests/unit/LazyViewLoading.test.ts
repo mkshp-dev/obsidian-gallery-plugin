@@ -1,5 +1,5 @@
 import { ThumbnailView } from '../../src/views/ThumbnailView';
-import { GridView } from '../../src/views/GridView';
+import { MasonryView } from '../../src/views/MasonryView';
 import { CarouselView } from '../../src/views/CarouselView';
 import { ImageSource } from '../../src/models/ImageSource';
 
@@ -121,10 +121,10 @@ describe('ThumbnailView loading', () => {
     });
 });
 
-describe('GridView loading', () => {
+describe('MasonryView loading', () => {
     test('fetches on visibility and shows the error tile once a fetch keeps failing', async () => {
         jest.useFakeTimers();
-        const view = new GridView(createContainer());
+        const view = new MasonryView(createContainer());
         const failing = deferredImage(1);
         failing.loader.mockRejectedValue(new Error('HTTP 401'));
         view.update([failing.image]);

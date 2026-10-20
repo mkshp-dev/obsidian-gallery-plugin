@@ -5,6 +5,7 @@ import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceCon
 import { GallerySourceResolveContext } from '../resolvers/GallerySourceResolver';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
+import { resolveViewType } from '../models/viewTypes';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
@@ -302,14 +303,7 @@ export class GalleryProcessor {
             loadingManager.startLoading('scan', { type: 'dots', text: 'Scanning for images...' });
         }
 
-        let viewType = 'thumbnail';
-        if (config.view) {
-            if (typeof config.view === 'string') {
-                viewType = config.view;
-            } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
-                viewType = (config.view as { type: string }).type;
-            }
-        }
+        const viewType = resolveViewType(config.view);
 
         try {
             const perSource: IImageSource[][] = [];
@@ -481,14 +475,7 @@ export class GalleryProcessor {
             }
 
             // Create view
-            let viewType = 'thumbnail';
-            if (config.view) {
-                if (typeof config.view === 'string') {
-                    viewType = config.view;
-                } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
-                    viewType = (config.view as { type: string }).type;
-                }
-            }
+            const viewType = resolveViewType(config.view);
             const view = this.viewFactory.createView(viewType, container);
 
             // Create gallery instance
@@ -625,14 +612,7 @@ export class GalleryProcessor {
             }
 
             // Create view
-            let viewType = 'thumbnail';
-            if (config.view) {
-                if (typeof config.view === 'string') {
-                    viewType = config.view;
-                } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
-                    viewType = (config.view as { type: string }).type;
-                }
-            }
+            const viewType = resolveViewType(config.view);
             const view = this.viewFactory.createView(viewType, container);
             
             // Create gallery instance

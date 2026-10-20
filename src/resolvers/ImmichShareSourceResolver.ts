@@ -2,9 +2,10 @@ import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { IImageSource, IImmichShareSourceConfig } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImageSource } from '../models/ImageSource';
-import { extractImmichCaption } from './ImmichSourceResolver';
+import { extractImmichCaption, extractImmichDimensions } from './ImmichSourceResolver';
 import { ImmichAsset, ImmichAlbum, ImmichShareResponse } from '../models/immich/ImmichTypes';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
+import { usesThumbnailImages } from '../models/viewTypes';
 
 export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichShareSourceConfig> {
     readonly type = 'immich-share';
@@ -206,7 +207,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
             // Determine representation based on viewType
             let representation: 'thumbnail' | 'preview' | 'original' = 'original';
-            if (context.viewType === 'thumbnail' || context.viewType === 'grid') {
+            if (usesThumbnailImages(context.viewType)) {
                 representation = 'thumbnail';
             } else if (context.viewType === 'carousel') {
                 representation = 'preview';
@@ -255,7 +256,9 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                     return new Blob([blobRes.arrayBuffer]);
                 });
 
-                return new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loader);
+                const image = new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loader);
+                image.dimensions = extractImmichDimensions(asset);
+                return image;
             }));
 
             for (const img of resolvedImages) {

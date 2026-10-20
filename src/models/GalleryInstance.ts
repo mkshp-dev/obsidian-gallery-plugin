@@ -1,5 +1,6 @@
 import { Logger } from "../utils/Logger";
 import { IGalleryInstance, IGalleryConfig, IImageSource, IGalleryView } from './interfaces';
+import { resolveViewType } from './viewTypes';
 
 /**
  * Represents a rendered gallery within a markdown document
@@ -53,15 +54,7 @@ export class GalleryInstance implements IGalleryInstance {
         this.addClass(this.container, 'gallery-container');
         try { this.container.setAttribute('data-gallery-id', this.id); } catch (error) { Logger.debug('Ignored error:', error); }
         try {
-            let viewType = 'thumbnail';
-            if (this.config.view) {
-                if (typeof this.config.view === 'string') {
-                    viewType = this.config.view;
-                } else if (typeof this.config.view === 'object' && this.config.view !== null && 'type' in this.config.view) {
-                    viewType = (this.config.view as { type: string }).type;
-                }
-            }
-            this.container.setAttribute('data-gallery-type', viewType);
+            this.container.setAttribute('data-gallery-type', resolveViewType(this.config.view));
         } catch (error) { Logger.debug('Ignored error:', error); }
         try { this.container.setAttribute('data-gallery-path', this.config.path || ''); } catch (error) { Logger.debug('Ignored error:', error); }
     }

@@ -9,7 +9,7 @@ export class GalleryBuilderModal extends Modal {
     private plugin: GalleryPlugin;
     private editor: Editor;
 
-    private viewType: string = 'grid';
+    private viewType: string = 'masonry';
     private pagination: boolean = false;
     private itemsPerPage: number | undefined = undefined;
     private sources: Partial<ISourceConfig>[] = [];
@@ -52,7 +52,8 @@ export class GalleryBuilderModal extends Modal {
             .setDesc('Select the rendering layout for your gallery.')
             .addDropdown(dropdown => dropdown
                 .addOptions({
-                    'grid': 'Grid (Masonry)',
+                    'masonry': 'Masonry (Columns)',
+                    'justified': 'Justified (Rows)',
                     'thumbnail': 'Thumbnail Grid',
                     'carousel': 'Carousel (Slideshow)',
                     'embed': 'Embed (Continuous)'

@@ -7,6 +7,8 @@ import { GalleryProcessor, RefreshSources } from './processors/GalleryProcessor'
 import { VaultWatcher } from './utils/VaultWatcher';
 import { LazyLoader } from './utils/LazyLoader';
 import { ShowcaseGenerator } from './generators/ShowcaseGenerator';
+import { addDemoConnections } from './generators/DemoServers';
+import { DemoConnectionsModal } from './ui/DemoConnectionsModal';
 import { GallerySettingsTab } from './ui/GallerySettingsTab';
 import { GalleryPluginSettings, DEFAULT_SETTINGS } from './models/settings';
 
@@ -70,7 +72,7 @@ export default class GalleryPlugin extends Plugin {
             id: 'create-showcase-notes',
             name: 'Create showcase notes',
             callback: async () => {
-                await new ShowcaseGenerator(this.app).generateShowcase();
+                await this.createShowcase();
             }
         });
 
@@ -206,6 +208,31 @@ export default class GalleryPlugin extends Plugin {
             pagination: this.settings.defaultPagination ?? DEFAULT_SETTINGS.defaultPagination,
             itemsPerPage: this.settings.defaultItemsPerPage ?? DEFAULT_SETTINGS.defaultItemsPerPage
         };
+    }
+
+    /**
+     * Create the showcase notes, first offering to add the demo server connections they use
+     */
+    private async createShowcase(): Promise<void> {
+        const generator = new ShowcaseGenerator(this.app);
+        if (generator.showcaseExists()) {
+            // Let the generator report it, without asking about connections first
+            await generator.generateShowcase();
+            return;
+        }
+
+        const choice = await new DemoConnectionsModal(this.app).ask();
+        if (choice === 'cancel') return;
+
+        if (choice === 'add') {
+            const added = addDemoConnections(this.settings);
+            if (added.length > 0) {
+                await this.saveSettings();
+                this.refreshGalleries(['immich', 'nextcloud']);
+            }
+        }
+
+        await generator.generateShowcase({ demoConnections: choice === 'add' ? 'added' : 'declined' });
     }
 
     /**

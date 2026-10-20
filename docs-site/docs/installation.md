@@ -26,3 +26,5 @@ sidebar_position: 2
 ## Next steps
 
 Once the plugin is installed and enabled, you can start creating galleries. Head over to the [Gallery block syntax](./gallery-block-syntax) page to learn how to write your first `obs-gallery` block.
+
+No Immich or Nextcloud server of your own? The read-only [demo servers](./demo-servers.md) let you try every source type, and the **Create showcase notes** command builds example notes that use them (it offers to add the demo connections for you).

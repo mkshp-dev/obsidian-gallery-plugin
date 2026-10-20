@@ -10,13 +10,13 @@ You can display images from an Immich shared album directly in Gallery View. Thi
 
 ## Usage
 
-Add an `immich-share` source type to your gallery configuration and provide the share URL:
+Add an `immich-share` source type to your gallery configuration and provide the share URL. This example is the Landscapes album on the public, read-only [demo server](../demo-servers.md), so you can paste it into a note as it is:
 
 ````markdown
 ```obs-gallery
 sources:
   - type: immich-share
-    url: https://photos.example.com/share/abc1234
+    url: https://demo-immich.mkshp.dev/share/7XBAej6IyThZOS7izb78XcEJX7QhYwQBmxtHxaBz7TaaqiP5pxWyZQrN6TIvUGRhI9g
 view:
   type: justified
 ```
@@ -26,14 +26,14 @@ The [justified view](../views/justified.md) shows the photos in even rows, like 
 
 ### Password-Protected Links
 
-If your Immich shared link is protected by a password, you can specify the password using the optional `password` field:
+If your Immich shared link is protected by a password, you can specify the password using the optional `password` field. The demo server's Travel album is shared with the password `gallery-demo`:
 
 ````markdown
 ```obs-gallery
 sources:
   - type: immich-share
-    url: https://photos.example.com/share/abc1234
-    password: "your-album-password"
+    url: https://demo-immich.mkshp.dev/share/RAHL6jLQTkqIDaSYjdlHdcbJ4W25u002dyorCdqYVDmoar8xyB7wiE8GARi4QH2eqWw
+    password: "gallery-demo"
 view:
   type: masonry
 ```
@@ -53,7 +53,7 @@ sources:
   - type: local
     path: Images/My Vacation
   - type: immich-share
-    url: https://photos.example.com/share/abc1234
+    url: https://demo-immich.mkshp.dev/share/7XBAej6IyThZOS7izb78XcEJX7QhYwQBmxtHxaBz7TaaqiP5pxWyZQrN6TIvUGRhI9g
 view:
   type: thumbnail
 ```

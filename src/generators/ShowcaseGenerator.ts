@@ -2,6 +2,7 @@ import { App, Notice } from 'obsidian';
 import { DUMMY_ASSETS } from './DemoAssets';
 import { ANIMATED_GIF_BASE64, DemoImageSpec, renderDemoImage } from './DemoImageFactory';
 import { Logger } from '../utils/Logger';
+import { DEMO } from './DemoServers';
 
 /** Mixed shapes, formats, and awkward file names for the local test lab */
 const TEST_LAB_IMAGES: DemoImageSpec[] = [
@@ -22,6 +23,11 @@ const TEST_LAB_IMAGES: DemoImageSpec[] = [
 const TEST_LAB_BULK_COUNT = 36;
 const BULK_SIZES: Array<[number, number]> = [[320, 240], [240, 320], [300, 300], [400, 200]];
 
+/** Whether the demo server connections are in the user's settings when the notes are generated */
+export interface ShowcaseOptions {
+    demoConnections: 'added' | 'declined';
+}
+
 export class ShowcaseGenerator {
     private app: App;
     private basePath = 'GalleryDemo';
@@ -32,11 +38,15 @@ export class ShowcaseGenerator {
         this.app = app;
     }
 
-    async generateShowcase(): Promise<void> {
+    /** True when the showcase folder is already in the vault (generating again would abort) */
+    showcaseExists(): boolean {
+        return !!this.app.vault.getAbstractFileByPath(this.basePath);
+    }
+
+    async generateShowcase(options: ShowcaseOptions = { demoConnections: 'declined' }): Promise<void> {
         try {
             // Check if folder already exists
-            const existingFolder = this.app.vault.getAbstractFileByPath(this.basePath);
-            if (existingFolder) {
+            if (this.showcaseExists()) {
                 new Notice(`${this.basePath} already exists. Delete or rename it if you want to regenerate the showcase.`);
                 return;
             }
@@ -55,7 +65,7 @@ export class ShowcaseGenerator {
             await this.writeTestLabAssets();
 
             // Create showcase notes
-            await this.createWelcomeNote();
+            await this.createWelcomeNote(options);
             await this.createLocalSourceNote();
             await this.createRelativePathNote();
             await this.createExternalUrlsNote();
@@ -140,7 +150,8 @@ export class ShowcaseGenerator {
         await this.app.vault.createBinary(`${this.testLabPath}/broken-image.jpg`, broken.buffer);
     }
 
-    private async createWelcomeNote(): Promise<void> {
+    private async createWelcomeNote(options: ShowcaseOptions): Promise<void> {
+        const demoSetup = this.demoSetupSection(options);
         const content = `\
 # Welcome to Gallery View Showcase
 
@@ -164,23 +175,23 @@ These notes render images immediately:
 - [[06 - Recursive and filters]] — Scan sub-folders and filter by filename glob, size, or date — for local files and Immich.
 
 ### 🔐 Immich — Authenticated
-Connect to your own Immich server using an API key configured in plugin settings:
+Use the \`${DEMO.immichKey}\` connection (see **Demo servers** below):
 - [[07 - Immich authenticated]] — People, tags, and date filters.
 - [[08 - Immich favorites and recent]] — Favorites and recent photo feeds.
-- [[09 - Immich albums]] — Album-based gallery (template).
+- [[09 - Immich albums]] — Album-based galleries, including videos only.
 
 ### 🔗 Immich — Shared Links
-No account required, just a public share URL:
+No account required, just a public share URL. These use albums on the demo server:
 - [[10 - Immich shared link]] — Public shared album.
 - [[11 - Password-protected Immich share]] — Password-protected share.
 
 ### ☁️ Nextcloud — Authenticated
-Connect to your Nextcloud server using connection settings (\`nextcloud-demo\`):
+Use the \`${DEMO.nextcloudKey}\` connection (see **Demo servers** below):
 - [[12 - Nextcloud authenticated]] — Path selection, subfolders, and carousel and justified layouts.
 - [[13 - Nextcloud recursive and filters]] — Sub-folder scanning, globs, MIME types, sizes, and date filtering.
 
 ### 🔗 Nextcloud — Shared Links
-No connection settings required, just a public Nextcloud share URL:
+No connection settings required, just a public Nextcloud share URL. These use folders on the demo server:
 - [[14 - Nextcloud shared link]] — Public and password-protected Nextcloud share links.
 
 ### ⚠️ Error States Reference
@@ -191,10 +202,29 @@ See every compact error the plugin can show — great for debugging your own gal
 Generated images in many shapes, sizes, and formats for checking layouts by eye:
 - [[16 - Local test lab]] — Aspect ratios, formats (PNG/JPEG/WebP/GIF), long and Unicode file names, a broken file, and 36 extra images for pagination.
 
+${demoSetup}
 ## Next Steps
 Want to learn more? Check out the full [Documentation](https://mkshp-dev.github.io/obsidian-gallery-plugin/)!
 `;
         await this.app.vault.create(`${this.basePath}/00 - Welcome.md`, content);
+    }
+
+    /** The Welcome note's demo server section: confirms the added connections, or explains how to add them */
+    private demoSetupSection(options: ShowcaseOptions): string {
+        const intro = options.demoConnections === 'added'
+            ? `The Immich and Nextcloud notes load photos from public demo servers. The \`${DEMO.immichKey}\` and \`${DEMO.nextcloudKey}\` connections they use were added to **Settings → Gallery View → Providers** (an existing connection with the same key was left unchanged). Remove them there when you are done trying the plugin.`
+            : `The Immich and Nextcloud notes load photos from public demo servers. The share-link notes (10, 11 and 14) work right away. The other Immich and Nextcloud notes need these two connections; add them in **Settings → Gallery View → Providers**:`;
+
+        return `## Demo servers
+${intro}
+
+| Connection | Key | Server URL | Credentials |
+|---|---|---|---|
+| Immich | \`${DEMO.immichKey}\` | \`${DEMO.immichUrl}\` | API key \`${DEMO.immichApiKey}\` |
+| Nextcloud | \`${DEMO.nextcloudKey}\` | \`${DEMO.nextcloudUrl}\` | Username \`${DEMO.nextcloudUser}\`, app password \`${DEMO.nextcloudAppPassword}\` |
+
+The demo servers are read-only and only meant for trying the plugin. Your requests go to a server run by the plugin's author. See the [demo servers page](https://mkshp-dev.github.io/obsidian-gallery-plugin/docs/demo-servers) for what is on them.
+`;
     }
 
     private async createLocalSourceNote(): Promise<void> {
@@ -442,7 +472,7 @@ view:
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     limit: 10
     sort:
       by: createdAt
@@ -529,15 +559,15 @@ view:
 
 ---
 
-### Immich — Images only, taken this year
+### Immich — Images only, taken since 2025
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       assetType: image
-      createdAfter: "2025-01-01"
+      takenAfter: "2025-01-01"
     limit: 20
 view:
   type: thumbnail
@@ -556,8 +586,9 @@ view:
 | Filter | Example | Description |
 |---|---|---|
 | \`assetType\` | \`image\` or \`video\` | Restrict to photos or videos |
-| \`createdAfter\` | \`2025-01-01\` | Only assets after this date (YYYY-MM-DD) |
-| \`createdBefore\` | \`2025-12-31\` | Only assets before this date |
+| \`takenAfter\` | \`2025-01-01\` | Only photos taken on or after this date (YYYY-MM-DD) |
+| \`takenBefore\` | \`2025-12-31\` | Only photos taken on or before this date |
+| \`createdAfter\` / \`createdBefore\` | \`2025-01-01\` | Same, but by the date the photo was uploaded to Immich |
 | \`isFavorite\` | \`true\` | Only favorited assets |
 `;
         await this.app.vault.create(`${this.basePath}/06 - Recursive and filters.md`, content);
@@ -567,57 +598,56 @@ view:
         const content = `\
 # Immich — Authenticated Gallery
 
-Connect Gallery View to your own Immich server with an API key.
-Set up your connection in **Settings → Gallery View → Immich Connections** first.
+These galleries use the \`${DEMO.immichKey}\` connection to the public demo server (see [[00 - Welcome]] for the setup). To use your own Immich server, add a connection in **Settings → Gallery View → Providers** and change \`connection:\` to its key.
 
 ---
 
-### Photos featuring specific people
+### Photos of a person
 
-Use human-readable names — the plugin resolves them to Immich person IDs automatically.
+Use people's names as they appear in Immich — the plugin resolves them to person IDs automatically.
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       people:
-        - John Doe
-        - Mom
-        - Dad
+        - Alice
 view:
-  type: thumbnail
+  type: justified
 \`\`\`
+
+> Listing several people shows only photos that include **all** of them. The demo has no photo with both Alice and Bob, so \`people: [Alice, Bob]\` shows nothing.
 
 ---
 
 ### Photos by tag
 
-Tag names are matched against your Immich tag library automatically.
+Tag names are matched against your Immich tag library (case-sensitive).
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       tags:
-        - photography
+        - Nature
 view:
   type: masonry
 \`\`\`
 
 ---
 
-### Work photos
+### Latest portraits
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       tags:
-        - work
-    limit: 30
+        - Portraits
+    limit: 12
     sort:
       by: createdAt
       order: desc
@@ -627,38 +657,36 @@ view:
 
 ---
 
-### Study materials (images only, last 2 years)
+### Nature photos taken since 2025 (images only)
+
+\`takenAfter\` filters on the date the photo was taken. (\`createdAfter\` would filter on the date it was uploaded to Immich.)
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       tags:
-        - study
+        - Nature
       assetType: image
-      createdAfter: "2023-01-01"
-    limit: 50
+      takenAfter: "2025-01-01"
 view:
   type: carousel
 \`\`\`
 
 ---
 
-### Combined — Family & photography tag together
+### Combined — a person and a tag together
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       people:
-        - John Doe
-        - Mom
-        - Dad
+        - Alice
       tags:
-        - photography
-    limit: 20
+        - Portraits
     sort:
       by: createdAt
       order: desc
@@ -667,10 +695,10 @@ view:
 \`\`\`
 
 ## How it works
-- \`connection: home\` refers to the connection key set in plugin settings.
-- \`people\` — list of person names as they appear in Immich (case-sensitive).
-- \`tags\` — list of tag names as they appear in your Immich tag library.
-- Multiple filters are combined (AND logic).
+- \`connection: ${DEMO.immichKey}\` refers to the connection key set in plugin settings.
+- \`people\` — person names as they appear in Immich (case-sensitive).
+- \`tags\` — tag names as they appear in your Immich tag library (case-sensitive).
+- Filters are combined with AND: every filter, and every listed person or tag, must match.
 `;
         await this.app.vault.create(`${this.basePath}/07 - Immich authenticated.md`, content);
     }
@@ -684,7 +712,7 @@ view:
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       isFavorite: true
 view:
@@ -698,7 +726,7 @@ view:
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     limit: 20
     sort:
       by: createdAt
@@ -709,32 +737,31 @@ view:
 
 ---
 
-### Favorite photos of specific people
+### Favorite portraits
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       isFavorite: true
-      people:
-        - John Doe
-    limit: 15
+      tags:
+        - Portraits
 view:
   type: thumbnail
 \`\`\`
 
 ---
 
-### Favorites from this year
+### Favorites taken since 2025
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       isFavorite: true
-      createdAfter: "2025-01-01"
+      takenAfter: "2025-01-01"
     sort:
       by: createdAt
       order: desc
@@ -747,37 +774,53 @@ view:
 
     private async createImmichAlbumsNote(): Promise<void> {
         const content = `\
-# Immich — Albums (Template)
+# Immich — Albums
 
-Gallery View can display images from a specific Immich album using the album's ID.
+Gallery View can display images from Immich albums using each album's ID.
 
-> **Note:** This is a template. Replace \`your-album-id-here\` with an actual album ID from your Immich instance.
-> You can find the album ID in the Immich web interface URL when you open an album.
+### One album (Landscapes)
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       albumIds:
-        - your-album-id-here
+        - ${DEMO.immichAlbums.landscapes}
 view:
   type: justified
 \`\`\`
 
-### Multiple albums in one gallery
+### Multiple albums in one gallery (City and Travel)
 
 \`\`\`obs-gallery
 sources:
   - type: immich
-    connection: home
+    connection: ${DEMO.immichKey}
     filters:
       albumIds:
-        - your-first-album-id
-        - your-second-album-id
+        - ${DEMO.immichAlbums.city}
+        - ${DEMO.immichAlbums.travel}
     sort:
       by: createdAt
       order: asc
+view:
+  type: thumbnail
+\`\`\`
+
+### Only the videos in an album
+
+\`assetType: video\` keeps just the videos; the gallery shows their preview images.
+
+\`\`\`obs-gallery
+sources:
+  - type: immich
+    connection: ${DEMO.immichKey}
+    filters:
+      albumIds:
+        - ${DEMO.immichAlbums.city}
+        - ${DEMO.immichAlbums.travel}
+      assetType: video
 view:
   type: thumbnail
 \`\`\`
@@ -795,25 +838,23 @@ view:
 
     private async createImmichSharedLinkNote(): Promise<void> {
         const content = `\
-# Immich Shared Link (Template)
+# Immich Shared Link
 
-Gallery View can pull images directly from a public Immich shared album — no API key needed.
-
-> **Note:** This is a template. Replace the \`url\` with your own Immich share link.
+Gallery View can pull images directly from a public Immich shared album — no API key or connection needed. This one is the Landscapes album on the demo server.
 
 \`\`\`obs-gallery
 sources:
   - type: immich-share
-    url: https://your-immich-host.com/share/abcdef123456
+    url: ${DEMO.immichShare}
 view:
   type: justified
 \`\`\`
 
 \`justified\` lays the photos out in even rows like Immich's own web view. Use \`masonry\` for Pinterest-style columns instead.
 
-## How to use
+## How to use your own
 1. Create a shared link in your Immich instance (Share → Create link).
-2. Paste the full share URL into the \`url\` field above.
+2. Paste the full share URL into the \`url\` field.
 3. Gallery View will automatically fetch the images in the share.
 `;
         await this.app.vault.create(`${this.basePath}/10 - Immich shared link.md`, content);
@@ -821,22 +862,20 @@ view:
 
     private async createImmichPasswordNote(): Promise<void> {
         const content = `\
-# Password-protected Immich Share (Template)
+# Password-protected Immich Share
 
-If your Immich shared link requires a password, configure it like this:
-
-> **Note:** This is a template. Replace the \`url\` and \`password\` with your own values.
+If your Immich shared link requires a password, add it to the source. This is the Travel album on the demo server, with the password \`${DEMO.sharePassword}\`.
 
 \`\`\`obs-gallery
 sources:
   - type: immich-share
-    url: https://your-immich-host.com/share/abcdef123456
-    password: my-secret-password
+    url: ${DEMO.immichProtectedShare}
+    password: ${DEMO.sharePassword}
 view:
   type: masonry
 \`\`\`
 
-## How to use
+## How to use your own
 1. Make sure your Immich share is password protected.
 2. Paste the share link into \`url\`.
 3. Provide the password in the \`password\` field.
@@ -848,34 +887,33 @@ view:
         const content = `\
 # Nextcloud — Authenticated Gallery
 
-Connect Gallery View to your Nextcloud instance using connection settings configured in **Settings → Gallery View → Nextcloud Connections**.
+These galleries use the \`${DEMO.nextcloudKey}\` connection to the public demo server (see [[00 - Welcome]] for the setup). To use your own Nextcloud, add a connection in **Settings → Gallery View → Providers** and change \`connection:\` to its key.
 
-> **Note:** Configure a Nextcloud connection with key \`nextcloud-demo\` in plugin settings to preview these galleries.
+The demo folder \`/Gallery-Demo\` has three sub-folders: \`Landscapes\`, \`City\` and \`Camera\`.
 
 ---
 
-### Root gallery folder (\`/Gallery-Test\`)
-
-Loads images from the \`/Gallery-Test\` folder on your Nextcloud server.
+### Every image under \`/Gallery-Demo\`
 
 \`\`\`obs-gallery
 sources:
   - type: nextcloud
-    connection: nextcloud-demo
-    path: /Gallery-Test
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo
+    recursive: true
 view:
   type: masonry
 \`\`\`
 
 ---
 
-### Specific subfolder (\`/Gallery-Test/Vacation\`)
+### One folder (\`/Gallery-Demo/City\`)
 
 \`\`\`obs-gallery
 sources:
   - type: nextcloud
-    connection: nextcloud-demo
-    path: /Gallery-Test/Vacation
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo/City
 view:
   type: thumbnail
 \`\`\`
@@ -887,8 +925,8 @@ view:
 \`\`\`obs-gallery
 sources:
   - type: nextcloud
-    connection: nextcloud-demo
-    path: /Gallery-Test
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo/Landscapes
 view:
   type: carousel
 \`\`\`
@@ -902,16 +940,16 @@ Even rows that fill the width. Nextcloud thumbnails keep each photo's shape, so 
 \`\`\`obs-gallery
 sources:
   - type: nextcloud
-    connection: nextcloud-demo
-    path: /Gallery-Test
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo/Landscapes
 view:
   type: justified
 \`\`\`
 
 ## How it works
 - \`type: nextcloud\` tells the plugin to load images from Nextcloud via WebDAV.
-- \`connection: nextcloud-demo\` refers to the connection key configured in Nextcloud settings.
-- \`path\` specifies the folder path on your Nextcloud server.
+- \`connection: ${DEMO.nextcloudKey}\` refers to the connection key configured in Nextcloud settings.
+- \`path\` specifies the folder path on your Nextcloud server. Sub-folders are included by default; add \`recursive: false\` to show only the folder itself.
 `;
         await this.app.vault.create(`${this.basePath}/12 - Nextcloud authenticated.md`, content);
     }
@@ -926,13 +964,13 @@ Combine Nextcloud sources with advanced filters, glob pattern matching, and sort
 
 ### Recursive scanning (all subfolders)
 
-Adding \`recursive: true\` scans sub-folders such as \`Vacation/\`, \`Nature/\`, and \`Archive/2023/\`.
+\`recursive: true\` (the default) scans the sub-folders \`Landscapes/\`, \`City/\` and \`Camera/\`.
 
 \`\`\`obs-gallery
 sources:
   - type: nextcloud
-    connection: nextcloud-demo
-    path: /Gallery-Test
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo
     recursive: true
 view:
   type: masonry
@@ -942,15 +980,14 @@ view:
 
 ### Filename pattern matching (\`filenameFilter\`)
 
-Only load images whose names match the glob pattern \`IMG_*\`.
+\`Camera/\` holds phone-style names such as \`IMG_20240716_111.jpg\`. The glob \`IMG_2024*\` keeps only the 2024 shots.
 
 \`\`\`obs-gallery
 sources:
   - type: nextcloud
-    connection: nextcloud-demo
-    path: /Gallery-Test
-    recursive: true
-    filenameFilter: "IMG_*"
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo/Camera
+    filenameFilter: "IMG_2024*"
 view:
   type: thumbnail
 \`\`\`
@@ -959,22 +996,41 @@ view:
 
 ### Filter by MIME types & file size
 
-Only load JPEG and PNG files that are at least 10 KB in size.
+Only load JPEG and PNG files between 50 KB and 1 MB.
 
 \`\`\`obs-gallery
 sources:
   - type: nextcloud
-    connection: nextcloud-demo
-    path: /Gallery-Test
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo
     recursive: true
     filters:
       mimeTypes:
         - image/jpeg
         - image/png
-      minSizeKb: 10
-      maxSizeKb: 5000
+      minSizeKb: 50
+      maxSizeKb: 1000
 view:
   type: masonry
+\`\`\`
+
+---
+
+### Filter by modified date
+
+Only files last modified during 2025.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo
+    recursive: true
+    filters:
+      modifiedAfter: "2025-01-01"
+      modifiedBefore: "2026-01-01"
+view:
+  type: justified
 \`\`\`
 
 ---
@@ -986,8 +1042,8 @@ Show the 10 most recently modified images.
 \`\`\`obs-gallery
 sources:
   - type: nextcloud
-    connection: nextcloud-demo
-    path: /Gallery-Test
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo
     recursive: true
     sort:
       by: lastModified
@@ -1016,7 +1072,7 @@ view:
         const content = `\
 # Nextcloud Shared Links (Public & Password-Protected)
 
-Gallery View can display images directly from a public Nextcloud share link — no account or login settings required.
+Gallery View can display images directly from a public Nextcloud share link — no account or connection settings required. These links point to the demo server.
 
 ---
 
@@ -1027,7 +1083,7 @@ Paste any public Nextcloud folder share URL.
 \`\`\`obs-gallery
 sources:
   - type: nextcloud-share
-    url: https://use23.thegood.cloud/s/YOUR_SHARE_TOKEN
+    url: ${DEMO.nextcloudShare}
 view:
   type: masonry
 \`\`\`
@@ -1036,13 +1092,13 @@ view:
 
 ### Password-Protected Nextcloud Share
 
-If your Nextcloud public share link is protected with a password, specify it in the \`password\` field.
+If your Nextcloud public share link is protected with a password, specify it in the \`password\` field. The demo share's password is \`${DEMO.sharePassword}\`.
 
 \`\`\`obs-gallery
 sources:
   - type: nextcloud-share
-    url: https://use23.thegood.cloud/s/YOUR_PROTECTED_SHARE_TOKEN
-    password: my-secret-password
+    url: ${DEMO.nextcloudProtectedShare}
+    password: ${DEMO.sharePassword}
 view:
   type: masonry
 \`\`\`
@@ -1051,21 +1107,21 @@ view:
 
 ### Nextcloud Photos App Public Album
 
-If you create a public album link in the Nextcloud Photos app:
+A public album link from the Nextcloud Photos app works too:
 
 \`\`\`obs-gallery
 sources:
   - type: nextcloud-share
-    url: https://use23.thegood.cloud/apps/photos/public/YOUR_ALBUM_TOKEN
+    url: ${DEMO.nextcloudPhotosAlbum}
 view:
-  type: thumbnail
+  type: justified
 \`\`\`
 
-## How to use
+## How to use your own
 1. Open Nextcloud in your browser.
 2. Select a folder or photo album and click **Share**.
 3. Create a public share link (optionally set a password).
-4. Copy and paste the share URL into the \`url\` field above.
+4. Copy and paste the share URL into the \`url\` field.
 `;
         await this.app.vault.create(`${this.basePath}/14 - Nextcloud shared link.md`, content);
     }
@@ -1230,7 +1286,7 @@ view:
             '```obs-gallery',
             'sources:',
             '  - type: immich',
-            '    connection: home',
+            `    connection: ${DEMO.immichKey}`,
             '    filters:',
             '      people:',
             '        - Unknown Person',
@@ -1247,7 +1303,7 @@ view:
             '```obs-gallery',
             'sources:',
             '  - type: immich',
-            '    connection: home',
+            `    connection: ${DEMO.immichKey}`,
             '    filters:',
             '      tags:',
             '        - nonexistenttag',
@@ -1261,10 +1317,12 @@ view:
             '> [!NOTE] Expected output',
             "> `\u26a0\ufe0f gallery: Ambiguous tag name: 'photography' matches multiple tags. Please make the name unique in Immich.`",
             '',
-            '```obs-gallery',
+            'The demo server has no duplicate tag names, so this example is not rendered. It shows the error on a server where two tags share a name.',
+            '',
+            '```yaml',
             'sources:',
             '  - type: immich',
-            '    connection: home',
+            `    connection: ${DEMO.immichKey}`,
             '    filters:',
             '      tags:',
             '        - photography',

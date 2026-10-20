@@ -61,12 +61,14 @@ Gallery View automatically parses and resolves several Nextcloud public share UR
 
 ## Examples
 
+These examples use shares on the public, read-only [demo server](../demo-servers.md), so you can paste them into a note as they are.
+
 ### 1. Standard Public Share Link
 
 ```yaml
 sources:
   - type: nextcloud-share
-    url: https://use23.thegood.cloud/s/abc123456789
+    url: https://demo-nextcloud.mkshp.dev/s/DAxM47SmHesMTqa
 view:
   type: masonry
 ```
@@ -76,8 +78,8 @@ view:
 ```yaml
 sources:
   - type: nextcloud-share
-    url: https://use23.thegood.cloud/s/xyz987654321
-    password: "secret-share-password"
+    url: https://demo-nextcloud.mkshp.dev/s/ZSBpcMLfaQPCi2Y
+    password: "gallery-demo"
 view:
   type: thumbnail
 ```
@@ -87,9 +89,9 @@ view:
 ```yaml
 sources:
   - type: nextcloud-share
-    url: https://use23.thegood.cloud/apps/photos/public/albumToken123
+    url: https://demo-nextcloud.mkshp.dev/apps/photos/public/wD9fLmI1TP6KEq76Yvs9fZrBdfDu8gfc
 view:
-  type: carousel
+  type: justified
 ```
 
 ---

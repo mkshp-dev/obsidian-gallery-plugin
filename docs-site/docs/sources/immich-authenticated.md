@@ -16,6 +16,10 @@ This is different from [Immich Shared Links](./immich-shared-links.md) because i
 
 See [Settings → Providers tab](../settings#providers-tab) for step-by-step instructions on adding a connection.
 
+:::tip Try it without your own server
+The examples on this page use the connection key `immich-demo` and the albums, tags and people of the public, read-only [demo server](../demo-servers.md). Add that connection to run them as they are, or replace `immich-demo` and the IDs with your own.
+:::
+
 ## Common Behavior
 
 - **View-Aware Loading**: The plugin fetches lighter assets depending on your `view`: thumbnails for the `thumbnail`, `masonry` and `justified` views, and previews for `carousel`. This avoids downloading large originals for big galleries.
@@ -39,7 +43,9 @@ sources:
         - Photography
       people:
         - Alice
-      createdAfter: YYYY-MM-DD
+      takenAfter: YYYY-MM-DD    # date the photo was taken
+      takenBefore: YYYY-MM-DD
+      createdAfter: YYYY-MM-DD  # date it was uploaded to Immich
       createdBefore: YYYY-MM-DD
       assetType: image  # or: video
     limit: 50
@@ -58,15 +64,17 @@ view:
 | `filters.isFavorite` | boolean | No | When `true`, only returns assets you have marked as favorites. |
 | `filters.tags` | list of strings | No | Human-readable tag names (e.g. `Photography`). The plugin resolves names to IDs automatically. |
 | `filters.people` | list of strings | No | Human-readable person names (e.g. `Alice`). The plugin resolves names to IDs automatically. |
-| `filters.createdAfter` | string (YYYY-MM-DD) | No | Only return assets created after this date. |
-| `filters.createdBefore` | string (YYYY-MM-DD) | No | Only return assets created before this date. |
+| `filters.takenAfter` | string (YYYY-MM-DD) | No | Only return photos **taken** on or after this date (the date stored in the photo's EXIF data). |
+| `filters.takenBefore` | string (YYYY-MM-DD) | No | Only return photos **taken** on or before this date. |
+| `filters.createdAfter` | string (YYYY-MM-DD) | No | Only return assets **uploaded** to Immich on or after this date. |
+| `filters.createdBefore` | string (YYYY-MM-DD) | No | Only return assets **uploaded** to Immich on or before this date. |
 | `filters.assetType` | `image` or `video` | No | Filter by asset type. |
 | `limit` | number | No | Maximum number of assets to fetch. |
 | `sort.by` | `createdAt` | No | Sort field. Currently only `createdAt` is supported. |
 | `sort.order` | `asc` or `desc` | No | Sort direction. `desc` = newest first. |
 
 > [!IMPORTANT]
-> Filters are combined using **AND** logic as per Immich API rules. For example, if you filter by `albumIds` **and** `isFavorite` **and** `assetType` in the same source block, only assets that meet *all* specified criteria will be returned.
+> Filters are combined using **AND** logic as per Immich API rules. For example, if you filter by `albumIds` **and** `isFavorite` **and** `assetType` in the same source block, only assets that meet *all* specified criteria will be returned. The same applies inside `tags` and `people`: listing two people returns only photos that include both. (`albumIds` is the exception: several albums are combined.)
 
 ---
 
@@ -79,12 +87,12 @@ To show an entire authenticated album, provide the album UUID in `filters.albumI
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
       albumIds:
-        - 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
+        - 0fe76d50-18b3-4f74-8f7c-3ede043982de
 view:
-  type: masonry
+  type: justified
 ```
 
 You can include **multiple albums** by listing more than one ID:
@@ -92,11 +100,11 @@ You can include **multiple albums** by listing more than one ID:
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
       albumIds:
-        - 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
-        - a1b2c3d4-0000-1111-2222-333344445555
+        - 0a33a817-9389-45f5-a99d-6ac12f56dc7f
+        - 882fef37-436a-49c1-af1a-e444d0216ee0
 view:
   type: masonry
 ```
@@ -116,7 +124,7 @@ To show all your favorited assets, set `filters.isFavorite: true`. No album ID o
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
       isFavorite: true
 view:
@@ -132,7 +140,7 @@ To show your most recently added assets, use `sort` with `order: desc` and an op
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     limit: 50
     sort:
       by: createdAt
@@ -150,14 +158,15 @@ You can filter assets by Immich tags by providing one or more **tag names** in `
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
       tags:
-        - Photography
-        - Family
+        - Nature
 view:
   type: masonry
 ```
+
+Listing several tags returns only assets that carry **all** of them, not any of them.
 
 ### Authenticated People
 
@@ -166,31 +175,51 @@ You can filter assets by recognized people by providing one or more **person nam
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
       people:
         - Alice
-        - Bob
 view:
   type: masonry
 ```
 
+Listing several people returns only photos that include **all** of them. To show photos of Alice *or* Bob, add two `immich` sources to the gallery, one per person.
+
 ### Date Range Filters
 
-You can filter assets by their creation date using `createdAfter` and `createdBefore`. The dates must be in `YYYY-MM-DD` format. These filters can be combined with other filters.
+There are two pairs of date filters. Both take a date in `YYYY-MM-DD` format (or a full `YYYY-MM-DDTHH:mm:ssZ` timestamp), include the whole day they name, and can be combined with other filters.
+
+| Filters | Date they check |
+|---|---|
+| `takenAfter` / `takenBefore` | When the photo was **taken**, from its EXIF data (Immich's `fileCreatedAt`). |
+| `createdAfter` / `createdBefore` | When the asset was **uploaded** to Immich (Immich's `createdAt`). |
+
+For most galleries you want `takenAfter` / `takenBefore`. Photos are often uploaded long after they were taken, for example when importing an old library, and then every photo shares the same upload date.
+
+Photos taken in 2025:
 
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
-      createdAfter: 2025-01-01
-      createdBefore: 2025-12-31
+      takenAfter: 2025-01-01
+      takenBefore: 2025-12-31
 view:
   type: masonry
 ```
 
-**Note:** Date filtering uses the *created date* (the date the asset was uploaded or created in the system), not the captured/taken date.
+Assets uploaded since a given day:
+
+```yaml
+sources:
+  - type: immich
+    connection: immich-demo
+    filters:
+      createdAfter: 2026-10-01
+view:
+  type: masonry
+```
 
 ### Asset Type Filters
 
@@ -200,10 +229,10 @@ Only videos from a specific album:
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
       albumIds:
-        - 6f671c26-3693-4a1e-84b2-2e6ddde2a2bb
+        - 882fef37-436a-49c1-af1a-e444d0216ee0
       assetType: video
 view:
   type: masonry
@@ -213,7 +242,7 @@ Favorite images only:
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
       isFavorite: true
       assetType: image
@@ -225,7 +254,7 @@ Recent videos:
 ```yaml
 sources:
   - type: immich
-    connection: home
+    connection: immich-demo
     filters:
       assetType: video
     limit: 20
@@ -260,6 +289,7 @@ See [Gallery Builder](../gallery-builder) for full details.
 ## Troubleshooting
 
 - **Gallery shows error "Authentication failed"**: Your API key may have expired or been revoked. Generate a new API key in Immich and update the plugin settings.
-- **Gallery shows error "Connection 'home' not found"**: Ensure the `connection` key in your gallery block perfectly matches the `key` you assigned to the connection in the plugin settings.
-- **Gallery is blank/empty**: The album or favorites list may be empty. If using an album, the Album ID might be incorrect. Double check the ID from the Immich URL.
+- **Gallery shows error "Connection 'immich-demo' not found"**: Ensure the `connection` key in your gallery block perfectly matches the `key` you assigned to the connection in the plugin settings.
+- **Gallery is blank/empty**: The album or favorites list may be empty. If using an album, the Album ID might be incorrect. Double check the ID from the Immich URL. If you list several tags or people, only assets matching all of them are shown.
+- **A date filter matches every photo or none**: `createdAfter` / `createdBefore` check the upload date. Use `takenAfter` / `takenBefore` to filter by the date the photo was taken.
 - **Tags or people not resolving**: Ensure the names match exactly as they appear in Immich. Names are case-sensitive. Use the Gallery Builder to browse and select available tags and people from live lists.

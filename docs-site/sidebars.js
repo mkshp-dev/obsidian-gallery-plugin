@@ -3,6 +3,7 @@ const sidebars = {
   tutorialSidebar: [
     'what-is-gallery-view',
     'installation',
+    'demo-servers',
     'gallery-block-syntax',
     'gallery-builder',
     {

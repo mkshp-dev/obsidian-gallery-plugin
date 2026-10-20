@@ -158,7 +158,7 @@ These notes render images immediately:
 - [[01 - Local source]] — Load images from a folder in your vault.
 - [[Nature (folder note demo)]] — Resolve \`path\` relative to the current note (\`.\`, \`./\`, \`../\`) instead of a hardcoded folder.
 - [[02 - External URLs]] — Load images from web URLs.
-- [[03 - Views]] — Layout types (thumbnail, grid, carousel, embed) and pagination for large collections.
+- [[03 - Views]] — Layout types (thumbnail, masonry, justified, carousel, embed) and pagination for large collections.
 - [[04 - Mixed sources]] — Combine local + external in one gallery.
 - [[05 - Sort and limit]] — Control order and count of displayed images, including local \`sort\`/\`limit\`.
 - [[06 - Recursive and filters]] — Scan sub-folders and filter by filename glob, size, or date — for local files and Immich.
@@ -176,7 +176,7 @@ No account required, just a public share URL:
 
 ### ☁️ Nextcloud — Authenticated
 Connect to your Nextcloud server using connection settings (\`nextcloud-demo\`):
-- [[12 - Nextcloud authenticated]] — Path selection, subfolders, and view layouts.
+- [[12 - Nextcloud authenticated]] — Path selection, subfolders, and carousel and justified layouts.
 - [[13 - Nextcloud recursive and filters]] — Sub-folder scanning, globs, MIME types, sizes, and date filtering.
 
 ### 🔗 Nextcloud — Shared Links
@@ -233,7 +233,7 @@ sources:
   - type: local
     path: "."
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ### A sibling folder's images (\`path: "../Travel"\`)
@@ -276,7 +276,7 @@ sources:
       - https://picsum.photos/400/300?random=5
       - https://picsum.photos/400/300?random=6
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ## How it works
@@ -306,15 +306,28 @@ view:
 
 ---
 
-### Grid View (Masonry)
-A Pinterest-style layout that preserves the natural aspect ratio of each image.
+### Masonry View
+A Pinterest-style layout: equal-width columns, each image at its natural height. (\`type: grid\` from older versions shows this view.)
 
 \`\`\`obs-gallery
 sources:
   - type: local
     path: GalleryDemo/Assets
 view:
-  type: grid
+  type: masonry
+\`\`\`
+
+---
+
+### Justified View
+Rows of equal height that fill the width, each image uncropped — like Immich or Google Photos.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+view:
+  type: justified
 \`\`\`
 
 ---
@@ -354,7 +367,7 @@ sources:
     path: GalleryDemo/Assets
     recursive: true
 view:
-  type: grid
+  type: masonry
   pagination: true
   itemsPerPage: 2
 \`\`\`
@@ -380,7 +393,7 @@ sources:
       - https://picsum.photos/400/300?random=11
       - https://picsum.photos/400/300?random=12
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ## How it works
@@ -421,7 +434,7 @@ sources:
       by: name
       order: asc
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ### Immich — Latest 10 photos, sorted oldest to newest
@@ -466,7 +479,7 @@ sources:
     path: GalleryDemo/Assets
     recursive: true
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ### Compare: non-recursive (top-level only)
@@ -477,7 +490,7 @@ sources:
     path: GalleryDemo/Assets
     recursive: false
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -511,7 +524,7 @@ sources:
       minSizeKb: 1
       modifiedAfter: "2025-01-01"
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -590,7 +603,7 @@ sources:
       tags:
         - photography
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -609,7 +622,7 @@ sources:
       by: createdAt
       order: desc
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -650,7 +663,7 @@ sources:
       by: createdAt
       order: desc
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ## How it works
@@ -675,7 +688,7 @@ sources:
     filters:
       isFavorite: true
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -726,7 +739,7 @@ sources:
       by: createdAt
       order: desc
 view:
-  type: grid
+  type: justified
 \`\`\`
 `;
         await this.app.vault.create(`${this.basePath}/08 - Immich favorites and recent.md`, content);
@@ -749,7 +762,7 @@ sources:
       albumIds:
         - your-album-id-here
 view:
-  type: grid
+  type: justified
 \`\`\`
 
 ### Multiple albums in one gallery
@@ -793,8 +806,10 @@ sources:
   - type: immich-share
     url: https://your-immich-host.com/share/abcdef123456
 view:
-  type: grid
+  type: justified
 \`\`\`
+
+\`justified\` lays the photos out in even rows like Immich's own web view. Use \`masonry\` for Pinterest-style columns instead.
 
 ## How to use
 1. Create a shared link in your Immich instance (Share → Create link).
@@ -818,7 +833,7 @@ sources:
     url: https://your-immich-host.com/share/abcdef123456
     password: my-secret-password
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ## How to use
@@ -849,7 +864,7 @@ sources:
     connection: nextcloud-demo
     path: /Gallery-Test
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -876,6 +891,21 @@ sources:
     path: /Gallery-Test
 view:
   type: carousel
+\`\`\`
+
+---
+
+### Justified view layout
+
+Even rows that fill the width. Nextcloud thumbnails keep each photo's shape, so nothing is cropped.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: nextcloud-demo
+    path: /Gallery-Test
+view:
+  type: justified
 \`\`\`
 
 ## How it works
@@ -905,7 +935,7 @@ sources:
     path: /Gallery-Test
     recursive: true
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -944,7 +974,7 @@ sources:
       minSizeKb: 10
       maxSizeKb: 5000
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -999,7 +1029,7 @@ sources:
   - type: nextcloud-share
     url: https://use23.thegood.cloud/s/YOUR_SHARE_TOKEN
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -1014,7 +1044,7 @@ sources:
     url: https://use23.thegood.cloud/s/YOUR_PROTECTED_SHARE_TOKEN
     password: my-secret-password
 view:
-  type: grid
+  type: masonry
 \`\`\`
 
 ---
@@ -1076,7 +1106,7 @@ view:
             '',
             '### 3 — Invalid view type',
             '> [!NOTE] Expected output',
-            '> `\u26a0\ufe0f gallery: View type must be one of: thumbnail, carousel, grid, embed`',
+            '> `\u26a0\ufe0f gallery: View type must be a string (Use one of: thumbnail, carousel, masonry, justified, embed)`',
             '',
             '```obs-gallery',
             'sources:',
@@ -1094,7 +1124,7 @@ view:
             '',
             '```obs-gallery',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1153,7 +1183,7 @@ view:
             '  - type: dropbox',
             '    path: /some/path',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1188,7 +1218,7 @@ view:
             '  - type: immich',
             '    connection: nonexistent',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1222,7 +1252,7 @@ view:
             '      tags:',
             '        - nonexistenttag',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1239,7 +1269,7 @@ view:
             '      tags:',
             '        - photography',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1253,7 +1283,7 @@ view:
             '  - type: immich-share',
             '    url: https://not-a-real-immich-host.invalid/share/abc123',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1269,7 +1299,7 @@ view:
             '  - type: nextcloud',
             '    path: /Gallery-Test',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1283,7 +1313,7 @@ view:
             '  - type: nextcloud',
             '    connection: nonexistent',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1296,7 +1326,7 @@ view:
             'sources:',
             '  - type: nextcloud-share',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1310,7 +1340,7 @@ view:
             '  - type: nextcloud-share',
             '    url: https://invalid-share-link.example.com',
             'view:',
-            '  type: grid',
+            '  type: masonry',
             '```',
             '',
             '---',
@@ -1373,16 +1403,30 @@ view:
 
 ---
 
-## Grid view
+## Masonry view
 
-Each image keeps its natural aspect ratio in a masonry layout.
+Each image keeps its natural aspect ratio in equal-width columns. Check that the tall strip doesn't leave gaps in the other columns.
 
 \`\`\`obs-gallery
 sources:
   - type: local
     path: ./_assets
 view:
-  type: grid
+  type: masonry
+\`\`\`
+
+---
+
+## Justified view
+
+Rows fill the width at an even height. Check that the panorama gets a row of its own and the last row isn't stretched.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+view:
+  type: justified
 \`\`\`
 
 ---
@@ -1430,16 +1474,28 @@ view:
   itemsPerPage: 12
 \`\`\`
 
-Same images in the grid view, 10 per page (the last page is a partial page of 6):
+Same images in the masonry view, 10 per page (the last page is a partial page of 6):
 
 \`\`\`obs-gallery
 sources:
   - type: local
     path: ./_assets/Bulk
 view:
-  type: grid
+  type: masonry
   pagination: true
   itemsPerPage: 10
+\`\`\`
+
+And in the justified view, 8 per page (the last page has 4, and its row should not be stretched to the full width):
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets/Bulk
+view:
+  type: justified
+  pagination: true
+  itemsPerPage: 8
 \`\`\`
 
 ---

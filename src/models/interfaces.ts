@@ -50,8 +50,12 @@ export interface IImmichSourceConfig {
     personIds?: string[];
     people?: string[];
     isFavorite?: boolean;
+    /** Upload date (Immich asset.createdAt), not the date the photo was taken */
     createdAfter?: string;
     createdBefore?: string;
+    /** Date the photo was taken (Immich fileCreatedAt, from EXIF) */
+    takenAfter?: string;
+    takenBefore?: string;
     assetType?: 'image' | 'video';
   };
   limit?: number;

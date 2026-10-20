@@ -647,28 +647,33 @@ export class GalleryBuilderModal extends Modal {
                         })
                     ));
 
+                const setDateFilter = (key: 'takenAfter' | 'takenBefore' | 'createdAfter' | 'createdBefore') => (value: string) => {
+                    if (value) {
+                        source.filters![key] = value;
+                    } else {
+                        delete source.filters![key];
+                    }
+                    this.refreshLivePreview();
+                };
+
                 this.createDateRangeSetting(
                     criteriaContent,
-                    'Created',
-                    'Only include photos created within this range.',
+                    'Taken',
+                    'Only include photos taken within this range (the date stored in the photo).',
+                    source.filters?.takenAfter || '',
+                    source.filters?.takenBefore || '',
+                    setDateFilter('takenAfter'),
+                    setDateFilter('takenBefore')
+                );
+
+                this.createDateRangeSetting(
+                    criteriaContent,
+                    'Uploaded',
+                    'Only include photos uploaded to Immich within this range.',
                     source.filters?.createdAfter || '',
                     source.filters?.createdBefore || '',
-                    value => {
-                        if (value) {
-                            source.filters!.createdAfter = value;
-                        } else {
-                            delete source.filters!.createdAfter;
-                        }
-                        this.refreshLivePreview();
-                    },
-                    value => {
-                        if (value) {
-                            source.filters!.createdBefore = value;
-                        } else {
-                            delete source.filters!.createdBefore;
-                        }
-                        this.refreshLivePreview();
-                    }
+                    setDateFilter('createdAfter'),
+                    setDateFilter('createdBefore')
                 );
 
                 const client = new ImmichClient(connection);

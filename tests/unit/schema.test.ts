@@ -183,6 +183,30 @@ view: thumbnail`;
         expect(() => ParameterParser.parseAndValidate(yaml)).toThrow('Immich source "filters.createdAfter" must be a string in YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format');
     });
 
+    it('new v2 immich block fails validation on invalid taken-date filters', () => {
+        for (const key of ['takenAfter', 'takenBefore']) {
+            const yaml = `sources:
+  - type: immich
+    connection: home
+    filters:
+      ${key}: 01/02/2025
+view: thumbnail`;
+            expect(() => ParameterParser.parseAndValidate(yaml)).toThrow(`Immich source "filters.${key}" must be a string in YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format`);
+        }
+    });
+
+    it('new v2 immich block accepts taken-date filters', () => {
+        const yaml = `sources:
+  - type: immich
+    connection: home
+    filters:
+      takenAfter: "2025-01-01"
+      takenBefore: "2025-12-31T23:59:59Z"
+view: thumbnail`;
+        const config = ParameterParser.parseAndValidate(yaml);
+        expect(config.sources![0]).toMatchObject({ filters: { takenAfter: '2025-01-01', takenBefore: '2025-12-31T23:59:59Z' } });
+    });
+
     it('new v2 immich album block fails validation on invalid albumIds', () => {
         const yaml = `sources:
   - type: immich

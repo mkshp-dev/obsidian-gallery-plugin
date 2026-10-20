@@ -216,6 +216,23 @@ describe('ImmichSourceResolver', () => {
         expect(searchSpy).toHaveBeenCalledWith({ createdAfter: '2025-01-01', createdBefore: '2025-12-31' }, undefined, undefined);
     });
 
+    it('should pass takenAfter/takenBefore through to the search', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                takenAfter: '2024-01-01',
+                takenBefore: '2024-12-31'
+            }
+        };
+
+        const searchSpy = (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue([{ id: 'asset1', originalFileName: 'photo1.jpg' }]);
+
+        await resolver.resolve(source, {});
+
+        expect(searchSpy).toHaveBeenCalledWith({ takenAfter: '2024-01-01', takenBefore: '2024-12-31' }, undefined, undefined);
+    });
+
     it('should assert assetType filter is passed correctly', async () => {
         const source: IImmichSourceConfig = {
             type: 'immich',

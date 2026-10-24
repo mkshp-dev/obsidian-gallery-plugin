@@ -96,9 +96,12 @@ export interface INextcloudShareSourceConfig {
   type: 'nextcloud-share';
   url: string;          // full share URL e.g. https://cloud.example.com/s/TOKEN
   password?: string;    // optional share password
+  recursive?: boolean;  // include images in sub-folders of a folder share (default: true)
   filenameFilter?: string; // Optional glob pattern for filenames
   filters?: {
     mimeTypes?: string[];
+    minSizeKb?: number;
+    maxSizeKb?: number;
   };
   limit?: number;       // Max number of files to return
   sort?: {

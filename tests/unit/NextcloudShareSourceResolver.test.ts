@@ -337,6 +337,59 @@ describe('NextcloudShareSourceResolver', () => {
         expect(result.errors.length).toBe(0);
         expect(result.images.length).toBe(0);
     });
+
+    describe('folder shares with sub-folders', () => {
+        const folder = (href: string) =>
+            `<d:response><d:href>${href}</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`;
+        const image = (href: string, size = 2048) =>
+            `<d:response><d:href>${href}</d:href><d:propstat><d:prop><d:resourcetype></d:resourcetype><d:getcontenttype>image/jpeg</d:getcontenttype><d:getcontentlength>${size}</d:getcontentlength></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`;
+        const multistatus = (...responses: string[]) => ({ status: 207, text: `<d:multistatus>${responses.join('')}</d:multistatus>` });
+
+        /** The share root holds only folders; City holds a nested folder, like the demo share */
+        const listings: Record<string, { status: number; text: string }> = {
+            'https://cloud.example.com/public.php/webdav/': multistatus(folder('/public.php/webdav/'), folder('/public.php/webdav/City/'), folder('/public.php/webdav/Camera/')),
+            'https://cloud.example.com/public.php/webdav/City/': multistatus(folder('/public.php/webdav/City/'), image('/public.php/webdav/City/a.jpg', 1024), folder('/public.php/webdav/City/Old/')),
+            'https://cloud.example.com/public.php/webdav/City/Old/': multistatus(folder('/public.php/webdav/City/Old/'), image('/public.php/webdav/City/Old/b.jpg', 600 * 1024)),
+            'https://cloud.example.com/public.php/webdav/Camera/': multistatus(folder('/public.php/webdav/Camera/'), image('/public.php/webdav/Camera/c.jpg', 50 * 1024))
+        };
+        const serve = () => (requestUrl as jest.Mock).mockImplementation(async ({ url }: { url: string }) => listings[url] ?? { status: 404, text: '' });
+        const share: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/token123' };
+
+        it('includes images from every sub-folder by default, one level per request', async () => {
+            serve();
+            const result = await resolver.resolve(share, {});
+
+            expect(result.errors).toEqual([]);
+            expect(result.images.map(i => i.displayName).sort()).toEqual(['a.jpg', 'b.jpg', 'c.jpg']);
+            for (const call of (requestUrl as jest.Mock).mock.calls) {
+                expect(call[0].headers.Depth).toBe('1');
+            }
+        });
+
+        it('lists only the top level with recursive: false', async () => {
+            serve();
+            const result = await resolver.resolve({ ...share, recursive: false }, {});
+
+            expect(result.images).toEqual([]);
+            expect(requestUrl).toHaveBeenCalledTimes(1);
+        });
+
+        it('applies minSizeKb and maxSizeKb', async () => {
+            serve();
+            const result = await resolver.resolve({ ...share, filters: { minSizeKb: 10, maxSizeKb: 100 } }, {});
+
+            expect(result.images.map(i => i.displayName)).toEqual(['c.jpg']);
+        });
+
+        it('skips a sub-folder that fails to list', async () => {
+            serve();
+            listings['https://cloud.example.com/public.php/webdav/Camera/'] = { status: 403, text: '' };
+            const result = await resolver.resolve(share, {});
+
+            expect(result.errors).toEqual([]);
+            expect(result.images.map(i => i.displayName).sort()).toEqual(['a.jpg', 'b.jpg']);
+        });
+    });
 });
 
 describe('Nextcloud Share Source Sorting', () => {

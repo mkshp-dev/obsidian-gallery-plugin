@@ -1,5 +1,6 @@
 import { Logger } from "../utils/Logger";
 import { IGalleryInstance, IGalleryConfig, IImageSource, IGalleryView } from './interfaces';
+import { resolveViewType } from './viewTypes';
 
 /**
  * Represents a rendered gallery within a markdown document
@@ -53,15 +54,7 @@ export class GalleryInstance implements IGalleryInstance {
         this.addClass(this.container, 'gallery-container');
         try { this.container.setAttribute('data-gallery-id', this.id); } catch (error) { Logger.debug('Ignored error:', error); }
         try {
-            let viewType = 'thumbnail';
-            if (this.config.view) {
-                if (typeof this.config.view === 'string') {
-                    viewType = this.config.view;
-                } else if (typeof this.config.view === 'object' && this.config.view !== null && 'type' in this.config.view) {
-                    viewType = (this.config.view as { type: string }).type;
-                }
-            }
-            this.container.setAttribute('data-gallery-type', viewType);
+            this.container.setAttribute('data-gallery-type', resolveViewType(this.config.view));
         } catch (error) { Logger.debug('Ignored error:', error); }
         try { this.container.setAttribute('data-gallery-path', this.config.path || ''); } catch (error) { Logger.debug('Ignored error:', error); }
     }
@@ -179,14 +172,16 @@ export class GalleryInstance implements IGalleryInstance {
         
         const added = newImages.filter(img => !oldPaths.has(img.path));
         const removed = oldImages.filter(img => !newPaths.has(img.path));
-        
+
         if (added.length > 0) changes.push('images_added');
-        if (removed.length > 0) {
-            changes.push('images_removed');
-            // Clean up resources for removed images
-            removed.forEach(img => img.destroy?.());
-        }
-        
+        if (removed.length > 0) changes.push('images_removed');
+
+        // Clean up resources for every old image object that is no longer displayed. This compares
+        // objects, not paths: a re-resolved image keeps its path but is a new object holding its own
+        // resources, so the old object must still be released.
+        const kept = new Set(newImages);
+        oldImages.filter(img => !kept.has(img)).forEach(img => img.destroy?.());
+
         return changes;
     }
 

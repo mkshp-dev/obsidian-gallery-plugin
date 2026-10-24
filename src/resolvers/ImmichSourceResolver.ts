@@ -4,6 +4,7 @@ import { ImmichClient } from '../services/immich/ImmichClient';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 import { ImmichAsset } from '../models/immich/ImmichTypes';
+import { usesThumbnailImages } from '../models/viewTypes';
 
 export function extractImmichCaption(asset: ImmichAsset | Record<string, unknown>): string | undefined {
     if (!asset || typeof asset !== 'object') return undefined;
@@ -27,6 +28,31 @@ export function extractImmichCaption(asset: ImmichAsset | Record<string, unknown
         }
         if (typeof exif.title === 'string' && exif.title.trim()) {
             return exif.title.trim();
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Display dimensions of an Immich asset, from the asset itself or its EXIF data, so layouts that
+ * need aspect ratios can place the image before it downloads. EXIF sizes are stored before
+ * rotation, so they are swapped for orientations that turn the image sideways (5-8).
+ */
+export function extractImmichDimensions(asset: ImmichAsset | Record<string, unknown>): { width: number; height: number } | undefined {
+    if (!asset || typeof asset !== 'object') return undefined;
+    const isSize = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
+
+    if (isSize(asset.width) && isSize(asset.height)) {
+        return { width: asset.width, height: asset.height };
+    }
+    if (asset.exifInfo && typeof asset.exifInfo === 'object') {
+        const exif = asset.exifInfo as Record<string, unknown>;
+        if (isSize(exif.exifImageWidth) && isSize(exif.exifImageHeight)) {
+            const orientation = Number(exif.orientation);
+            const sideways = orientation >= 5 && orientation <= 8;
+            return sideways
+                ? { width: exif.exifImageHeight, height: exif.exifImageWidth }
+                : { width: exif.exifImageWidth, height: exif.exifImageHeight };
         }
     }
     return undefined;
@@ -129,26 +155,27 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
 
             // Determine the appropriate asset representation based on the view type
             let representation: 'thumbnail' | 'preview' | 'original' = 'original';
-            if (context.viewType === 'thumbnail' || context.viewType === 'grid') {
+            if (usesThumbnailImages(context.viewType)) {
                 representation = 'thumbnail';
             } else if (context.viewType === 'carousel') {
                 representation = 'preview';
             }
 
-            // Fetch preview blobs for the MVP authenticated image delivery.
-            // We use Promise.all to fetch concurrently, but we must map the results back
-            // to preserve the original sorting order of the album.
+            // Image data is fetched lazily, when a view first displays each asset. Promise.all keeps
+            // the album's sort order while the (rare) caption lookups below run concurrently.
             const resolvedImages = await Promise.all(assets.map(async (asset) => {
                 if (!asset.id) return null;
+                const assetId = asset.id;
 
                 try {
-                    const blobUrl = await client.getAssetBlobUrl(asset.id, representation);
-                    const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(asset.id);
-                    
+                    const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(assetId);
+
+                    // Search results include exifInfo (withExif), so a missing caption there means the
+                    // asset has none. Only look the asset up when the server left exifInfo out.
                     let description = extractImmichCaption(asset);
-                    if (!description && asset.id) {
+                    if (!description && asset.exifInfo === undefined) {
                         try {
-                            const detailedAsset = await client.getAssetInfo(asset.id);
+                            const detailedAsset = await client.getAssetInfo(assetId);
                             if (detailedAsset) {
                                 description = extractImmichCaption(detailedAsset);
                             }
@@ -157,12 +184,15 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                         }
                     }
 
-                    // The path is logical, resourceUrl is the blob Object URL
-                    const logicalPath = `immich://${connection.key}/search/asset/${asset.id}`;
+                    // The path is logical; the loader fetches the blob Object URL used for display
+                    const logicalPath = `immich://${connection.key}/search/asset/${assetId}`;
 
-                    return new ImageSource(logicalPath, 'immich', originalFileName, blobUrl, description);
+                    const image = new ImageSource(logicalPath, 'immich', originalFileName, undefined, description,
+                        () => client.getAssetBlobUrl(assetId, representation));
+                    image.dimensions = extractImmichDimensions(asset);
+                    return image;
                 } catch (e) {
-                    Logger.warn(`Failed to load asset ${asset.id} for Immich source: ${e instanceof Error ? e.message : String(e)}`);
+                    Logger.warn(`Failed to resolve asset ${assetId} for Immich source: ${e instanceof Error ? e.message : String(e)}`);
                     // We don't necessarily want to fail the whole album if one asset fails
                     return null;
                 }

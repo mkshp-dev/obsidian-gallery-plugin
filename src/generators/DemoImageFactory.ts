@@ -40,7 +40,7 @@ export const ANIMATED_GIF_BASE64 = 'R0lGODlh8ACgAIEAACZGU////+dvUQAAACH/C05FVFND
  * rendering is unavailable in the current environment.
  */
 export async function renderDemoImage(spec: DemoImageSpec): Promise<DemoImageFile | null> {
-    const canvas = activeDocument.createElement('canvas');
+    const canvas = createEl('canvas');
     canvas.width = spec.width;
     canvas.height = spec.height;
     const ctx = canvas.getContext('2d');

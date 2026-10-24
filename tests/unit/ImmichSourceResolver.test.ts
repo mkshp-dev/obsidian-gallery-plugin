@@ -9,7 +9,8 @@ describe('ImmichSourceResolver', () => {
     let mockConnections: IImmichConnection[];
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        // reset (not just clear) so queued mockResolvedValueOnce values never leak between tests
+        jest.resetAllMocks();
 
         mockConnections = [
             {
@@ -40,7 +41,7 @@ describe('ImmichSourceResolver', () => {
         expect(result.errors[0]).toContain("not found in settings");
     });
 
-    it('should resolve and fetch blobs successfully', async () => {
+    it('should resolve assets without downloading, and fetch each blob on first display', async () => {
         const source: IImmichSourceConfig = { type: 'immich', connection: 'home', filters: { albumIds: ['album1'] } };
 
         const mockAssets = [
@@ -58,8 +59,15 @@ describe('ImmichSourceResolver', () => {
         expect(result.images).toHaveLength(2);
 
         expect(result.images[0].path).toBe('immich://home/search/asset/asset1');
-        expect(result.images[0].resourceUrl).toBe('blob:url1');
         expect(result.images[0].displayName).toBe('photo1.jpg'); // ImageSource uses provided displayName verbatim
+
+        // Nothing is downloaded until a view asks for the image
+        expect(ImmichClient.prototype.getAssetBlobUrl).not.toHaveBeenCalled();
+        expect(result.images[0].resourceUrl).toBeUndefined();
+
+        await expect(result.images[0].resolveDisplayUrl!()).resolves.toBe('blob:url1');
+        expect(result.images[0].resourceUrl).toBe('blob:url1');
+        expect(ImmichClient.prototype.getAssetBlobUrl).toHaveBeenCalledTimes(1);
     });
 
     it('should handle searchMetadata throwing an error', async () => {
@@ -84,22 +92,28 @@ describe('ImmichSourceResolver', () => {
         (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue(mockAssets);
         const getBlobUrlMock = (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockResolvedValue('blob:url1');
 
-        await resolver.resolve(source, { viewType: 'thumbnail' });
+        await (await resolver.resolve(source, { viewType: 'thumbnail' })).images[0].resolveDisplayUrl!();
         expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'thumbnail');
 
         getBlobUrlMock.mockClear();
 
-        await resolver.resolve(source, { viewType: 'carousel' });
+        await (await resolver.resolve(source, { viewType: 'carousel' })).images[0].resolveDisplayUrl!();
         expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'preview');
 
         getBlobUrlMock.mockClear();
 
-        await resolver.resolve(source, { viewType: 'grid' });
+        await (await resolver.resolve(source, { viewType: 'grid' })).images[0].resolveDisplayUrl!();
         expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'thumbnail');
+
+        for (const viewType of ['masonry', 'justified']) {
+            getBlobUrlMock.mockClear();
+            await (await resolver.resolve(source, { viewType })).images[0].resolveDisplayUrl!();
+            expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'thumbnail');
+        }
 
         getBlobUrlMock.mockClear();
 
-        await resolver.resolve(source, {});
+        await (await resolver.resolve(source, {})).images[0].resolveDisplayUrl!();
         expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'original');
     });
 
@@ -119,7 +133,7 @@ describe('ImmichSourceResolver', () => {
         expect(result.images).toHaveLength(1);
 
         expect(result.images[0].path).toBe('immich://home/search/asset/asset1');
-        expect(result.images[0].resourceUrl).toBe('blob:url_fav1');
+        await expect(result.images[0].resolveDisplayUrl!()).resolves.toBe('blob:url_fav1');
         expect(result.images[0].displayName).toBe('fav1.jpg');
     });
 
@@ -140,7 +154,7 @@ describe('ImmichSourceResolver', () => {
         expect(result.images).toHaveLength(1);
 
         expect(result.images[0].path).toBe('immich://home/search/asset/asset1');
-        expect(result.images[0].resourceUrl).toBe('blob:url_recent1');
+        await expect(result.images[0].resolveDisplayUrl!()).resolves.toBe('blob:url_recent1');
         expect(result.images[0].displayName).toBe('recent1.jpg');
     });
 
@@ -161,7 +175,7 @@ describe('ImmichSourceResolver', () => {
         expect(result.images).toHaveLength(1);
     });
 
-    it('should ignore single asset failure but resolve the rest', async () => {
+    it('should keep an asset whose blob fails, failing only when it is displayed', async () => {
         const source: IImmichSourceConfig = { type: 'immich', connection: 'home', filters: { albumIds: ['album1'] } };
 
         const mockAssets = [
@@ -176,9 +190,11 @@ describe('ImmichSourceResolver', () => {
         const result = await resolver.resolve(source, {});
 
         expect(result.errors).toHaveLength(0);
-        expect(result.images).toHaveLength(1);
+        expect(result.images).toHaveLength(2);
 
-        expect(result.images[0].resourceUrl).toBe('blob:url2');
+        // The failing asset rejects (the view shows its error tile with a retry); the other still loads
+        await expect(result.images[0].resolveDisplayUrl!()).rejects.toThrow('Failed to load blob');
+        await expect(result.images[1].resolveDisplayUrl!()).resolves.toBe('blob:url2');
     });
 
     it('should assert date filters are passed correctly', async () => {
@@ -198,6 +214,23 @@ describe('ImmichSourceResolver', () => {
         await resolver.resolve(source, {});
 
         expect(searchSpy).toHaveBeenCalledWith({ createdAfter: '2025-01-01', createdBefore: '2025-12-31' }, undefined, undefined);
+    });
+
+    it('should pass takenAfter/takenBefore through to the search', async () => {
+        const source: IImmichSourceConfig = {
+            type: 'immich',
+            connection: 'home',
+            filters: {
+                takenAfter: '2024-01-01',
+                takenBefore: '2024-12-31'
+            }
+        };
+
+        const searchSpy = (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue([{ id: 'asset1', originalFileName: 'photo1.jpg' }]);
+
+        await resolver.resolve(source, {});
+
+        expect(searchSpy).toHaveBeenCalledWith({ takenAfter: '2024-01-01', takenBefore: '2024-12-31' }, undefined, undefined);
     });
 
     it('should assert assetType filter is passed correctly', async () => {
@@ -382,5 +415,29 @@ describe('ImmichSourceResolver', () => {
         expect(result.images).toHaveLength(0);
         expect(result.errors).toHaveLength(1);
         expect(result.errors[0]).toContain("Ambiguous person name: 'DuplicatePerson' matches multiple people. Please make the name unique in Immich.");
+    });
+
+    it('should not look up assets whose search result already includes exifInfo', async () => {
+        const source: IImmichSourceConfig = { type: 'immich', connection: 'home', filters: { albumIds: ['album1'] } };
+        (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue([
+            { id: 'asset1', originalFileName: 'a.jpg', exifInfo: { description: 'Sunset' } },
+            { id: 'asset2', originalFileName: 'b.jpg', exifInfo: {} }
+        ]);
+
+        const result = await resolver.resolve(source, {});
+
+        expect(result.images.map(img => img.caption)).toEqual(['Sunset', undefined]);
+        expect(ImmichClient.prototype.getAssetInfo).not.toHaveBeenCalled();
+    });
+
+    it('should look up the asset for a caption when the search result has no exifInfo', async () => {
+        const source: IImmichSourceConfig = { type: 'immich', connection: 'home', filters: { albumIds: ['album1'] } };
+        (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue([{ id: 'asset1', originalFileName: 'a.jpg' }]);
+        (ImmichClient.prototype.getAssetInfo as jest.Mock).mockResolvedValue({ id: 'asset1', exifInfo: { description: 'From details' } });
+
+        const result = await resolver.resolve(source, {});
+
+        expect(result.images[0].caption).toBe('From details');
+        expect(ImmichClient.prototype.getAssetInfo).toHaveBeenCalledWith('asset1');
     });
 });

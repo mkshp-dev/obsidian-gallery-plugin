@@ -9,6 +9,7 @@ Create interactive image galleries in your Obsidian notes using simple code bloc
 ## Features
 
 - **Thumbnail galleries** — Display images in responsive grid layouts
+- **Five layouts** — Thumbnail grid, carousel, masonry columns, justified rows (like Immich or Google Photos), and borderless embed
 - **Modal viewer** — Click thumbnails to view full-size images
 - **Multiple Sources** — Load images from local folders, external URLs, Immich (shared links & authenticated albums), or Nextcloud (public share links & WebDAV folders)
 - **Simple syntax** — Easy `obs-gallery` code blocks with `sources` + `view` schema
@@ -59,7 +60,18 @@ Gallery View includes a built-in command to generate a set of interactive demo n
 
 1. Open the Obsidian command palette (`Ctrl+P` / `Cmd+P`)
 2. Run **Gallery View: Create showcase notes**
-3. Open the generated `GalleryDemo/` folder in your vault to explore working examples of local sources, external URLs, views, and template configurations for Immich shared links.
+3. Choose whether to add the read-only demo server connections (see below), or create the notes only.
+4. Open the generated `GalleryDemo/` folder in your vault to explore working examples of local sources, external URLs, every view, and Immich and Nextcloud sources backed by public demo servers.
+
+## Network use
+
+Gallery View only makes network requests for sources you configure, or for demo notes you choose to create:
+
+- **Your own sources:** `external`, `immich`, `immich-share`, `nextcloud` and `nextcloud-share` sources contact the server in their URL or connection. External image URLs load only when **Allow remote images** is on.
+- **Demo servers:** the showcase notes for Immich and Nextcloud load photos from public, read-only demo servers run by the plugin's author (`demo-immich.mkshp.dev` and `demo-nextcloud.mkshp.dev`). **Create showcase notes** asks before adding their connections to your settings. When those notes are open, your IP address reaches that server; access logs are kept for about 14 days. See [Try it with the demo servers](https://mkshp-dev.github.io/obsidian-gallery-plugin/docs/demo-servers).
+- **Sample web images:** the showcase's External URLs and Mixed sources notes load sample images from `picsum.photos` when **Allow remote images** is on.
+
+The plugin has no telemetry and sends nothing anywhere else.
 
 ## Development
 

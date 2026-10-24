@@ -70,12 +70,14 @@ describe('NextcloudSourceResolver', () => {
 
         expect(result.images[0].path).toBe('nextcloud://my-cloud/Photos/image1.jpg');
         expect(result.images[0].displayName).toBe('image1.jpg');
-        expect(result.images[0].resourceUrl).toBe('blob:http://localhost/mock-blob-url');
-
         expect(result.images[1].path).toBe('nextcloud://my-cloud/Photos/image2.png');
-
         expect(mockListFiles).toHaveBeenCalledWith('/Photos', true, undefined);
-        expect(mockGetFileBlobUrl).toHaveBeenCalledTimes(2);
+
+        // Nothing is downloaded until a view displays the image
+        expect(mockGetFileBlobUrl).not.toHaveBeenCalled();
+        await expect(result.images[0].resolveDisplayUrl!()).resolves.toBe('blob:http://localhost/mock-blob-url');
+        expect(result.images[0].resourceUrl).toBe('blob:http://localhost/mock-blob-url');
+        expect(mockGetFileBlobUrl).toHaveBeenCalledTimes(1);
         // since viewType is 'grid', we expect 'thumbnail' representation
         expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/Photos/image1.jpg', 'thumbnail', undefined);
     });
@@ -106,8 +108,11 @@ describe('NextcloudSourceResolver', () => {
         const result = await resolver.resolve(source, context);
 
         expect(result.errors.length).toBe(0);
-        expect(result.images.length).toBe(1);
-        expect(result.images[0].displayName).toBe('image2.png');
+        expect(result.images.length).toBe(2);
+
+        // The failing file only fails when displayed (the view shows its error tile); the other still loads
+        await expect(result.images[0].resolveDisplayUrl!()).rejects.toThrow('Failed to load blob');
+        await expect(result.images[1].resolveDisplayUrl!()).resolves.toBe('blob:http://localhost/mock-blob-url');
 
         // since viewType is 'carousel', we expect 'original' representation
         expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/Photos/image1.jpg', 'original', undefined);
@@ -153,7 +158,6 @@ describe('NextcloudSourceResolver', () => {
         expect(result.images.length).toBe(2);
         expect(result.images[0].displayName).toBe('1.jpg');
         expect(result.images[1].displayName).toBe('3.jpg');
-        expect(mockGetFileBlobUrl).toHaveBeenCalledTimes(2);
     });
 
     it('should enforce limit parameter', async () => {
@@ -179,7 +183,6 @@ describe('NextcloudSourceResolver', () => {
         expect(result.images.length).toBe(2);
         expect(result.images[0].displayName).toBe('1.jpg');
         expect(result.images[1].displayName).toBe('2.jpg');
-        expect(mockGetFileBlobUrl).toHaveBeenCalledTimes(2);
     });
 
     it('should select thumbnail representation for thumbnail view', async () => {
@@ -193,7 +196,7 @@ describe('NextcloudSourceResolver', () => {
 
         const source: INextcloudSourceConfig = { type: 'nextcloud', connection: 'my-cloud', path: '/' };
         const context: GallerySourceResolveContext = { viewType: 'thumbnail' };
-        await resolver.resolve(source, context);
+        await (await resolver.resolve(source, context)).images[0].resolveDisplayUrl!();
 
         expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/1.jpg', 'thumbnail', undefined);
     });
@@ -209,7 +212,7 @@ describe('NextcloudSourceResolver', () => {
 
         const source: INextcloudSourceConfig = { type: 'nextcloud', connection: 'my-cloud', path: '/' };
         const context: GallerySourceResolveContext = { viewType: 'carousel' };
-        await resolver.resolve(source, context);
+        await (await resolver.resolve(source, context)).images[0].resolveDisplayUrl!();
 
         expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/1.jpg', 'original', undefined);
     });

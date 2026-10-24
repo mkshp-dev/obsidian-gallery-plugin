@@ -1,6 +1,7 @@
 import { Logger } from "../utils/Logger";
 import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
+import type { ViewType } from '../models/viewTypes';
 
 /**
  * Abstract base class for gallery view renderers
@@ -9,7 +10,7 @@ import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 export abstract class GalleryView implements IGalleryView {
     public readonly container: HTMLElement;
     protected _images: IImageSource[] = [];
-    protected _type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
+    protected _type: ViewType;
     protected _isDestroyed: boolean = false;
     protected _observers: IntersectionObserver[] = [];
     // Runtime options (common)
@@ -26,7 +27,7 @@ export abstract class GalleryView implements IGalleryView {
     protected slideshowInterval: number | null = null;
     protected slideshowPlaying: boolean = false;
 
-    constructor(type: 'thumbnail' | 'carousel' | 'grid' | 'embed', container: HTMLElement) {
+    constructor(type: ViewType, container: HTMLElement) {
         this._type = type;
         this.container = container;
         this.initializeContainer();
@@ -35,7 +36,7 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Get view type identifier
      */
-    get type(): 'thumbnail' | 'carousel' | 'grid' | 'embed' {
+    get type(): ViewType {
         return this._type;
     }
 
@@ -452,8 +453,43 @@ export abstract class GalleryView implements IGalleryView {
     protected reloadImage(element: HTMLElement, image: IImageSource): void {
         const img = element.querySelector('img');
         if (img) {
-            img.src = image.getDisplayUrl();
+            this.resolveImageUrl(image)
+                .then(url => { img.src = url; })
+                .catch((e: unknown) => this.handleImageError(image, e instanceof Error ? e : new Error(String(e))));
         }
+    }
+
+    /**
+     * Get the URL to display for an image, fetching it first for sources that load on demand
+     * (Immich, Nextcloud). Views call this only when they are about to show the image.
+     */
+    protected resolveImageUrl(image: IImageSource): Promise<string> {
+        return image.resolveDisplayUrl ? image.resolveDisplayUrl() : Promise.resolve(image.getDisplayUrl());
+    }
+
+    /**
+     * Load an image into a temporary Image, honoring remoteLoadTimeoutMs, and report the outcome.
+     * The timeout covers both fetching the URL and decoding the image.
+     */
+    protected loadWithTimeout(image: IImageSource, onLoad: (temp: HTMLImageElement) => void, onError: (error: Error) => void): void {
+        const temp = new Image();
+        let settled = false;
+        const settle = (fn: () => void) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeoutHandle);
+            temp.onload = null;
+            temp.onerror = null;
+            fn();
+        };
+
+        const timeoutHandle = window.setTimeout(() => settle(() => onError(new Error('Image loading timed out'))), this.remoteLoadTimeoutMs ?? 10000);
+        temp.onload = () => settle(() => onLoad(temp));
+        temp.onerror = () => settle(() => onError(new Error('Failed to load')));
+
+        this.resolveImageUrl(image)
+            .then(url => { if (!settled) temp.src = url; })
+            .catch((e: unknown) => settle(() => onError(e instanceof Error ? e : new Error(String(e)))));
     }
 
     /**
@@ -799,19 +835,23 @@ export abstract class GalleryView implements IGalleryView {
 
         // Download/Open Original
         downloadBtn.addEventListener('click', () => {
-            const displayUrl = currentImage.getDisplayUrl();
-            if (displayUrl) {
+            const target = currentImage;
+            this.resolveImageUrl(target).then(displayUrl => {
+                if (!displayUrl) return;
                 const a = doc.body.createEl('a', {
                     href: displayUrl,
-                    attr: { target: '_blank', download: currentImage.displayName || 'image' }
+                    attr: { target: '_blank', download: target.displayName || 'image' }
                 });
                 a.click();
                 a.remove();
-            }
+            }).catch((error: unknown) => Logger.debug('Could not open original image:', error));
         });
 
-        // Image loader helper
+        // Image loader helper. Each load gets a token so a slow fetch for an image the user has
+        // already navigated away from cannot overwrite the current one.
+        let modalLoadToken = 0;
         const loadModalImage = (imgEl: HTMLImageElement, srcImage: IImageSource) => {
+            const token = ++modalLoadToken;
             resetZoom();
             updateInfoPanel(srcImage);
 
@@ -828,39 +868,18 @@ export abstract class GalleryView implements IGalleryView {
                 opacity: '0'
             });
 
-            const temp = new Image();
-            let timeoutHandle: number | undefined = undefined;
-
-            const onLoad = () => {
-                window.clearTimeout(timeoutHandle);
+            this.loadWithTimeout(srcImage, (temp) => {
+                if (token !== modalLoadToken) return;
                 try {
                     imgEl.src = temp.src;
                     imgEl.setCssStyles({ opacity: '1' });
                 } catch (error) { Logger.debug('Ignored error:', error); }
-                cleanup();
-            };
-
-            const onError = () => {
-                window.clearTimeout(timeoutHandle);
+            }, () => {
+                if (token !== modalLoadToken) return;
                 imgEl.alt = 'Failed to load';
                 imgEl.src = '';
                 imgEl.setCssStyles({ opacity: '1' });
-                cleanup();
-            };
-
-            const cleanup = () => {
-                temp.onload = null;
-                temp.onerror = null;
-            };
-
-            temp.onload = onLoad;
-            temp.onerror = onError;
-
-            timeoutHandle = window.setTimeout(() => {
-                onError();
-            }, this.remoteLoadTimeoutMs ?? 10000);
-
-            try { temp.src = srcImage.getDisplayUrl(); } catch { onError(); }
+            });
         };
 
         // Initial Load

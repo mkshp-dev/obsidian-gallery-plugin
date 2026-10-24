@@ -1,6 +1,7 @@
 import { ImmichShareSourceResolver } from '../../src/resolvers/ImmichShareSourceResolver';
 import { IImmichShareSourceConfig } from '../../src/models/interfaces';
 import { requestUrl } from 'obsidian';
+import { ObjectUrlManager } from '../../src/utils/ObjectUrlManager';
 
 jest.mock('obsidian', () => ({
   requestUrl: jest.fn()
@@ -11,7 +12,10 @@ describe('ImmichShareSourceResolver', () => {
 
     beforeEach(() => {
         resolver = new ImmichShareSourceResolver();
-        jest.clearAllMocks();
+        jest.resetAllMocks();
+        ObjectUrlManager.cleanupAll();
+        global.URL.createObjectURL = jest.fn(() => 'blob:share') as any;
+        global.URL.revokeObjectURL = jest.fn() as any;
     });
 
     it('should fail cleanly on missing or invalid url', async () => {
@@ -54,10 +58,11 @@ describe('ImmichShareSourceResolver', () => {
         expect(result.errors).toHaveLength(0);
         expect(result.images).toHaveLength(2);
 
-        expect(result.images[0].path).toBe('https://immich.example.com/api/assets/123/original?key=abc1234');
+        expect(result.images[0].path).toBe('immich-share://abc1234/123');
+        expect(result.images[0].type).toBe('immich-share');
         expect(result.images[0].displayName).toBe('photo1.jpg');
 
-        expect(result.images[1].path).toBe('https://immich.example.com/api/assets/456/original?key=abc1234');
+        expect(result.images[1].path).toBe('immich-share://abc1234/456');
         expect(result.images[1].displayName).toBe('photo2.png');
     });
 
@@ -79,7 +84,7 @@ describe('ImmichShareSourceResolver', () => {
         expect(result.errors).toHaveLength(0);
         expect(result.images).toHaveLength(1);
 
-        expect(result.images[0].path).toBe('https://immich.example.com/api/assets/789/original?key=album123');
+        expect(result.images[0].path).toBe('immich-share://album123/789');
         expect(result.images[0].displayName).toBe('photo3.jpg');
     });
 
@@ -145,7 +150,43 @@ describe('ImmichShareSourceResolver', () => {
 
         expect(result.errors).toHaveLength(0);
         expect(result.images).toHaveLength(1);
-        expect(result.images[0].path).toBe('https://immich.example.com/api/assets/999/original?key=locked123');
+        expect(result.images[0].path).toBe('immich-share://locked123/999');
         expect(result.images[0].displayName).toBe('private.jpg');
+
+        // The asset download sends the share session, which a plain image URL could not
+        (requestUrl as jest.Mock).mockResolvedValueOnce({ status: 200, arrayBuffer: new ArrayBuffer(4) });
+        await expect(result.images[0].resolveDisplayUrl!()).resolves.toBe('blob:share');
+        expect(requestUrl).toHaveBeenLastCalledWith({
+            url: 'https://immich.example.com/api/assets/999/original?key=locked123',
+            method: 'GET',
+            headers: {
+                'x-immich-share-key': 'locked123',
+                'Cookie': 'immich_shared_link_token=authenticatedToken'
+            }
+        });
+    });
+
+    it('should not download assets until they are displayed, then fetch the representation for the view', async () => {
+        (requestUrl as jest.Mock).mockResolvedValueOnce({
+            status: 200,
+            json: { assets: [{ id: '123', originalFileName: 'photo1.jpg', exifInfo: {} }] }
+        });
+
+        const source: IImmichShareSourceConfig = { type: 'immich-share', url: 'https://immich.example.com/share/abc1234' };
+        const result = await resolver.resolve(source, { viewType: 'grid' });
+
+        // Only the share lookup; exifInfo is present, so no per-asset caption lookup either
+        expect(requestUrl).toHaveBeenCalledTimes(1);
+
+        (requestUrl as jest.Mock).mockResolvedValueOnce({ status: 200, arrayBuffer: new ArrayBuffer(4) });
+        await expect(result.images[0].resolveDisplayUrl!()).resolves.toBe('blob:share');
+        expect(requestUrl).toHaveBeenCalledTimes(2);
+        expect(requestUrl).toHaveBeenLastCalledWith(expect.objectContaining({
+            url: 'https://immich.example.com/api/assets/123/thumbnail?key=abc1234'
+        }));
+
+        // Destroying the image releases the blob URL it acquired
+        result.images[0].destroy!();
+        expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:share');
     });
 });

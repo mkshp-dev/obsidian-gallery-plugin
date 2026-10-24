@@ -17,6 +17,16 @@ export interface ILazyLoadOptions {
   timeoutMs?: number;
 }
 
+/** An image URL, or a function that resolves it (e.g. by fetching a remote image) when the image becomes visible */
+export type LazyImageSource = string | (() => Promise<string>);
+
+interface ILazyLoadEntry {
+  src: LazyImageSource;
+  retryCount: number;
+  /** Called once the image has failed after all retries */
+  onError?: (error: Error) => void;
+}
+
 export interface ILazyLoadResult {
   success: boolean;
   element: HTMLImageElement;
@@ -28,7 +38,7 @@ export interface ILazyLoadResult {
 export class LazyLoader {
   private observer: IntersectionObserver | null = null;
   private options: Required<ILazyLoadOptions>;
-  private loadingElements = new Map<HTMLImageElement, { src: string; retryCount: number }>();
+  private loadingElements = new Map<HTMLImageElement, ILazyLoadEntry>();
   private loadedElements = new Set<HTMLImageElement>();
 
   private static readonly DEFAULT_OPTIONS: Required<ILazyLoadOptions> = {
@@ -81,14 +91,16 @@ export class LazyLoader {
 
   /**
    * Add an image element for lazy loading
+   * @param src The URL to load, or a function resolving it, called only when the image becomes visible
+   * @param onError Called once the image has failed to load after all retries
    */
-  observe(img: HTMLImageElement, src: string): void {
+  observe(img: HTMLImageElement, src: LazyImageSource, onError?: (error: Error) => void): void {
     if (this.loadedElements.has(img)) {
       return; // Already loaded
     }
 
     // Store the actual src and set placeholder
-    this.loadingElements.set(img, { src, retryCount: 0 });
+    this.loadingElements.set(img, { src, retryCount: 0, onError });
 
     // Set placeholder if provided
     if (this.options.placeholderSrc) {
@@ -132,10 +144,17 @@ export class LazyLoader {
       };
     }
 
-    const { src, retryCount } = imageData;
+    const { src, retryCount, onError } = imageData;
+    let srcLabel = typeof src === 'string' ? src : 'deferred image';
 
     try {
-      await this.loadImageWithPromise(img, src);
+      const url = typeof src === 'string' ? src : await src();
+      srcLabel = url;
+      // Stop if the image was unobserved (e.g. the view re-rendered) while its URL was resolving
+      if (this.loadingElements.get(img) !== imageData) {
+        return { success: false, element: img, error: 'Image is no longer observed', loadTime: Date.now() - startTime, retryCount };
+      }
+      await this.loadImageWithPromise(img, url);
       
       // Success
       this.loadingElements.delete(img);
@@ -153,11 +172,16 @@ export class LazyLoader {
 
     } catch (error) {
       // Handle retry logic
+      // Stop if the image was unobserved while it was loading
+      if (this.loadingElements.get(img) !== imageData) {
+        return { success: false, element: img, error: 'Image is no longer observed', loadTime: Date.now() - startTime, retryCount };
+      }
+
       if (retryCount < this.options.retryAttempts) {
         const newRetryCount = retryCount + 1;
-        this.loadingElements.set(img, { src, retryCount: newRetryCount });
+        this.loadingElements.set(img, { ...imageData, retryCount: newRetryCount });
         
-        Logger.debug(`Retrying image load (${newRetryCount}/${this.options.retryAttempts}):`, src);
+        Logger.debug(`Retrying image load (${newRetryCount}/${this.options.retryAttempts}):`, srcLabel);
         
         // Retry after delay
         window.setTimeout(() => {
@@ -179,7 +203,8 @@ export class LazyLoader {
         img.classList.add(this.options.errorClass);
         
         // Set error placeholder or alt text
-        img.alt = `Failed to load: ${src}`;
+        img.alt = `Failed to load: ${srcLabel}`;
+        onError?.(error instanceof Error ? error : new Error(String(error)));
 
         return {
           success: false,

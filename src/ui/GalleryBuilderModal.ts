@@ -1,6 +1,6 @@
 import { App, Modal, Setting, Editor, Notice, TFolder } from 'obsidian';
 import type GalleryPlugin from '../main';
-import { ISourceConfig, ILocalSourceConfig, INextcloudSourceConfig, INextcloudShareSourceConfig } from '../models/interfaces';
+import { ISourceConfig, ILocalSourceConfig, INextcloudSourceConfig, INextcloudShareSourceConfig, SourceType } from '../models/interfaces';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 import { NotePathResolver } from '../utils/NotePathResolver';
@@ -9,7 +9,7 @@ export class GalleryBuilderModal extends Modal {
     private plugin: GalleryPlugin;
     private editor: Editor;
 
-    private viewType: string = 'grid';
+    private viewType: string = 'masonry';
     private pagination: boolean = false;
     private itemsPerPage: number | undefined = undefined;
     private sources: Partial<ISourceConfig>[] = [];
@@ -52,7 +52,8 @@ export class GalleryBuilderModal extends Modal {
             .setDesc('Select the rendering layout for your gallery.')
             .addDropdown(dropdown => dropdown
                 .addOptions({
-                    'grid': 'Grid (Masonry)',
+                    'masonry': 'Masonry (Columns)',
+                    'justified': 'Justified (Rows)',
                     'thumbnail': 'Thumbnail Grid',
                     'carousel': 'Carousel (Slideshow)',
                     'embed': 'Embed (Continuous)'
@@ -115,7 +116,7 @@ export class GalleryBuilderModal extends Modal {
             const codeText = this.livePreviewContainer?.innerText || '';
             if (codeText) {
                 void navigator.clipboard.writeText(codeText);
-                new Notice('Gallery yaml copied to clipboard!');
+                new Notice('Gallery YAML copied to clipboard!');
             }
         });
 
@@ -199,11 +200,11 @@ export class GalleryBuilderModal extends Modal {
             const emptyState = container.createDiv('gallery-builder-empty-state');
             emptyState.createDiv({ cls: 'gallery-builder-empty-icon', text: '🖼️' });
             emptyState.createEl('h4', { text: 'No image sources added yet' });
-            emptyState.createEl('p', { text: 'Click one of the buttons above to add local files, external URLs, or immich albums.' });
+            emptyState.createEl('p', { text: 'Click one of the buttons above to add an image source.' });
             return;
         }
 
-        const iconMap: Record<string, string> = {
+        const iconMap: Record<SourceType, string> = {
             'local': '📁',
             'external': '🌐',
             'immich-share': '🔗',
@@ -212,7 +213,7 @@ export class GalleryBuilderModal extends Modal {
             'nextcloud-share': '🔗'
         };
 
-        const nameMap: Record<string, string> = {
+        const nameMap: Record<SourceType, string> = {
             'local': 'Local Vault',
             'external': 'External URLs',
             'immich-share': 'Immich Share Link',
@@ -367,7 +368,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(localFilterContent)
                 .setName('Filename filter')
-                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .setDesc('Glob pattern for filenames, such as *.jpg')
                 .addText(text => text
                     .setPlaceholder('*.jpg')
                     .setValue(source.filenameFilter || '')
@@ -646,28 +647,33 @@ export class GalleryBuilderModal extends Modal {
                         })
                     ));
 
+                const setDateFilter = (key: 'takenAfter' | 'takenBefore' | 'createdAfter' | 'createdBefore') => (value: string) => {
+                    if (value) {
+                        source.filters![key] = value;
+                    } else {
+                        delete source.filters![key];
+                    }
+                    this.refreshLivePreview();
+                };
+
                 this.createDateRangeSetting(
                     criteriaContent,
-                    'Created',
-                    'Only include photos created within this range.',
+                    'Taken',
+                    'Only include photos taken within this range (the date stored in the photo).',
+                    source.filters?.takenAfter || '',
+                    source.filters?.takenBefore || '',
+                    setDateFilter('takenAfter'),
+                    setDateFilter('takenBefore')
+                );
+
+                this.createDateRangeSetting(
+                    criteriaContent,
+                    'Uploaded',
+                    'Only include photos uploaded to Immich within this range.',
                     source.filters?.createdAfter || '',
                     source.filters?.createdBefore || '',
-                    value => {
-                        if (value) {
-                            source.filters!.createdAfter = value;
-                        } else {
-                            delete source.filters!.createdAfter;
-                        }
-                        this.refreshLivePreview();
-                    },
-                    value => {
-                        if (value) {
-                            source.filters!.createdBefore = value;
-                        } else {
-                            delete source.filters!.createdBefore;
-                        }
-                        this.refreshLivePreview();
-                    }
+                    setDateFilter('createdAfter'),
+                    setDateFilter('createdBefore')
                 );
 
                 const client = new ImmichClient(connection);
@@ -878,7 +884,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(ncFilterContent)
                 .setName('Filename filter')
-                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .setDesc('Glob pattern for filenames, such as *.jpg')
                 .addText(text => text
                     .setPlaceholder('*.jpg')
                     .setValue(source.filenameFilter || '')
@@ -963,7 +969,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(ncFilterContent)
                 .setName('Mime types')
-                .setDesc('Comma-separated list of mime types (e.g. Image/jpeg, image/png).')
+                .setDesc('Comma-separated list of file types to include.')
                 .addText(text => {
                     const typedSource = source as unknown as INextcloudSourceConfig;
                     return text
@@ -1039,7 +1045,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(ncsFilterContent)
                 .setName('Filename filter')
-                .setDesc('Glob pattern for filenames (e.g. *.jpg)')
+                .setDesc('Glob pattern for filenames, such as *.jpg')
                 .addText(text => text
                     .setPlaceholder('*.jpg')
                     .setValue(source.filenameFilter || '')
@@ -1055,7 +1061,7 @@ export class GalleryBuilderModal extends Modal {
 
             new Setting(ncsFilterContent)
                 .setName('Mime types')
-                .setDesc('Comma-separated list of mime types (e.g. Image/jpeg, image/png).')
+                .setDesc('Comma-separated list of file types to include.')
                 .addText(text => {
                     const typedSource = source as unknown as INextcloudShareSourceConfig;
                     return text

@@ -279,35 +279,126 @@
   background: var(--interactive-accent);
 }
 
-/* Grid View */
-.gallery-grid {
-  padding: 16px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 16px;
+/* Masonry and Justified Views
+   Both place tiles by aspect ratio in JS (AspectLayoutView). Each tile carries
+   --gallery-tile-ratio, so its image box has the right size before the image loads.
+   Tune the layouts with the custom properties on the layout roots. */
+/* The outer view element is the size container, so the layouts below can respond to it */
+.gallery-view.gallery-masonry,
+.gallery-view.gallery-justified {
   container-type: inline-size;
 }
 
-.gallery-grid-item {
+.gallery-masonry-layout,
+.gallery-justified-layout {
+  padding: 16px;
+}
+
+.gallery-masonry-layout {
+  --gallery-masonry-column-width: 220px;
+  --gallery-masonry-gap: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gallery-masonry-gap);
+}
+
+.gallery-masonry-column {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gallery-masonry-gap);
+}
+
+.gallery-justified-layout {
+  --gallery-justified-row-height: 220px;
+  --gallery-justified-gap: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gallery-justified-gap);
+}
+
+.gallery-justified-row {
+  display: flex;
+  gap: var(--gallery-justified-gap);
+  height: var(--gallery-row-height, var(--gallery-justified-row-height));
+}
+
+.gallery-tile {
+  position: relative;
   display: block;
-  width: 100%;
   border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
+  /* Placeholder colour while the image loads */
+  background: var(--background-modifier-hover);
+}
+
+.gallery-tile-image {
+  display: block;
+  width: 100%;
+  object-fit: cover;
   transition: transform 0.2s ease;
 }
 
-.gallery-grid-item:hover {
-  transform: scale(1.02);
+.gallery-tile:hover .gallery-tile-image {
+  transform: scale(1.03);
 }
 
-.gallery-grid-image {
-  width: 100%;
+.gallery-masonry-tile .gallery-tile-image {
   height: auto;
-  display: block;
-  /* Limit height so grid items are visually larger but consistent */
-  max-height: 320px;
-  object-fit: cover;
+  aspect-ratio: var(--gallery-tile-ratio, 1.5);
+}
+
+.gallery-masonry-tile .gallery-caption {
+  background: var(--background-primary);
+}
+
+.gallery-justified-tile {
+  flex: var(--gallery-tile-grow, 0) 1 var(--gallery-tile-basis, 0px);
+  min-width: 0;
+  height: 100%;
+}
+
+.gallery-justified-tile .gallery-tile-image {
+  height: 100%;
+}
+
+/* Justified tiles have a fixed height, so captions sit over the bottom of the image */
+.gallery-justified-tile .gallery-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px 8px 6px;
+  color: #fff;
+  text-align: left;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+/* On devices that can hover, show justified captions only on hover or keyboard focus */
+@media (hover: hover) {
+  .gallery-justified-tile .gallery-caption {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .gallery-justified-tile:hover .gallery-caption,
+  .gallery-justified-tile:focus-visible .gallery-caption {
+    opacity: 1;
+  }
+}
+
+@container (max-width: 480px) {
+  .gallery-masonry-layout {
+    --gallery-masonry-column-width: 140px;
+    --gallery-masonry-gap: 6px;
+  }
+
+  .gallery-justified-layout {
+    --gallery-justified-row-height: 140px;
+  }
 }
 
 /* Embed View: continuous, borderless, native-embed feel */
@@ -409,12 +500,6 @@
     padding: 16px;
   }
   
-  .gallery-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 16px;
-    padding: 16px;
-  }
-  
   .gallery-carousel-nav {
     width: 40px;
     height: 40px;
@@ -444,11 +529,6 @@
   
   .gallery-thumbnail-item:hover {
     transform: translateY(-2px) scale(1.01);
-  }
-  
-  .gallery-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
   }
   
   .gallery-carousel-nav {
@@ -895,7 +975,7 @@
 /* Accessibility */
 .gallery-thumbnail-item:focus,
 .gallery-carousel-nav:focus,
-.gallery-grid-item:focus {
+.gallery-tile:focus {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }

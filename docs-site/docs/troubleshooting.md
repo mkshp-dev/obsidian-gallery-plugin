@@ -45,6 +45,8 @@ Errors from authenticated Immich sources appear inline inside the gallery block 
 - **"Authentication failed":** Your API key may have expired or been revoked. Generate a new key in your Immich account settings and update the plugin.
 - **Gallery blank/empty:** The album, favorites list, or filtered result may genuinely be empty. If using `albumIds`, verify the UUID is correct by checking the URL in your Immich web interface.
 - **Tags or people not resolving:** Names must match exactly as they appear in Immich (case-sensitive). Use the **Insert gallery** builder to pick from live lists instead of typing names manually.
+- **Several tags or people show nothing:** Immich returns only assets that match *all* listed tags or people. Use one per source, or add a source per person.
+- **A date filter matches every photo or none:** `createdAfter` / `createdBefore` filter on the date a photo was *uploaded* to Immich. Use `takenAfter` / `takenBefore` to filter on the date it was *taken*.
 - Click **Test connection** in the Providers settings tab to confirm credentials are valid before troubleshooting gallery blocks.
 
 ## Performance with many images

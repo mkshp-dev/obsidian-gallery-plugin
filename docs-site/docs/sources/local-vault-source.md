@@ -26,7 +26,7 @@ sources:
       order: desc   # asc | desc
     limit: 50
 view:
-  type: grid
+  type: masonry
 ```
 
 | Field | Type | Default | Description |
@@ -70,7 +70,7 @@ sources:
     path: Projects
     recursive: true
 view:
-  type: grid
+  type: masonry
 ```
 ````
 
@@ -89,7 +89,7 @@ sources:
       order: desc
     limit: 12
 view:
-  type: grid
+  type: masonry
 ```
 ````
 
@@ -125,7 +125,7 @@ sources:
   - type: local
     path: "."
 view:
-  type: grid
+  type: masonry
 ```
 ````
 

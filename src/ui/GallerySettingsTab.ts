@@ -85,8 +85,8 @@ export class GallerySettingsTab extends PluginSettingTab {
                         control: { type: 'number', key: 'gracePeriodMs', defaultValue: DEFAULT_SETTINGS.gracePeriodMs, min: 0 }
                     },
                     {
-                        name: 'Enable lifecycle logging',
-                        desc: 'Enable verbose lifecycle logs (debug) for gallery attach/detach events. Useful for troubleshooting mode toggles.',
+                        name: 'Enable debug logging',
+                        desc: 'Write verbose debug logs to the developer console. Useful for troubleshooting.',
                         control: { type: 'toggle', key: 'enableLifecycleLogging', defaultValue: false }
                     }
                 ]
@@ -191,7 +191,7 @@ export class GallerySettingsTab extends PluginSettingTab {
 
             new Setting(contentDiv)
                 .setName('Base URL')
-                .setDesc('The base URL of your immich server (e.g. Https://immich.example.com).')
+                .setDesc('The base URL of your server.')
                 .addText(text => text
                     .setPlaceholder('https://immich.example.com')
                     .setValue(conn.baseUrl)
@@ -202,10 +202,10 @@ export class GallerySettingsTab extends PluginSettingTab {
                 );
 
             new Setting(contentDiv)
-                .setName('Api key')
-                .setDesc('Your personal immich api key.')
+                .setName('API key')
+                .setDesc('Your personal API key.')
                 .addText(text => text
-                    .setPlaceholder('Your api key')
+                    .setPlaceholder('Your API key')
                     .setValue(conn.apiKey)
                     .onChange(async (value) => {
                         this.plugin.settings.immichConnections[index].apiKey = value;
@@ -228,7 +228,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     .onClick(async () => {
                         this.plugin.settings.immichConnections.splice(index, 1);
                         await this.plugin.saveSettings();
-                        this.plugin.refreshGalleries();
+                        this.plugin.refreshGalleries(['immich']);
                         this.update();
                     })
                 );
@@ -245,7 +245,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                         apiKey: ''
                     });
                     await this.plugin.saveSettings();
-                    this.plugin.refreshGalleries();
+                    this.plugin.refreshGalleries(['immich']);
                     this.update();
                 })
             );
@@ -288,7 +288,7 @@ export class GallerySettingsTab extends PluginSettingTab {
 
             new Setting(contentDiv)
                 .setName('Base URL')
-                .setDesc('The base URL of your nextcloud server (e.g. Https://cloud.example.com).')
+                .setDesc('The base URL of your server.')
                 .addText(text => text
                     .setPlaceholder('https://cloud.example.com')
                     .setValue(conn.baseUrl)
@@ -338,7 +338,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     .onClick(async () => {
                         this.plugin.settings.nextcloudConnections.splice(index, 1);
                         await this.plugin.saveSettings();
-                        this.plugin.refreshGalleries();
+                        this.plugin.refreshGalleries(['nextcloud']);
                         this.update();
                     })
                 );
@@ -356,7 +356,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                         appPassword: ''
                     });
                     await this.plugin.saveSettings();
-                    this.plugin.refreshGalleries();
+                    this.plugin.refreshGalleries(['nextcloud']);
                     this.update();
                 })
             );
@@ -369,6 +369,9 @@ export class GallerySettingsTab extends PluginSettingTab {
     async setControlValue(key: string, value: unknown): Promise<void> {
         (this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
         await this.plugin.saveSettings();
-        this.plugin.refreshGalleries();
+        // Only the remote-image settings change which external images a gallery gets; every
+        // other general setting is a view option, so re-render without fetching anything again.
+        const affectsExternalSources = key === 'allowRemoteImages' || key === 'validateRemoteContentType';
+        this.plugin.refreshGalleries(affectsExternalSources ? ['external'] : 'none');
     }
 }

@@ -4,7 +4,7 @@ import { IImmichConnection } from '../../models/interfaces';
 import { Logger } from '../../utils/Logger';
 import { ImmichAsset, ImmichAlbum, ImmichTag, ImmichPerson } from '../../models/immich/ImmichTypes';
 import { ImmichHelpers } from '../../utils/immich/ImmichHelpers';
-import { ObjectUrlManager } from '../../utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../../utils/ObjectUrlManager';
 
 interface CacheEntry<T> {
     promise: Promise<T>;
@@ -88,7 +88,8 @@ export class ImmichClient {
     public async searchMetadata(filters?: Record<string, unknown>, limit?: number, sort?: Record<string, unknown>): Promise<ImmichAsset[]> {
         const url = `${this.baseUrl}/api/search/metadata`;
         try {
-            const body: Record<string, unknown> = {};
+            // withExif includes each asset's description, so captions need no per-asset request
+            const body: Record<string, unknown> = { withExif: true };
             if (limit) {
                 body.size = limit;
             }
@@ -99,13 +100,15 @@ export class ImmichClient {
                 if (filters.isFavorite !== undefined) {
                     body.isFavorite = filters.isFavorite;
                 }
-                if (typeof filters.createdAfter === 'string') {
-                    const val = filters.createdAfter;
-                    body.createdAfter = /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T00:00:00.000Z` : val;
+                // created* filter on upload time, taken* on the photo's own date (EXIF). A bare date
+                // covers the whole day: *After from its start, *Before up to its end.
+                for (const key of ['createdAfter', 'takenAfter'] as const) {
+                    const val = filters[key];
+                    if (typeof val === 'string') body[key] = /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T00:00:00.000Z` : val;
                 }
-                if (typeof filters.createdBefore === 'string') {
-                    const val = filters.createdBefore;
-                    body.createdBefore = /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T23:59:59.999Z` : val;
+                for (const key of ['createdBefore', 'takenBefore'] as const) {
+                    const val = filters[key];
+                    if (typeof val === 'string') body[key] = /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T23:59:59.999Z` : val;
                 }
                 if (filters.assetType !== undefined) {
                     body.type = (filters.assetType as string).toUpperCase();
@@ -314,11 +317,10 @@ export class ImmichClient {
 
     public async getAssetBlobUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): Promise<string> {
         const key = `immich:${this.connection.key}:${assetId}:${representation}`;
-        const existingUrl = ObjectUrlManager.acquire(key);
-        if (existingUrl) {
-            return existingUrl;
-        }
+        return ObjectUrlManager.getOrCreate(key, () => this.fetchAssetBlob(assetId, representation));
+    }
 
+    private async fetchAssetBlob(assetId: string, representation: 'thumbnail' | 'preview' | 'original'): Promise<Blob> {
         const url = this.getAssetUrl(assetId, representation);
         try {
             const response = await requestUrl({
@@ -328,8 +330,7 @@ export class ImmichClient {
             });
 
             if (response.status === 200) {
-                const blob = new Blob([response.arrayBuffer]);
-                return ObjectUrlManager.create(key, blob);
+                return new Blob([response.arrayBuffer]);
             }
             if (response.status === 401 || response.status === 403) {
                 throw new Error(`Authentication failed for asset '${assetId}' (HTTP ${response.status})`);

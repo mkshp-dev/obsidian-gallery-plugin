@@ -2,7 +2,7 @@ import { NextcloudShareSourceResolver } from '../../src/resolvers/NextcloudShare
 import { INextcloudShareSourceConfig } from '../../src/models/interfaces';
 import { GallerySourceResolveContext } from '../../src/resolvers/GallerySourceResolver';
 import { requestUrl } from 'obsidian';
-import { ObjectUrlManager } from '../../src/utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../../src/utils/ObjectUrlManager';
 
 jest.mock('obsidian', () => ({
   requestUrl: jest.fn()
@@ -16,19 +16,16 @@ jest.mock('../../src/utils/Logger', () => ({
     }
 }));
 
-jest.mock('../../src/utils/immich/ObjectUrlManager', () => ({
-    ObjectUrlManager: {
-        acquire: jest.fn(),
-        create: jest.fn(),
-        revoke: jest.fn()
-    }
-}));
-
 describe('NextcloudShareSourceResolver', () => {
     let resolver: NextcloudShareSourceResolver;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        // reset (not just clear) so queued mockResolvedValueOnce values never leak between tests
+        jest.resetAllMocks();
+        // Real ObjectUrlManager, with only the browser URL APIs stubbed
+        ObjectUrlManager.cleanupAll();
+        global.URL.createObjectURL = jest.fn(() => 'blob:test') as any;
+        global.URL.revokeObjectURL = jest.fn() as any;
         resolver = new NextcloudShareSourceResolver();
 
         // Mock DOMParser for webdav response parsing
@@ -184,8 +181,6 @@ describe('NextcloudShareSourceResolver', () => {
                 headers: { 'content-type': 'image/jpeg' }
             });
 
-        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
-        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
 
         const source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123' };
         const result = await resolver.resolve(source, { viewType: 'grid' });
@@ -194,8 +189,20 @@ describe('NextcloudShareSourceResolver', () => {
         expect(result.images.length).toBe(1);
         expect(result.images[0].displayName).toBe('image1.jpg');
         expect(result.images[0].path).toBe('nextcloud-share://TOKEN123/public.php/webdav/image1.jpg');
-        expect(result.images[0].resourceUrl).toBe('blob:test');
-        expect(ObjectUrlManager.create).toHaveBeenCalled();
+
+        // Only the listing is fetched up front; the file is downloaded when first displayed
+        expect(requestUrl).toHaveBeenCalledTimes(1);
+        await expect(result.images[0].resolveDisplayUrl!()).resolves.toBe('blob:test');
+        expect(requestUrl).toHaveBeenCalledTimes(2);
+        expect(requestUrl).toHaveBeenLastCalledWith(expect.objectContaining({
+            url: 'https://cloud.example.com/public.php/webdav/image1.jpg',
+            method: 'GET',
+            headers: expect.objectContaining({ 'X-Requested-With': 'XMLHttpRequest' })
+        }));
+
+        // Destroying the image releases its blob URL
+        result.images[0].destroy!();
+        expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test');
     });
 
     it('should filter files by filenameFilter glob pattern', async () => {
@@ -233,8 +240,6 @@ describe('NextcloudShareSourceResolver', () => {
                 headers: { 'content-type': 'image/jpeg' }
             });
 
-        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
-        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
 
         const source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123', filenameFilter: '*.jpg' };
         const result = await resolver.resolve(source, { viewType: 'grid' });
@@ -242,7 +247,6 @@ describe('NextcloudShareSourceResolver', () => {
         expect(result.errors.length).toBe(0);
         expect(result.images.length).toBe(1);
         expect(result.images[0].displayName).toBe('image1.jpg');
-        expect(ObjectUrlManager.create).toHaveBeenCalledTimes(1);
     });
 
     it('should use ObjectUrlManager cache for blob URLs', async () => {
@@ -263,13 +267,15 @@ describe('NextcloudShareSourceResolver', () => {
         `;
 
         (requestUrl as jest.Mock).mockResolvedValueOnce({ status: 207, text: xmlResponse });
-        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue('blob:existing');
+        // The same file is already displayed elsewhere
+        (URL.createObjectURL as jest.Mock).mockReturnValueOnce('blob:existing');
+        ObjectUrlManager.create('nextcloud-share:TOKEN123:/public.php/webdav/image1.jpg', new Blob(['x']));
 
         const source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123' };
         const result = await resolver.resolve(source, { viewType: 'grid' });
 
         expect(result.images.length).toBe(1);
-        expect(result.images[0].resourceUrl).toBe('blob:existing');
+        await expect(result.images[0].resolveDisplayUrl!()).resolves.toBe('blob:existing');
         // Because it was acquired from cache, GET shouldn't be called
         expect(requestUrl).toHaveBeenCalledTimes(1);
     });
@@ -299,8 +305,6 @@ describe('NextcloudShareSourceResolver', () => {
                 headers: { 'content-type': 'image/png' }
             });
 
-        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
-        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test2');
 
         const source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123' };
         const result = await resolver.resolve(source, { viewType: 'grid' });
@@ -332,6 +336,59 @@ describe('NextcloudShareSourceResolver', () => {
 
         expect(result.errors.length).toBe(0);
         expect(result.images.length).toBe(0);
+    });
+
+    describe('folder shares with sub-folders', () => {
+        const folder = (href: string) =>
+            `<d:response><d:href>${href}</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`;
+        const image = (href: string, size = 2048) =>
+            `<d:response><d:href>${href}</d:href><d:propstat><d:prop><d:resourcetype></d:resourcetype><d:getcontenttype>image/jpeg</d:getcontenttype><d:getcontentlength>${size}</d:getcontentlength></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`;
+        const multistatus = (...responses: string[]) => ({ status: 207, text: `<d:multistatus>${responses.join('')}</d:multistatus>` });
+
+        /** The share root holds only folders; City holds a nested folder, like the demo share */
+        const listings: Record<string, { status: number; text: string }> = {
+            'https://cloud.example.com/public.php/webdav/': multistatus(folder('/public.php/webdav/'), folder('/public.php/webdav/City/'), folder('/public.php/webdav/Camera/')),
+            'https://cloud.example.com/public.php/webdav/City/': multistatus(folder('/public.php/webdav/City/'), image('/public.php/webdav/City/a.jpg', 1024), folder('/public.php/webdav/City/Old/')),
+            'https://cloud.example.com/public.php/webdav/City/Old/': multistatus(folder('/public.php/webdav/City/Old/'), image('/public.php/webdav/City/Old/b.jpg', 600 * 1024)),
+            'https://cloud.example.com/public.php/webdav/Camera/': multistatus(folder('/public.php/webdav/Camera/'), image('/public.php/webdav/Camera/c.jpg', 50 * 1024))
+        };
+        const serve = () => (requestUrl as jest.Mock).mockImplementation(async ({ url }: { url: string }) => listings[url] ?? { status: 404, text: '' });
+        const share: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/token123' };
+
+        it('includes images from every sub-folder by default, one level per request', async () => {
+            serve();
+            const result = await resolver.resolve(share, {});
+
+            expect(result.errors).toEqual([]);
+            expect(result.images.map(i => i.displayName).sort()).toEqual(['a.jpg', 'b.jpg', 'c.jpg']);
+            for (const call of (requestUrl as jest.Mock).mock.calls) {
+                expect(call[0].headers.Depth).toBe('1');
+            }
+        });
+
+        it('lists only the top level with recursive: false', async () => {
+            serve();
+            const result = await resolver.resolve({ ...share, recursive: false }, {});
+
+            expect(result.images).toEqual([]);
+            expect(requestUrl).toHaveBeenCalledTimes(1);
+        });
+
+        it('applies minSizeKb and maxSizeKb', async () => {
+            serve();
+            const result = await resolver.resolve({ ...share, filters: { minSizeKb: 10, maxSizeKb: 100 } }, {});
+
+            expect(result.images.map(i => i.displayName)).toEqual(['c.jpg']);
+        });
+
+        it('skips a sub-folder that fails to list', async () => {
+            serve();
+            listings['https://cloud.example.com/public.php/webdav/Camera/'] = { status: 403, text: '' };
+            const result = await resolver.resolve(share, {});
+
+            expect(result.errors).toEqual([]);
+            expect(result.images.map(i => i.displayName).sort()).toEqual(['a.jpg', 'b.jpg']);
+        });
     });
 });
 
@@ -393,8 +450,6 @@ describe('Nextcloud Share Source Sorting', () => {
                 headers: { 'content-type': 'image/jpeg' }
             });
 
-        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
-        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
 
         // Test Sort by name desc
         let source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123', sort: { by: 'name', order: 'desc' } };
@@ -471,8 +526,6 @@ describe('Nextcloud Share Source Sorting', () => {
                 headers: { 'content-type': 'image/jpeg' }
             });
 
-        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
-        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
 
         let source: INextcloudShareSourceConfig = { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN123', limit: 2 };
         let result = await resolver.resolve(source, { viewType: 'grid' });
@@ -571,8 +624,6 @@ describe('Nextcloud Share Source Filtering', () => {
                 headers: { 'content-type': 'image/png' }
             });
 
-        (ObjectUrlManager.acquire as jest.Mock).mockReturnValue(null);
-        (ObjectUrlManager.create as jest.Mock).mockReturnValue('blob:test');
 
         let source: INextcloudShareSourceConfig = {
             type: 'nextcloud-share',

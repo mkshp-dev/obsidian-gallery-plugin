@@ -3,10 +3,12 @@ import { Logger } from "./utils/Logger";
 import { Plugin, App, MarkdownPostProcessorContext, MarkdownView, Notice } from 'obsidian';
 import { ContentScanner } from './services/ContentScanner';
 import { ViewFactory } from './views/ViewFactory';
-import { GalleryProcessor } from './processors/GalleryProcessor';
+import { GalleryProcessor, RefreshSources } from './processors/GalleryProcessor';
 import { VaultWatcher } from './utils/VaultWatcher';
 import { LazyLoader } from './utils/LazyLoader';
 import { ShowcaseGenerator } from './generators/ShowcaseGenerator';
+import { addDemoConnections, DemoConnectionConflict } from './generators/DemoServers';
+import { DemoConnectionsModal } from './ui/DemoConnectionsModal';
 import { GallerySettingsTab } from './ui/GallerySettingsTab';
 import { GalleryPluginSettings, DEFAULT_SETTINGS } from './models/settings';
 
@@ -26,8 +28,6 @@ export default class GalleryPlugin extends Plugin {
     private _onOpenSettingsRequested: ((e?: Event) => void) | null = null;
     
     async onload() {
-        Logger.setDebugEnabled(true);
-
         await this.loadSettings();
 
         // Initialize core services
@@ -49,14 +49,15 @@ export default class GalleryPlugin extends Plugin {
             retryDelay: 1000
         });
 
-        // Initialize vault watcher for automatic gallery updates
+        // Initialize vault watcher for automatic gallery updates. Vault image changes only
+        // affect local sources, so remote sources are not fetched again.
         this.vaultWatcher = new VaultWatcher(
             this.app.vault,
             {
-                onFileAdded: () => this.refreshGalleries(),
-                onFileDeleted: () => this.refreshGalleries(),
-                onFileRenamed: () => this.refreshGalleries(),
-                onFileModified: () => this.refreshGalleries()
+                onFileAdded: () => this.refreshGalleries(['local']),
+                onFileDeleted: () => this.refreshGalleries(['local']),
+                onFileRenamed: () => this.refreshGalleries(['local']),
+                onFileModified: () => this.refreshGalleries(['local'])
             },
             {
                 debounceMs: 1000,
@@ -71,7 +72,7 @@ export default class GalleryPlugin extends Plugin {
             id: 'create-showcase-notes',
             name: 'Create showcase notes',
             callback: async () => {
-                await new ShowcaseGenerator(this.app).generateShowcase();
+                await this.createShowcase();
             }
         });
 
@@ -139,9 +140,12 @@ export default class GalleryPlugin extends Plugin {
         } else {
             this.settings.nextcloudConnections = [];
         }
+
+        Logger.setDebugEnabled(!!this.settings.enableLifecycleLogging);
     }
 
     async saveSettings() {
+        Logger.setDebugEnabled(!!this.settings.enableLifecycleLogging);
         await this.saveData(this.settings);
     }
 
@@ -207,14 +211,45 @@ export default class GalleryPlugin extends Plugin {
     }
 
     /**
-     * Refresh all active galleries (professional version)
+     * Create the showcase notes, first offering to add the demo server connections they use
      */
-    public refreshGalleries(): void {
+    private async createShowcase(): Promise<void> {
+        const generator = new ShowcaseGenerator(this.app);
+        if (generator.showcaseExists()) {
+            // Let the generator report it, without asking about connections first
+            await generator.generateShowcase();
+            return;
+        }
+
+        const choice = await new DemoConnectionsModal(this.app).ask();
+        if (choice === 'cancel') return;
+
+        let conflicts: DemoConnectionConflict[] = [];
+        if (choice === 'add') {
+            const result = addDemoConnections(this.settings);
+            conflicts = result.conflicts;
+            if (result.added.length > 0) {
+                await this.saveSettings();
+                this.refreshGalleries(['immich', 'nextcloud']);
+            }
+            for (const conflict of conflicts) {
+                new Notice(`Gallery View: a connection named "${conflict.key}" already exists and points to ${conflict.baseUrl}, so it was not changed. The showcase notes that use it will not reach the demo server; see the welcome note.`, 10000);
+            }
+        }
+
+        await generator.generateShowcase({ demoConnections: choice === 'add' ? 'added' : 'declined', conflicts });
+    }
+
+    /**
+     * Refresh all active galleries. `refreshSources` picks which sources are re-resolved
+     * (fetched again); see RefreshSources.
+     */
+    public refreshGalleries(refreshSources: RefreshSources = 'all'): void {
         if (!this.galleryProcessor) {
             return;
         }
 
-        this.galleryProcessor.refreshAllGalleries().catch(error => {
+        this.galleryProcessor.refreshAllGalleries(refreshSources).catch(error => {
             console.error('Error refreshing galleries:', error);
         });
     }

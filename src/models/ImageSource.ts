@@ -1,5 +1,11 @@
-import { IImageSource } from './interfaces';
-import { ObjectUrlManager } from '../utils/immich/ObjectUrlManager';
+import { IImageSource, SourceType } from './interfaces';
+import { ObjectUrlManager } from '../utils/ObjectUrlManager';
+
+/**
+ * Fetches an image on demand and returns a URL for it that was acquired from
+ * ObjectUrlManager. The ImageSource that runs it owns that reference and releases it on destroy.
+ */
+export type ImageUrlLoader = () => Promise<string>;
 
 /**
  * Represents an individual image source within a gallery
@@ -7,8 +13,7 @@ import { ObjectUrlManager } from '../utils/immich/ObjectUrlManager';
  */
 export class ImageSource implements IImageSource {
     public readonly path: string;
-    public readonly resourceUrl?: string;
-    public readonly type: 'local' | 'external' | 'immich-share' | 'immich' | 'nextcloud' | 'nextcloud-share';
+    public readonly type: SourceType;
     public readonly displayName: string;
     public caption?: string;
     public size?: number;
@@ -18,12 +23,25 @@ export class ImageSource implements IImageSource {
     public errorMessage?: string;
     public loadStartTime?: number;
 
+    private _resourceUrl?: string;
+    private readonly loader?: ImageUrlLoader;
+    private pendingLoad: Promise<string> | null = null;
+    /** True once `_resourceUrl` came from `loader`, so destroy() must release it */
+    private ownsResourceUrl = false;
+    private destroyed = false;
+
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
-    constructor(path: string, type: 'local' | 'external' | 'immich-share' | 'immich' | 'nextcloud' | 'nextcloud-share', displayName?: string, resourceUrl?: string, caption?: string) {
+    /**
+     * @param resourceUrl A ready-to-use URL for the image (e.g. a vault resource path)
+     * @param loader Fetches the image when it is first displayed; used by remote sources so
+     *               nothing is downloaded for images that are never shown
+     */
+    constructor(path: string, type: SourceType, displayName?: string, resourceUrl?: string, caption?: string, loader?: ImageUrlLoader) {
         this.path = path;
-        this.resourceUrl = resourceUrl;
+        this._resourceUrl = resourceUrl;
+        this.loader = loader;
         this.type = type;
         this.displayName = displayName || this.extractDisplayName(path);
         this.caption = caption;
@@ -31,6 +49,11 @@ export class ImageSource implements IImageSource {
 
         // Validate path format
         this.validatePath();
+    }
+
+    /** URL used to display the image; for loader-backed images, only set once the loader has run */
+    get resourceUrl(): string | undefined {
+        return this._resourceUrl;
     }
 
     /**
@@ -196,10 +219,41 @@ export class ImageSource implements IImageSource {
      * For external files, returns path
      */
     getDisplayUrl(): string {
-        if (this.resourceUrl) {
-            return this.resourceUrl;
+        if (this._resourceUrl) {
+            return this._resourceUrl;
         }
         return this.path;
+    }
+
+    /**
+     * Get the URL to display, running the loader first if the image has one and it has not run.
+     * The loader runs at most once at a time; if it fails, the next call tries again.
+     */
+    async resolveDisplayUrl(): Promise<string> {
+        if (this._resourceUrl || !this.loader) {
+            return this.getDisplayUrl();
+        }
+        if (this.destroyed) {
+            throw new Error(`Image source was destroyed: ${this.path}`);
+        }
+
+        if (!this.pendingLoad) {
+            this.pendingLoad = this.loader()
+                .then(url => {
+                    if (this.destroyed) {
+                        // Destroyed while fetching: give the reference straight back
+                        ObjectUrlManager.releaseByUrl(url);
+                        throw new Error(`Image source was destroyed: ${this.path}`);
+                    }
+                    this._resourceUrl = url;
+                    this.ownsResourceUrl = true;
+                    return url;
+                })
+                .finally(() => {
+                    this.pendingLoad = null;
+                });
+        }
+        return this.pendingLoad;
     }
 
     /**
@@ -226,14 +280,18 @@ export class ImageSource implements IImageSource {
     }
 
     /**
-     * Destroys the image source, cleaning up any resources (like blob URLs)
+     * Destroys the image source, releasing the blob URL its loader acquired (if any).
+     * Safe to call more than once.
      */
     destroy(): void {
-        if (this.type === 'immich' && this.resourceUrl) {
-            ObjectUrlManager.releaseByUrl(this.resourceUrl);
-        }
-        if (this.type === 'nextcloud' && this.resourceUrl) {
-            ObjectUrlManager.releaseByUrl(this.resourceUrl);
+        if (this.destroyed) return;
+        this.destroyed = true;
+
+        if (this.ownsResourceUrl && this._resourceUrl) {
+            ObjectUrlManager.releaseByUrl(this._resourceUrl);
+            // The URL may now be revoked, so stop handing it out
+            this._resourceUrl = undefined;
+            this.ownsResourceUrl = false;
         }
     }
 }

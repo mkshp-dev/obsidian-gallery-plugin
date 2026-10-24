@@ -1,8 +1,8 @@
-import { requestUrl } from 'obsidian';
+import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { INextcloudConnection } from '../../models/interfaces';
 import { NextcloudFile } from '../../models/nextcloud/NextcloudTypes';
 import { Logger } from '../../utils/Logger';
-import { ObjectUrlManager } from '../../utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../../utils/ObjectUrlManager';
 
 interface CacheEntry<T> {
   promise: Promise<T>;
@@ -99,17 +99,25 @@ export class NextcloudClient {
 
       const url = `${this.baseUrl}/remote.php/dav/files/${encodeURIComponent(this.connection.username)}${normalizedPath}`;
 
+      // throw: false so failures can name the folder and server instead of "Request failed, status 404"
       const response = await requestUrl({
         url: url,
         method: 'PROPFIND',
         headers: {
           ...this.getHeaders(),
           'Depth': recursive ? 'infinity' : '1'
-        }
+        },
+        throw: false
       });
 
+      if (response.status === 404) {
+        throw new Error(`Folder '${normalizedPath}' not found on ${this.baseUrl} (connection '${this.connection.key}')`);
+      }
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Authentication failed for ${this.baseUrl} (connection '${this.connection.key}'). Check the username and app password.`);
+      }
       if (response.status !== 200 && response.status !== 207) {
-        throw new Error(`Failed to list files. Status: ${response.status}`);
+        throw new Error(`Failed to list files in '${normalizedPath}' on ${this.baseUrl}. Status: ${response.status}`);
       }
 
       return this.parseWebdavResponse(response.text, normalizedPath, mimeTypesFilter);
@@ -120,56 +128,48 @@ export class NextcloudClient {
   }
 
   public async getFileBlobUrl(path: string, representation: 'thumbnail' | 'original', fileId?: string): Promise<string> {
+    // Stable key for ObjectUrlManager: connectionKey + representation + path
+    const urlKey = `nextcloud:${this.connection.key}:${representation}:${path}`;
     try {
-      // Normalize path
-      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-      let url = '';
-      if (representation === 'thumbnail' && fileId) {
-        url = `${this.baseUrl}/index.php/core/preview?fileId=${fileId}&x=256&y=256`;
-      } else {
-        url = `${this.baseUrl}/remote.php/dav/files/${encodeURIComponent(this.connection.username)}${normalizedPath}`;
-      }
-
-      let response = await requestUrl({
-        url: url,
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-
-      // Fallback for thumbnail if preview endpoint fails
-      if (representation === 'thumbnail' && fileId && response.status !== 200) {
-        Logger.debug(`Thumbnail preview failed for ${fileId}, falling back to original`);
-        url = `${this.baseUrl}/remote.php/dav/files/${encodeURIComponent(this.connection.username)}${normalizedPath}`;
-        response = await requestUrl({
-          url: url,
-          method: 'GET',
-          headers: this.getHeaders()
-        });
-      }
-
-      if (response.status !== 200) {
-        throw new Error(`Failed to fetch file. Status: ${response.status}`);
-      }
-
-      // Convert array buffer to blob
-      const buffer = response.arrayBuffer;
-      const contentType = typeof response.headers['content-type'] === 'string' ? response.headers['content-type'] : 'image/jpeg';
-      const blob = new Blob([buffer], { type: contentType });
-
-      // We need a stable key for ObjectUrlManager. We'll use connectionKey + representation + path
-      const urlKey = `nextcloud:${this.connection.key}:${representation}:${path}`;
-
-      const existingUrl = ObjectUrlManager.acquire(urlKey);
-      if (existingUrl) {
-          return existingUrl;
-      }
-
-      return ObjectUrlManager.create(urlKey, blob);
+      return await ObjectUrlManager.getOrCreate(urlKey, () => this.fetchFileBlob(path, representation, fileId));
     } catch (error) {
       Logger.error(`Failed to get file blob URL for Nextcloud file at path ${path}:`, error);
       throw error;
     }
+  }
+
+  private async fetchFileBlob(path: string, representation: 'thumbnail' | 'original', fileId?: string): Promise<Blob> {
+    // Normalize path
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const originalUrl = `${this.baseUrl}/remote.php/dav/files/${encodeURIComponent(this.connection.username)}${normalizedPath}`;
+
+    let response: RequestUrlResponse;
+    if (representation === 'thumbnail' && fileId) {
+      // a=1 keeps the image's aspect ratio (Nextcloud crops previews to x*y by default).
+      // throw: false so a failed preview (e.g. preview generation disabled) reaches the fallback below
+      response = await requestUrl({
+        url: `${this.baseUrl}/index.php/core/preview?fileId=${fileId}&x=256&y=256&a=1`,
+        method: 'GET',
+        headers: this.getHeaders(),
+        throw: false
+      });
+
+      // Fallback for thumbnail if preview endpoint fails
+      if (response.status !== 200) {
+        Logger.debug(`Thumbnail preview failed for ${fileId}, falling back to original`);
+        response = await requestUrl({ url: originalUrl, method: 'GET', headers: this.getHeaders() });
+      }
+    } else {
+      response = await requestUrl({ url: originalUrl, method: 'GET', headers: this.getHeaders() });
+    }
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch file. Status: ${response.status}`);
+    }
+
+    // Convert array buffer to blob
+    const contentType = typeof response.headers['content-type'] === 'string' ? response.headers['content-type'] : 'image/jpeg';
+    return new Blob([response.arrayBuffer], { type: contentType });
   }
 
   private parseWebdavResponse(xmlText: string, basePath: string, mimeTypesFilter?: string[]): NextcloudFile[] {

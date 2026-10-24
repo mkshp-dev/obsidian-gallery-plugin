@@ -128,6 +128,18 @@ describe('GalleryYamlGenerator', () => {
         expect(result).toContain('isFavorite: true');
     });
 
+    it('should emit taken and uploaded date filters for an authenticated immich source', () => {
+        const sources: Partial<ISourceConfig>[] = [
+            { type: 'immich', connection: 'home', filters: { takenAfter: '2024-01-01', takenBefore: '2024-12-31', createdAfter: '2025-06-01' } }
+        ];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'masonry');
+
+        expect(result).toContain('takenAfter: 2024-01-01');
+        expect(result).toContain('takenBefore: 2024-12-31');
+        expect(result).toContain('createdAfter: 2025-06-01');
+    });
+
     it('should generate valid yaml for an authenticated immich source (recent mode)', () => {
         const sources: Partial<ISourceConfig>[] = [
             { type: 'immich', connection: 'home', limit: 50, sort: { by: 'createdAt', order: 'desc' } }

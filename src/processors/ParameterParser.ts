@@ -1,6 +1,7 @@
 import { parseYaml, stringifyYaml } from 'obsidian';
 import { IGalleryConfig, IConfigError } from '../models/interfaces';
 import { GalleryConfig } from '../models/GalleryConfig';
+import { VIEW_TYPES, getViewTypeName, normalizeViewType } from '../models/viewTypes';
 
 class ConfigError extends Error implements IConfigError {
     readonly type = 'config' as const;
@@ -21,7 +22,6 @@ class ConfigError extends Error implements IConfigError {
  */
 export class ParameterParser {
     private static readonly ALLOWED_KEYS = ['path', 'view', 'recursive', 'urls', 'sources'];
-    private static readonly VIEW_TYPES = ['thumbnail', 'carousel', 'grid', 'embed'];
 
     /**
      * Parse YAML content from code block
@@ -181,16 +181,10 @@ export class ParameterParser {
         // Validate view type if provided
         const view = config.view;
         if (view) {
-            let viewType = '';
-            if (typeof view === 'string') {
-                viewType = view;
-            } else if (typeof view === 'object' && view !== null && 'type' in view) {
-                viewType = (view as { type: string }).type;
-            }
-            if (viewType && !this.VIEW_TYPES.includes(viewType)) {
+            if (!this.isValidView(view)) {
                 throw this.createConfigError('invalid_view',
-                    `View type must be a string (Use one of: ${this.VIEW_TYPES.join(', ')})`,
-                    `Valid view types are: ${this.VIEW_TYPES.join(', ')}`);
+                    `View type must be a string (Use one of: ${VIEW_TYPES.join(', ')})`,
+                    `Valid view types are: ${VIEW_TYPES.join(', ')}`);
             }
 
             if (typeof view === 'object' && view !== null) {
@@ -217,6 +211,18 @@ export class ParameterParser {
     }
 
     /**
+     * A view value is valid when it names a known view or alias. An object without a type uses the
+     * default view; an object with a non-string type is invalid.
+     */
+    private static isValidView(view: unknown): boolean {
+        if (typeof view === 'object' && view !== null && 'type' in view && typeof view.type !== 'string') {
+            return false;
+        }
+        const name = getViewTypeName(view);
+        return name === undefined || normalizeViewType(name) !== undefined;
+    }
+
+    /**
      * Create structured configuration error
      */
     private static createConfigError(field: string, message: string, suggestion?: string): ConfigError {
@@ -238,18 +244,10 @@ export class ParameterParser {
         }
 
         // View validation
-        if (config.view) {
-            let viewType = '';
-            if (typeof config.view === 'string') {
-                viewType = config.view;
-            } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
-                viewType = (config.view as { type: string }).type;
-            }
-            if (viewType && !this.VIEW_TYPES.includes(viewType)) {
-                errors.push(this.createConfigError('view',
-                    `View type must be a string (Use one of: ${this.VIEW_TYPES.join(', ')})`,
-                    `Valid types: ${this.VIEW_TYPES.join(', ')}`));
-            }
+        if (config.view && !this.isValidView(config.view)) {
+            errors.push(this.createConfigError('view',
+                `View type must be a string (Use one of: ${VIEW_TYPES.join(', ')})`,
+                `Valid types: ${VIEW_TYPES.join(', ')}`));
         }
 
         // Recursive validation
@@ -283,13 +281,12 @@ export class ParameterParser {
                             errors.push(this.createConfigError(`sources[${i}].filters.isFavorite`,
                                 'Immich source "filters.isFavorite" must be a boolean'));
                         }
-                        if (source.filters.createdAfter !== undefined && (typeof source.filters.createdAfter !== 'string' || !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(source.filters.createdAfter))) {
-                            errors.push(this.createConfigError(`sources[${i}].filters.createdAfter`,
-                                'Immich source "filters.createdAfter" must be a string in YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format'));
-                        }
-                        if (source.filters.createdBefore !== undefined && (typeof source.filters.createdBefore !== 'string' || !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(source.filters.createdBefore))) {
-                            errors.push(this.createConfigError(`sources[${i}].filters.createdBefore`,
-                                'Immich source "filters.createdBefore" must be a string in YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format'));
+                        for (const key of ['createdAfter', 'createdBefore', 'takenAfter', 'takenBefore'] as const) {
+                            const value: unknown = source.filters[key];
+                            if (value !== undefined && (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(value))) {
+                                errors.push(this.createConfigError(`sources[${i}].filters.${key}`,
+                                    `Immich source "filters.${key}" must be a string in YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format`));
+                            }
                         }
                         if (source.filters.assetType !== undefined && source.filters.assetType !== 'image' && source.filters.assetType !== 'video') {
                             errors.push(this.createConfigError(`sources[${i}].filters.assetType`,
@@ -364,7 +361,7 @@ export class ParameterParser {
      * Get supported view types
      */
     static getSupportedViewTypes(): string[] {
-        return [...this.VIEW_TYPES];
+        return [...VIEW_TYPES];
     }
 
     /**

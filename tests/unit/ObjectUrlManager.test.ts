@@ -1,17 +1,19 @@
-import { ObjectUrlManager } from '../../src/utils/immich/ObjectUrlManager';
+import { ObjectUrlManager } from '../../src/utils/ObjectUrlManager';
 
 describe('ObjectUrlManager', () => {
     let mockCreateObjectURL: jest.Mock;
     let mockRevokeObjectURL: jest.Mock;
 
     beforeEach(() => {
+        // Clear entries left by the previous test before installing fresh mocks,
+        // so those revocations are not counted against this test
+        ObjectUrlManager.cleanupAll();
+
         mockCreateObjectURL = jest.fn((blob) => `blob:mock-url-${blob.size}`);
         mockRevokeObjectURL = jest.fn();
 
         global.URL.createObjectURL = mockCreateObjectURL as any;
         global.URL.revokeObjectURL = mockRevokeObjectURL as any;
-
-        ObjectUrlManager.cleanupAll();
     });
 
     afterEach(() => {
@@ -85,5 +87,61 @@ describe('ObjectUrlManager', () => {
 
         expect(mockRevokeObjectURL).toHaveBeenCalledTimes(2);
         expect(ObjectUrlManager.getStats().totalEntries).toBe(0);
+    });
+
+    describe('getOrCreate', () => {
+        it('should fetch and create a URL when none exists', async () => {
+            const fetchBlob = jest.fn().mockResolvedValue(new Blob(['abc']));
+
+            const url = await ObjectUrlManager.getOrCreate('k', fetchBlob);
+
+            expect(url).toBe('blob:mock-url-3');
+            expect(fetchBlob).toHaveBeenCalledTimes(1);
+            expect(ObjectUrlManager.getStats().totalEntries).toBe(1);
+        });
+
+        it('should reuse an existing URL without fetching', async () => {
+            const existing = ObjectUrlManager.create('k', new Blob(['abc']));
+            const fetchBlob = jest.fn();
+
+            const url = await ObjectUrlManager.getOrCreate('k', fetchBlob);
+
+            expect(url).toBe(existing);
+            expect(fetchBlob).not.toHaveBeenCalled();
+        });
+
+        it('should fetch once for concurrent requests and give each caller its own reference', async () => {
+            let resolveFetch: (blob: Blob) => void = () => {};
+            const fetchBlob = jest.fn(() => new Promise<Blob>(resolve => { resolveFetch = resolve; }));
+
+            const first = ObjectUrlManager.getOrCreate('k', fetchBlob);
+            const second = ObjectUrlManager.getOrCreate('k', fetchBlob);
+            resolveFetch(new Blob(['abc']));
+            const [url1, url2] = await Promise.all([first, second]);
+
+            expect(fetchBlob).toHaveBeenCalledTimes(1);
+            expect(url1).toBe(url2);
+
+            // Two references: the URL survives the first release and is revoked by the second
+            ObjectUrlManager.releaseByUrl(url1);
+            expect(mockRevokeObjectURL).not.toHaveBeenCalled();
+            ObjectUrlManager.releaseByUrl(url2);
+            expect(mockRevokeObjectURL).toHaveBeenCalledWith(url1);
+        });
+
+        it('should reject every waiting caller when the fetch fails, and fetch again on the next call', async () => {
+            const fetchBlob = jest.fn()
+                .mockRejectedValueOnce(new Error('boom'))
+                .mockResolvedValueOnce(new Blob(['abc']));
+
+            await expect(Promise.all([
+                ObjectUrlManager.getOrCreate('k', fetchBlob),
+                ObjectUrlManager.getOrCreate('k', fetchBlob)
+            ])).rejects.toThrow('boom');
+            expect(ObjectUrlManager.getStats().totalEntries).toBe(0);
+
+            await expect(ObjectUrlManager.getOrCreate('k', fetchBlob)).resolves.toBe('blob:mock-url-3');
+            expect(fetchBlob).toHaveBeenCalledTimes(2);
+        });
     });
 });

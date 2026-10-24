@@ -3,6 +3,8 @@
  * Based on contracts defined in contracts/interfaces.md
  */
 
+import type { ViewType, ViewTypeName } from './viewTypes';
+
 export interface ILocalSourceConfig {
   type: 'local';
   path: string;
@@ -48,8 +50,12 @@ export interface IImmichSourceConfig {
     personIds?: string[];
     people?: string[];
     isFavorite?: boolean;
+    /** Upload date (Immich asset.createdAt), not the date the photo was taken */
     createdAfter?: string;
     createdBefore?: string;
+    /** Date the photo was taken (Immich fileCreatedAt, from EXIF) */
+    takenAfter?: string;
+    takenBefore?: string;
     assetType?: 'image' | 'video';
   };
   limit?: number;
@@ -90,9 +96,12 @@ export interface INextcloudShareSourceConfig {
   type: 'nextcloud-share';
   url: string;          // full share URL e.g. https://cloud.example.com/s/TOKEN
   password?: string;    // optional share password
+  recursive?: boolean;  // include images in sub-folders of a folder share (default: true)
   filenameFilter?: string; // Optional glob pattern for filenames
   filters?: {
     mimeTypes?: string[];
+    minSizeKb?: number;
+    maxSizeKb?: number;
   };
   limit?: number;       // Max number of files to return
   sort?: {
@@ -103,8 +112,12 @@ export interface INextcloudShareSourceConfig {
 
 export type ISourceConfig = ILocalSourceConfig | IExternalSourceConfig | IImmichShareSourceConfig | IImmichSourceConfig | INextcloudSourceConfig | INextcloudShareSourceConfig;
 
+/** Every source type a gallery block can use; also the type tag of the images it resolves to */
+export type SourceType = ISourceConfig['type'];
+
 export interface IViewConfig {
-  type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
+  /** View name as written; GalleryConfig normalizes aliases (grid) to their view type */
+  type: ViewTypeName;
   [key: string]: unknown;
 }
 
@@ -113,7 +126,7 @@ export interface IGalleryConfig {
   path: string;
 
   /** Display view type */
-  view?: 'thumbnail' | 'carousel' | 'grid' | 'embed' | IViewConfig;
+  view?: ViewTypeName | IViewConfig;
 
   /** Include subdirectories (default: true) */
   recursive?: boolean;
@@ -139,7 +152,7 @@ export interface IImageSource {
   resourceUrl?: string;
 
   /** Source type */
-  type: 'local' | 'external' | 'immich-share' | 'immich' | 'nextcloud' | 'nextcloud-share';
+  type: SourceType;
 
   /** Optional image caption */
   caption?: string;
@@ -186,6 +199,12 @@ export interface IImageSource {
   /** Get the URL that should be used for loading in the browser */
   getDisplayUrl(): string;
 
+  /**
+   * Get the display URL, fetching the image first if it is loaded on demand (remote sources).
+   * Views should prefer this over getDisplayUrl when about to show an image.
+   */
+  resolveDisplayUrl?(): Promise<string>;
+
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;
 
@@ -195,7 +214,7 @@ export interface IImageSource {
 
 export interface IGalleryView {
   /** View type identifier */
-  readonly type: 'thumbnail' | 'carousel' | 'grid' | 'embed';
+  readonly type: ViewType;
 
   /** DOM container element */
   readonly container: HTMLElement;

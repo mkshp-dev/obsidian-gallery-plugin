@@ -1,5 +1,5 @@
 import { CarouselView } from '../../src/views/CarouselView';
-import { GridView } from '../../src/views/GridView';
+import { MasonryView } from '../../src/views/MasonryView';
 import { EmbedView } from '../../src/views/EmbedView';
 import { IImageSource } from '../../src/models/interfaces';
 
@@ -75,9 +75,9 @@ describe('Gallery Views - getStats', () => {
     expect(stats.pendingImages).toBe(1);
   });
 
-  test('GridView reports correct stats from model and DOM fallback', () => {
+  test('MasonryView reports correct stats from model and DOM fallback', () => {
   const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
 
     const images = [
       makeImage('a.png', 'pending'),
@@ -143,7 +143,7 @@ describe('Gallery Views - Caption Rendering', () => {
 
   test('renders .gallery-caption when showCaptions is true', () => {
     const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
     view.setOptions({ showCaptions: true, captionMaxLines: 2 });
 
     const img = makeImageWithCaption('photo.jpg', 'Photo Title', 'Scenic mountain view');
@@ -157,7 +157,7 @@ describe('Gallery Views - Caption Rendering', () => {
 
   test('does not render .gallery-caption when showCaptions is false', () => {
     const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
     view.setOptions({ showCaptions: false });
 
     const img = makeImageWithCaption('photo.jpg', 'Photo Title', 'Scenic mountain view');
@@ -170,7 +170,7 @@ describe('Gallery Views - Caption Rendering', () => {
 
   test('falls back to displayName if caption is undefined', () => {
     const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
     view.setOptions({ showCaptions: true });
 
     const img = makeImageWithCaption('photo.jpg', 'Photo Title');
@@ -190,22 +190,22 @@ describe('Gallery Views - Pagination', () => {
 
   test('pagination disabled by default: renders all images, no controls', () => {
     const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
 
     view.update(makeImages(30));
 
-    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(30);
+    expect(container.querySelectorAll('.gallery-tile').length).toBe(30);
     expect(container.querySelector('.gallery-pagination')).toBeNull();
   });
 
-  test('GridView paginates when enabled, showing only itemsPerPage images', () => {
+  test('MasonryView paginates when enabled, showing only itemsPerPage images', () => {
     const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
     view.setOptions({ pagination: true, itemsPerPage: 10 });
 
     view.update(makeImages(25));
 
-    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(10);
+    expect(container.querySelectorAll('.gallery-tile').length).toBe(10);
     const status = container.querySelector('.gallery-pagination-status');
     expect(status).not.toBeNull();
     expect(status.textContent).toBe('Page 1 of 3');
@@ -218,7 +218,7 @@ describe('Gallery Views - Pagination', () => {
 
   test('Next/Prev buttons navigate pages and update status', () => {
     const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
     view.setOptions({ pagination: true, itemsPerPage: 10 });
 
     view.update(makeImages(25));
@@ -226,14 +226,14 @@ describe('Gallery Views - Pagination', () => {
     let nextBtn = container.querySelector('.gallery-pagination-next') as HTMLButtonElement;
     nextBtn.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
 
-    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(10);
+    expect(container.querySelectorAll('.gallery-tile').length).toBe(10);
     expect(container.querySelector('.gallery-pagination-status').textContent).toBe('Page 2 of 3');
 
     nextBtn = container.querySelector('.gallery-pagination-next') as HTMLButtonElement;
     nextBtn.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
 
     // Last page has 5 remaining images (25 - 10 - 10)
-    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(5);
+    expect(container.querySelectorAll('.gallery-tile').length).toBe(5);
     expect(container.querySelector('.gallery-pagination-status').textContent).toBe('Page 3 of 3');
     expect((container.querySelector('.gallery-pagination-next') as HTMLButtonElement).disabled).toBe(true);
 
@@ -245,18 +245,18 @@ describe('Gallery Views - Pagination', () => {
 
   test('no pagination controls rendered when everything fits on one page', () => {
     const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
     view.setOptions({ pagination: true, itemsPerPage: 50 });
 
     view.update(makeImages(10));
 
-    expect(container.querySelectorAll('.gallery-grid-item').length).toBe(10);
+    expect(container.querySelectorAll('.gallery-tile').length).toBe(10);
     expect(container.querySelector('.gallery-pagination')).toBeNull();
   });
 
   test('update() resets pagination back to page 1', () => {
     const container = createMockContainer();
-    const view = new GridView(container as any);
+    const view = new MasonryView(container as any);
     view.setOptions({ pagination: true, itemsPerPage: 10 });
 
     view.update(makeImages(25));

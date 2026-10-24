@@ -1,4 +1,5 @@
 import { IGalleryConfig, IConfigError } from '../models/interfaces';
+import { VIEW_TYPES, normalizeViewType, resolveViewType } from '../models/viewTypes';
 
 /**
  * Configuration validator with path sanitization
@@ -126,7 +127,7 @@ export class ConfigValidator {
      */
     private static validateView(view?: unknown): IConfigError[] {
         const errors: IConfigError[] = [];
-        const validViews = ['thumbnail', 'carousel', 'grid', 'embed'];
+        const validViews = VIEW_TYPES;
         
         if (view !== undefined) {
             let viewType = '';
@@ -144,7 +145,7 @@ export class ConfigValidator {
                 return errors;
             }
 
-            if (!validViews.includes(viewType)) {
+            if (normalizeViewType(viewType) === undefined) {
                 errors.push({
                     type: 'config',
                     field: 'view',
@@ -270,21 +271,9 @@ export class ConfigValidator {
      * Suggest corrections for invalid configuration
      */
     static suggestCorrections(config: IGalleryConfig): IGalleryConfig {
-        let viewType = 'thumbnail';
-        if (config.view) {
-            if (typeof config.view === 'string' && ['thumbnail', 'carousel', 'grid', 'embed'].includes(config.view)) {
-                viewType = config.view;
-            } else if (typeof config.view === 'object' && config.view !== null && 'type' in config.view) {
-                const typeVal = (config.view as Record<string, unknown>).type;
-                if (typeof typeVal === 'string' && ['thumbnail', 'carousel', 'grid', 'embed'].includes(typeVal)) {
-                    viewType = typeVal;
-                }
-            }
-        }
-
         return {
             path: this.sanitizePath(config.path),
-            view: { type: viewType as 'thumbnail' | 'carousel' | 'grid' | 'embed' },
+            view: { type: resolveViewType(config.view) },
             recursive: typeof config.recursive === 'boolean' 
                 ? config.recursive 
                 : true

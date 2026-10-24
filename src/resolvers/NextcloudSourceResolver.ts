@@ -4,6 +4,7 @@ import { NextcloudClient } from '../services/nextcloud/NextcloudClient';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 import { globToRegex } from '../utils/globToRegex';
+import { usesThumbnailImages } from '../models/viewTypes';
 
 export class NextcloudSourceResolver implements GallerySourceResolver<INextcloudSourceConfig> {
     readonly type = 'nextcloud';
@@ -103,26 +104,19 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
             }
 
             let representation: 'thumbnail' | 'original' = 'original';
-            if (context.viewType === 'thumbnail' || context.viewType === 'grid') {
+            if (usesThumbnailImages(context.viewType)) {
                 representation = 'thumbnail';
             }
 
-            const resolvedImages = await Promise.all(files.map(async (file) => {
+            for (const file of files) {
                 try {
-                    const blobUrl = await client.getFileBlobUrl(file.path, representation, file.fileId);
-
                     const logicalPath = `nextcloud://${connection.key}${file.path.startsWith('/') ? '' : '/'}${file.path}`;
 
-                    return new ImageSource(logicalPath, 'nextcloud', file.name, blobUrl, undefined);
+                    // File contents are fetched lazily, when a view first displays the image
+                    images.push(new ImageSource(logicalPath, 'nextcloud', file.name, undefined, undefined,
+                        () => client.getFileBlobUrl(file.path, representation, file.fileId)));
                 } catch (e) {
-                    Logger.warn(`Failed to load file ${file.path} for Nextcloud source: ${e instanceof Error ? e.message : String(e)}`);
-                    return null;
-                }
-            }));
-
-            for (const img of resolvedImages) {
-                if (img !== null) {
-                    images.push(img);
+                    Logger.warn(`Failed to resolve file ${file.path} for Nextcloud source: ${e instanceof Error ? e.message : String(e)}`);
                 }
             }
         } catch (error) {

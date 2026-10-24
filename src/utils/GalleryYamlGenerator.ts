@@ -100,6 +100,12 @@ export class GalleryYamlGenerator {
                         if (source.filters.createdBefore) {
                             yaml += `      createdBefore: ${source.filters.createdBefore}\n`;
                         }
+                        if (source.filters.takenAfter) {
+                            yaml += `      takenAfter: ${source.filters.takenAfter}\n`;
+                        }
+                        if (source.filters.takenBefore) {
+                            yaml += `      takenBefore: ${source.filters.takenBefore}\n`;
+                        }
                         if (source.filters.assetType) {
                             yaml += `      assetType: ${source.filters.assetType}\n`;
                         }

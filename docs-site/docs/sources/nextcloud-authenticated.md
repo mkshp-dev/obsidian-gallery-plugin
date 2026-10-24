@@ -42,14 +42,14 @@ sources:
       order: desc       # asc | desc
     limit: 50
 view:
-  type: grid
+  type: masonry
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `type` | string | Yes | Must be `nextcloud`. |
 | `connection` | string | Yes | The `key` of a Nextcloud connection configured in Settings → Providers. |
-| `path` | string | No | Folder path on your Nextcloud server (e.g., `/Photos`, `/Gallery-Test`). Defaults to `/`. |
+| `path` | string | No | Folder path on your Nextcloud server (e.g., `/Photos`, `/Gallery-Demo`). Defaults to `/`. |
 | `recursive` | boolean | No | When `true`, scans subdirectories recursively. Defaults to `true`. |
 | `filenameFilter` | string | No | Glob pattern for filename matching (e.g. `IMG_*`, `*.png`). |
 | `filters.mimeTypes` | list of strings | No | Filter files by MIME types (e.g. `image/jpeg`, `image/png`, `image/webp`). |
@@ -65,7 +65,7 @@ view:
 
 ## Features
 
-- **WebDAV & Preview Integration**: Uses Nextcloud's native WebDAV protocol and efficient core preview API to render lightweight thumbnails fast.
+- **WebDAV & Preview Integration**: Uses Nextcloud's native WebDAV protocol and efficient core preview API to render lightweight thumbnails fast (for the `thumbnail`, `masonry` and `justified` views). Thumbnails keep each image's aspect ratio, so nothing is cropped.
 - **Recursive Scanning**: Discover images across subdirectories without manually listing each folder.
 - **Filename Globs & MIME Filtering**: Easily target specific file types or camera naming conventions.
 - **Automatic Caching**: Results are cached in memory for optimal performance and low server load.
@@ -74,15 +74,17 @@ view:
 
 ## Examples
 
+These examples use the `nextcloud-demo` connection to the public, read-only [demo server](../demo-servers.md). Add that connection to run them as they are, or change `connection` and `path` to your own.
+
 ### 1. Basic Nextcloud Gallery
 
 ```yaml
 sources:
   - type: nextcloud
-    connection: my-cloud
-    path: /Photos
+    connection: nextcloud-demo
+    path: /Gallery-Demo/Landscapes
 view:
-  type: grid
+  type: masonry
 ```
 
 ### 2. Recursive Subfolder Scan with Camera Glob Filter
@@ -90,9 +92,8 @@ view:
 ```yaml
 sources:
   - type: nextcloud
-    connection: my-cloud
-    path: /Gallery-Test
-    recursive: true
+    connection: nextcloud-demo
+    path: /Gallery-Demo/Camera
     filenameFilter: "IMG_2024*"
     limit: 20
 view:

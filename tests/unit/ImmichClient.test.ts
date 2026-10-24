@@ -150,7 +150,7 @@ describe('ImmichClient', () => {
                 'Content-Type': 'application/json',
                 'x-api-key': 'test-api-key'
             },
-            body: JSON.stringify({ size: 35, order: 'desc' })
+            body: JSON.stringify({ withExif: true, size: 35, order: 'desc' })
         });
         expect(assets).toHaveLength(1);
     });
@@ -172,9 +172,23 @@ describe('ImmichClient', () => {
                 'Content-Type': 'application/json',
                 'x-api-key': 'test-api-key'
             },
-            body: JSON.stringify({ isFavorite: true, createdAfter: '2025-01-01T00:00:00.000Z', createdBefore: '2025-12-31T23:59:59.999Z' })
+            body: JSON.stringify({ withExif: true, isFavorite: true, createdAfter: '2025-01-01T00:00:00.000Z', createdBefore: '2025-12-31T23:59:59.999Z' })
         });
         expect(assets).toHaveLength(1);
+    });
+
+    it('should send takenAfter/takenBefore as the photo-date filters', async () => {
+        (requestUrl as jest.Mock).mockResolvedValue({
+            status: 200,
+            json: { items: [{ id: 'asset1' }] }
+        });
+
+        const client = new ImmichClient(mockConnection);
+        await client.searchMetadata({ takenAfter: '2025-01-01', takenBefore: '2025-06-30T12:00:00Z' });
+
+        const body = JSON.parse((requestUrl as jest.Mock).mock.calls[0][0].body);
+        // A bare date is expanded to the start of the day; a full timestamp passes through unchanged
+        expect(body).toEqual({ withExif: true, takenAfter: '2025-01-01T00:00:00.000Z', takenBefore: '2025-06-30T12:00:00Z' });
     });
 
     it('should searchMetadata looping over albumIds', async () => {
@@ -188,10 +202,10 @@ describe('ImmichClient', () => {
 
         expect(requestUrl).toHaveBeenCalledTimes(2);
         expect(requestUrl).toHaveBeenNthCalledWith(1, expect.objectContaining({
-            body: JSON.stringify({ albumIds: ['album1'] })
+            body: JSON.stringify({ withExif: true, albumIds: ['album1'] })
         }));
         expect(requestUrl).toHaveBeenNthCalledWith(2, expect.objectContaining({
-            body: JSON.stringify({ albumIds: ['album2'] })
+            body: JSON.stringify({ withExif: true, albumIds: ['album2'] })
         }));
         expect(assets).toHaveLength(1); // deduped
     });

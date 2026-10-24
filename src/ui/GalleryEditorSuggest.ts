@@ -2,6 +2,7 @@ import { App, Editor, EditorPosition, EditorSuggest, EditorSuggestContext, Edito
 import GalleryPlugin from '../main';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { IImmichConnection } from '../models/interfaces';
+import { VIEW_TYPES } from '../models/viewTypes';
 
 // Suggestion item interface
 interface SuggestionItem {
@@ -168,8 +169,8 @@ export class GalleryEditorSuggest extends EditorSuggest<SuggestionItem> {
                 }
             }
         } else if (field === 'view') {
-            const views = ['grid', 'masonry', 'carousel', 'embed'];
-            for (const v of views) {
+            // Suggest only current view types; the legacy `grid` alias still works but is not offered
+            for (const v of VIEW_TYPES) {
                 if (v.includes(textLower)) {
                     suggestions.push({ label: v, value: v });
                 }

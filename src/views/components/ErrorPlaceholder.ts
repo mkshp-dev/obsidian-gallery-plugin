@@ -160,7 +160,7 @@ export class ErrorPlaceholder {
     
     const retryButton = this.createElement(retryContainer, 'button', {
       cls: 'gallery-retry-button',
-      text: 'Try Again'
+      text: 'Try again'
     }) as HTMLButtonElement;
         // Accessibility: label and role
         retryButton.setAttribute('aria-label', 'Retry action');
@@ -177,7 +177,7 @@ export class ErrorPlaceholder {
             } catch {
               // Reset button state if retry fails immediately
               window.setTimeout(() => {
-                retryButton.textContent = 'Try Again';
+                retryButton.textContent = 'Try again';
                 retryButton.disabled = false;
               }, 1000);
             }

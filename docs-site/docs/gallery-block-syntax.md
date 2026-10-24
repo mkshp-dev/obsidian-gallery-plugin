@@ -31,13 +31,44 @@ See the [Sources](./category/sources) section for details on configuring specifi
 
 ### `view`
 
-**Optional**. Defaults to `{ type: 'thumbnail' }`. The `view` key defines how the gallery will be laid out. It can be a simple string (e.g., `thumbnail`) or an object containing a `type` property (`thumbnail`, `carousel`, `masonry`, `justified`, or `embed`). The older name `grid` is still accepted and renders as `masonry`.
+**Optional**. Defaults to `thumbnail`. The `view` key sets how the gallery is laid out. It can be just the view name, or an object with the name under `type` plus options:
 
-See the [Views](./category/views) section for details on specific view types.
+```yaml
+view: masonry          # short form
+```
+
+```yaml
+view:                  # long form, with options
+  type: masonry
+  pagination: true
+  itemsPerPage: 24
+```
+
+| Key | Values | Default | Description |
+|---|---|---|---|
+| `type` | `thumbnail`, `carousel`, `masonry`, `justified`, `embed` | `thumbnail` | The layout. The older name `grid` is still accepted and renders as `masonry`. |
+| `pagination` | `true` / `false` | The **Enable pagination by default** setting (off) | Show a fixed number of images per page with Prev/Next buttons, instead of one long scroll. Not used by the `carousel` view. |
+| `itemsPerPage` | a whole number above 0 | The **Images per page** setting (24) | Images per page when pagination is on. |
+
+`pagination` and `itemsPerPage` override the plugin-wide defaults in [Settings](./settings.md#general-tab) for this gallery only.
+
+See the [Views](./category/views) section for each layout, and the [Image viewer](./views/image-viewer.md) for what happens when you click an image.
 
 ---
 
 ## Backward Compatibility
 
 > [!NOTE]
-> For convenience and backward compatibility, the plugin transparently translates legacy v1 root-level keys (like `path: Images/Screenshots` or `urls: [...]`) into the new structured format. However, the v2 schema documented above is the preferred format going forward.
+> For convenience and backward compatibility, the plugin transparently translates legacy v1 root-level keys into the new structured format. However, the v2 schema documented above is the preferred format going forward.
+
+| Legacy key | Same as |
+|---|---|
+| `path: Images` | a `local` source with that `path` |
+| `recursive: false` | `recursive` on that `local` source (default `true`) |
+| `urls: [...]` | an `external` source with those `urls` |
+
+```yaml
+path: Images/Screenshots
+recursive: false
+view: masonry
+```

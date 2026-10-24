@@ -64,6 +64,8 @@ view:
 | `filters.isFavorite` | boolean | No | When `true`, only returns assets you have marked as favorites. |
 | `filters.tags` | list of strings | No | Human-readable tag names (e.g. `Photography`). The plugin resolves names to IDs automatically. |
 | `filters.people` | list of strings | No | Human-readable person names (e.g. `Alice`). The plugin resolves names to IDs automatically. |
+| `filters.tagIds` | list of strings | No | Tag UUIDs, as an alternative to `tags`. Useful when two tags share a name. |
+| `filters.personIds` | list of strings | No | Person UUIDs, as an alternative to `people`. Useful for people without a name in Immich. |
 | `filters.takenAfter` | string (YYYY-MM-DD) | No | Only return photos **taken** on or after this date (the date stored in the photo's EXIF data). |
 | `filters.takenBefore` | string (YYYY-MM-DD) | No | Only return photos **taken** on or before this date. |
 | `filters.createdAfter` | string (YYYY-MM-DD) | No | Only return assets **uploaded** to Immich on or after this date. |

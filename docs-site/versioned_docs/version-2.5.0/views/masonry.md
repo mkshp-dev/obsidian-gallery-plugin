@@ -4,6 +4,8 @@ sidebar_position: 3
 
 # Masonry view
 
+![Masonry view screenshot](Masonry.png)
+
 A Pinterest-style layout: columns of equal width, with each image at its natural height and nothing cropped. Images fill the columns in reading order, left to right, each going into whichever column is currently shortest, so there are no gaps under short images.
 
 ````markdown

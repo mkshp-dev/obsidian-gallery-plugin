@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Redesigned Providers settings**: Immich and Nextcloud connections are now matching cards that show the key, server and last test result at a glance. Each card lists problems (missing or duplicate key, a server URL without `https://`, empty credentials), hides the Immich API key like the Nextcloud app password, shows the `connection:` line to copy into gallery blocks, and asks for a second click before removing. Edits now take effect right away: leaving a field clears that connection's cached listings and reloads only galleries that use it.
+
 ## 2.5.0 - 2026-10-24
 
 - **Linting matches the Obsidian review bot**: Upgraded `eslint-plugin-obsidianmd` to 0.4.2 and switched to its stock `recommended` config with no rule overrides, so `npm run lint` reports the same issues as the plugin review bot.

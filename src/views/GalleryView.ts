@@ -666,7 +666,7 @@ export abstract class GalleryView implements IGalleryView {
         // Download/Open original Button
         const downloadBtn = this.createElement(toolbar, 'button', {
             cls: 'gallery-modal-tool-btn download-btn',
-            attr: { 'aria-label': 'Open original image', 'title': 'Open original image' }
+            attr: { 'aria-label': 'Open or save image', 'title': 'Open or save image' }
         });
         downloadBtn.textContent = '🔗';
 
@@ -833,10 +833,11 @@ export abstract class GalleryView implements IGalleryView {
             infoPanel.classList.toggle('visible', infoVisible);
         });
 
-        // Download/Open Original
+        // Open/save the image, at the size the viewer shows rather than the gallery's thumbnail
         downloadBtn.addEventListener('click', () => {
             const target = currentImage;
-            this.resolveImageUrl(target).then(displayUrl => {
+            const resolveUrl = target.resolveLargeUrl ? target.resolveLargeUrl() : this.resolveImageUrl(target);
+            resolveUrl.then(displayUrl => {
                 if (!displayUrl) return;
                 const a = doc.body.createEl('a', {
                     href: displayUrl,
@@ -874,12 +875,29 @@ export abstract class GalleryView implements IGalleryView {
                     imgEl.src = temp.src;
                     imgEl.setCssStyles({ opacity: '1' });
                 } catch (error) { Logger.debug('Ignored error:', error); }
+                loadLargeVersion(imgEl, srcImage, token);
             }, () => {
                 if (token !== modalLoadToken) return;
                 imgEl.alt = 'Failed to load';
                 imgEl.src = '';
                 imgEl.setCssStyles({ opacity: '1' });
             });
+        };
+
+        // Galleries of remote thumbnails show the thumbnail first, then swap in the larger
+        // version once it has downloaded and decoded, unless the user has moved on.
+        const loadLargeVersion = (imgEl: HTMLImageElement, srcImage: IImageSource, token: number) => {
+            if (!srcImage.resolveLargeUrl) return;
+            srcImage.resolveLargeUrl()
+                .then(url => {
+                    if (token !== modalLoadToken || url === imgEl.src) return;
+                    const large = new Image();
+                    large.onload = () => {
+                        if (token === modalLoadToken) imgEl.src = url;
+                    };
+                    large.src = url;
+                })
+                .catch((error: unknown) => Logger.debug('Could not load the larger image:', error));
         };
 
         // Initial Load

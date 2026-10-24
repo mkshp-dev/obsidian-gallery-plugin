@@ -113,8 +113,11 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
                     const logicalPath = `nextcloud://${connection.key}${file.path.startsWith('/') ? '' : '/'}${file.path}`;
 
                     // File contents are fetched lazily, when a view first displays the image
-                    images.push(new ImageSource(logicalPath, 'nextcloud', file.name, undefined, undefined,
-                        () => client.getFileBlobUrl(file.path, representation, file.fileId)));
+                    const image = new ImageSource(logicalPath, 'nextcloud', file.name, undefined, undefined,
+                        () => client.getFileBlobUrl(file.path, representation, file.fileId));
+                    // Tile views load small previews; the image viewer uses a large one instead
+                    if (representation === 'thumbnail') image.setLargeLoader(() => client.getFileBlobUrl(file.path, 'large', file.fileId));
+                    images.push(image);
                 } catch (e) {
                     Logger.warn(`Failed to resolve file ${file.path} for Nextcloud source: ${e instanceof Error ? e.message : String(e)}`);
                 }

@@ -158,6 +158,21 @@ describe('NextcloudClient', () => {
             expect(createdBlobs).toEqual([{ key: 'nextcloud:test:thumbnail:/Photos/test.jpg', blob: expect.any(Blob) }]);
         });
 
+        it('requests a 2048 px preview for the large representation, cached separately', async () => {
+            (requestUrl as jest.Mock).mockResolvedValueOnce({
+                status: 200,
+                arrayBuffer: new ArrayBuffer(10),
+                headers: { 'content-type': 'image/jpeg' }
+            });
+
+            await client.getFileBlobUrl('/Photos/test.jpg', 'large', '1234');
+
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({
+                url: 'https://cloud.example.com/index.php/core/preview?fileId=1234&x=2048&y=2048&a=1'
+            }));
+            expect(createdBlobs).toEqual([{ key: 'nextcloud:test:large:/Photos/test.jpg', blob: expect.any(Blob) }]);
+        });
+
         it('should throw error on fetch failure', async () => {
             (requestUrl as jest.Mock).mockResolvedValueOnce({ status: 500 });
 

@@ -29,6 +29,10 @@ export class ImageSource implements IImageSource {
     /** True once `_resourceUrl` came from `loader`, so destroy() must release it */
     private ownsResourceUrl = false;
     private destroyed = false;
+    /** Fetches a larger version for the image viewer (remote sources whose gallery shows thumbnails) */
+    private largeLoader?: ImageUrlLoader;
+    private largeUrl?: string;
+    private pendingLarge: Promise<string> | null = null;
 
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
@@ -257,6 +261,40 @@ export class ImageSource implements IImageSource {
     }
 
     /**
+     * Give the image a larger version for the image viewer. Without one, the viewer uses the
+     * display URL. The URL the loader returns must come from ObjectUrlManager; it is released on destroy.
+     */
+    setLargeLoader(loader: ImageUrlLoader): void {
+        this.largeLoader = loader;
+    }
+
+    /**
+     * Get a URL for viewing the image large, fetching the larger version on first use.
+     * Falls back to the display URL when the image has no larger version.
+     */
+    async resolveLargeUrl(): Promise<string> {
+        if (!this.largeLoader) return this.resolveDisplayUrl();
+        if (this.largeUrl) return this.largeUrl;
+        if (this.destroyed) throw new Error(`Image source was destroyed: ${this.path}`);
+
+        if (!this.pendingLarge) {
+            this.pendingLarge = this.largeLoader()
+                .then(url => {
+                    if (this.destroyed) {
+                        ObjectUrlManager.releaseByUrl(url);
+                        throw new Error(`Image source was destroyed: ${this.path}`);
+                    }
+                    this.largeUrl = url;
+                    return url;
+                })
+                .finally(() => {
+                    this.pendingLarge = null;
+                });
+        }
+        return this.pendingLarge;
+    }
+
+    /**
      * Check if image can be retried (only if in error state)
      */
     canRetry(): boolean {
@@ -292,6 +330,10 @@ export class ImageSource implements IImageSource {
             // The URL may now be revoked, so stop handing it out
             this._resourceUrl = undefined;
             this.ownsResourceUrl = false;
+        }
+        if (this.largeUrl) {
+            ObjectUrlManager.releaseByUrl(this.largeUrl);
+            this.largeUrl = undefined;
         }
     }
 }

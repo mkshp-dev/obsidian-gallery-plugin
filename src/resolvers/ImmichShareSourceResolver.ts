@@ -236,27 +236,26 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                     }
                 }
 
-                let assetUrl: string;
-                if (representation === 'thumbnail') {
-                    assetUrl = `${apiBase}/assets/${assetId}/thumbnail?key=${shareKey}`;
-                } else if (representation === 'preview') {
-                    assetUrl = `${apiBase}/assets/${assetId}/thumbnail?size=preview&key=${shareKey}`;
-                } else {
-                    assetUrl = `${apiBase}/assets/${assetId}/original?key=${shareKey}`;
-                }
+                const assetUrls = {
+                    thumbnail: `${apiBase}/assets/${assetId}/thumbnail?key=${shareKey}`,
+                    preview: `${apiBase}/assets/${assetId}/thumbnail?size=preview&key=${shareKey}`,
+                    original: `${apiBase}/assets/${assetId}/original?key=${shareKey}`
+                };
 
                 // Fetched lazily, when a view first displays the asset. requestUrl bypasses browser CORS
                 // and sends the share session, which a plain <img> URL could not do for password-protected shares.
-                const cacheKey = `immich-share:${shareKey}:${assetId}:${representation}`;
-                const loader = () => ObjectUrlManager.getOrCreate(cacheKey, async () => {
-                    const blobRes = await requestUrl({ url: assetUrl, method: 'GET', headers: authHeaders });
-                    if (blobRes.status !== 200) {
-                        throw new Error(`Failed to fetch Immich share asset '${assetId}': HTTP ${blobRes.status}`);
-                    }
-                    return new Blob([blobRes.arrayBuffer]);
-                });
+                const loaderFor = (rep: 'thumbnail' | 'preview' | 'original') => () =>
+                    ObjectUrlManager.getOrCreate(`immich-share:${shareKey}:${assetId}:${rep}`, async () => {
+                        const blobRes = await requestUrl({ url: assetUrls[rep], method: 'GET', headers: authHeaders });
+                        if (blobRes.status !== 200) {
+                            throw new Error(`Failed to fetch Immich share asset '${assetId}': HTTP ${blobRes.status}`);
+                        }
+                        return new Blob([blobRes.arrayBuffer]);
+                    });
 
-                const image = new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loader);
+                const image = new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loaderFor(representation));
+                // Tile views load small thumbnails; the image viewer uses the preview size instead
+                if (representation === 'thumbnail') image.setLargeLoader(loaderFor('preview'));
                 image.dimensions = extractImmichDimensions(asset);
                 return image;
             }));

@@ -6,6 +6,8 @@ sidebar_position: 6
 
 Click an image in any view (or focus it and press **Enter** or **Space**) to open it full size in the image viewer. The viewer steps through every image in the gallery, including those on other pages when pagination is on, and wraps around at the ends.
 
+For Immich and Nextcloud galleries, the viewer first shows the small image the gallery already loaded, then switches to a sharper one as soon as it has downloaded: Immich's preview size (about 1440 pixels), or a 2048-pixel Nextcloud preview.
+
 ## Controls
 
 | Control | Action |
@@ -16,7 +18,7 @@ Click an image in any view (or focus it and press **Enter** or **Space**) to ope
 | Drag the image | Move around a zoomed image |
 | **🔄** | Reset the zoom |
 | **ℹ️** | Show or hide details: name, path, source type, caption, and size when known |
-| **🔗** | Open the image in a new tab (or save it) |
+| **🔗** | Open the image in a new tab, or save it, at the size the viewer shows |
 | **×**, **Esc**, or a click outside the image | Close the viewer |
 
 ## Keyboard in the gallery

@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Sharp images in the image viewer**: For Immich and Nextcloud galleries in the thumbnail, masonry and justified views, the viewer showed the gallery's small thumbnail (about 250 px) enlarged. It now shows that thumbnail at once and swaps in Immich's preview size (about 1440 px) or a 2048 px Nextcloud preview as soon as it loads. The 🔗 button (now "Open or save image") uses the larger version too.
+- **Simpler error setting**: "Error display mode" had three options, but "Full" and "Text only" looked the same. It is now **Error messages: Show / Hide**; a saved "Text only" becomes "Show".
 - **Redesigned Providers settings**: Immich and Nextcloud connections are now matching cards that show the key, server and last test result at a glance. Each card lists problems (missing or duplicate key, a server URL without `https://`, empty credentials), hides the Immich API key like the Nextcloud app password, shows the `connection:` line to copy into gallery blocks, and asks for a second click before removing. Edits now take effect right away: leaving a field clears that connection's cached listings and reloads only galleries that use it.
 
 ## 2.5.0 - 2026-10-24

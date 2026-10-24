@@ -205,6 +205,12 @@ export interface IImageSource {
    */
   resolveDisplayUrl?(): Promise<string>;
 
+  /**
+   * Get a URL for viewing the image large (the image viewer). Remote sources whose galleries show
+   * thumbnails fetch a larger version; others return the display URL.
+   */
+  resolveLargeUrl?(): Promise<string>;
+
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;
 

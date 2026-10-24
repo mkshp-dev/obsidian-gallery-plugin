@@ -92,9 +92,9 @@ export class GallerySettingsTab extends PluginSettingTab {
                 heading: 'Plugin preferences',
                 items: [
                     {
-                        name: 'Error display mode',
-                        desc: 'How to display errors when the block processor encounters them.',
-                        control: { type: 'dropdown', key: 'errorDisplayMode', options: { full: 'Full', text: 'Text only', hidden: 'Hidden' }, defaultValue: 'full' }
+                        name: 'Error messages',
+                        desc: 'When a gallery cannot be shown, show a one-line message in its place, or show nothing.',
+                        control: { type: 'dropdown', key: 'errorDisplayMode', options: { full: 'Show', hidden: 'Hide' }, defaultValue: 'full' }
                     },
                     {
                         name: 'Allow remote images',

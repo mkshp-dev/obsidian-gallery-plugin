@@ -80,6 +80,10 @@ describe('NextcloudSourceResolver', () => {
         expect(mockGetFileBlobUrl).toHaveBeenCalledTimes(1);
         // since viewType is 'grid', we expect 'thumbnail' representation
         expect(mockGetFileBlobUrl).toHaveBeenCalledWith('/Photos/image1.jpg', 'thumbnail', undefined);
+
+        // The image viewer asks for a large preview instead
+        await result.images[0].resolveLargeUrl!();
+        expect(mockGetFileBlobUrl).toHaveBeenLastCalledWith('/Photos/image1.jpg', 'large', undefined);
     });
 
     it('should handle individual file fetch failures gracefully', async () => {

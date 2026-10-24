@@ -13,7 +13,7 @@ import { ImageLoader } from '../utils/ImageLoader';
 import { IImmichConnection, INextcloudConnection } from '../models/interfaces';
 
 export interface IGalleryProcessingOptions {
-  errorDisplayMode?: 'full' | 'text' | 'hidden';
+  errorDisplayMode?: 'full' | 'hidden';
   showLoadingFeedback?: boolean;
   enableValidation?: boolean;
   maxRetries?: number;

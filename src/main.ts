@@ -114,6 +114,11 @@ export default class GalleryPlugin extends Plugin {
         const data = (await this.loadData()) as Partial<GalleryPluginSettings> | null;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, data || {});
 
+        // 'Text only' error display looked the same as 'Full' and was removed
+        if ((this.settings.errorDisplayMode as string) === 'text') {
+            this.settings.errorDisplayMode = 'full';
+        }
+
         // Migrate old Immich connection settings
         if (this.settings.immichConnections && Array.isArray(this.settings.immichConnections)) {
             this.settings.immichConnections = this.settings.immichConnections.map((connRaw) => {

@@ -16,7 +16,7 @@ The General tab controls core plugin behavior and remote image handling.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Error display mode | `Full` | Controls how errors in a gallery block are shown. `Full` and `Text only` both show a one-line message (starting with ⚠️) where the gallery would be. `Hidden` shows nothing. |
+| Error messages | `Show` | When a gallery can't be shown, `Show` puts a one-line message (starting with ⚠️) in its place; `Hide` shows nothing. |
 | Show captions | `On` | Controls persistent caption display under images in Masonry, Thumbnail, and Carousel views, and on hover in the Justified view. When toggled off, persistent captions are hidden. |
 | Caption max lines | `1` | Controls the maximum number of text lines displayed for image captions before truncating with an ellipsis (configurable between 1 and 10). |
 | Allow remote images | Off | Enable loading images from external URLs. Disabled by default to protect your privacy. If disabled, any `external` sources in your blocks will be skipped. |

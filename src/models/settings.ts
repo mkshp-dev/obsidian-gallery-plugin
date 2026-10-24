@@ -4,7 +4,9 @@ import { IImmichConnection, INextcloudConnection } from './interfaces';
  * Plugin settings
  */
 export interface GalleryPluginSettings {
-    errorDisplayMode?: 'full' | 'text' | 'hidden';
+    // 'full' shows a one-line message, 'hidden' shows nothing. Older versions also had 'text',
+    // which looked the same as 'full'; loadSettings migrates it.
+    errorDisplayMode?: 'full' | 'hidden';
     allowRemoteImages: boolean;
     remoteLoadTimeoutMs: number;
     validateRemoteContentType?: boolean;

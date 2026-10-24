@@ -2,6 +2,8 @@
 
 ## In-progress
 
+## 2.5.0 - 2026-10-24
+
 - **Linting matches the Obsidian review bot**: Upgraded `eslint-plugin-obsidianmd` to 0.4.2 and switched to its stock `recommended` config with no rule overrides, so `npm run lint` reports the same issues as the plugin review bot.
 - **Settings and builder text cleanup**: Fixed UI text that earlier lint autofixes had garbled (for example `Image/jpeg` and `Https://`), and reworded descriptions to pass the default sentence-case check: "API key", "Try again", "Gallery YAML copied to clipboard!", and shorter base-URL and MIME-type descriptions.
 - **Remote images load on demand**: Immich and Nextcloud galleries (authenticated and share links) no longer download every image before the gallery appears. Each image is fetched when it scrolls into view, the current pagination page is shown, or a carousel slide comes near. An image that fails to fetch now shows the error tile with a retry button instead of silently disappearing. Authenticated Immich galleries also stop making one extra request per photo to look up captions.
@@ -19,6 +21,7 @@
 - **Nextcloud share links include sub-folders**: `nextcloud-share` sources ignored `recursive` and listed only the top level, so a shared folder that holds only sub-folders showed "No images found". Sub-folders are now included by default (`recursive: false` turns this off), and the documented `minSizeKb` / `maxSizeKb` filters now work for share links too.
 - **Clearer Nextcloud folder errors**: A missing folder now shows `Folder '/Photos/' not found on https://cloud.example.com (connection 'home')` instead of `Request failed, status 404`, and a rejected login names the server and connection.
 - **Uncropped Nextcloud thumbnails**: Nextcloud previews were requested cropped to a square. They now keep the image's aspect ratio, which the masonry and justified views need.
+
 
 ## 2.4.4 - 2026-10-18
 

@@ -2,7 +2,7 @@ import { App, Notice } from 'obsidian';
 import { DUMMY_ASSETS } from './DemoAssets';
 import { ANIMATED_GIF_BASE64, DemoImageSpec, renderDemoImage } from './DemoImageFactory';
 import { Logger } from '../utils/Logger';
-import { DEMO } from './DemoServers';
+import { DEMO, DemoConnectionConflict } from './DemoServers';
 
 /** Mixed shapes, formats, and awkward file names for the local test lab */
 const TEST_LAB_IMAGES: DemoImageSpec[] = [
@@ -26,6 +26,8 @@ const BULK_SIZES: Array<[number, number]> = [[320, 240], [240, 320], [300, 300],
 /** Whether the demo server connections are in the user's settings when the notes are generated */
 export interface ShowcaseOptions {
     demoConnections: 'added' | 'declined';
+    /** Demo keys already used by connections to other servers, which were left unchanged */
+    conflicts?: DemoConnectionConflict[];
 }
 
 export class ShowcaseGenerator {
@@ -212,12 +214,19 @@ Want to learn more? Check out the full [Documentation](https://mkshp-dev.github.
     /** The Welcome note's demo server section: confirms the added connections, or explains how to add them */
     private demoSetupSection(options: ShowcaseOptions): string {
         const intro = options.demoConnections === 'added'
-            ? `The Immich and Nextcloud notes load photos from public demo servers. The \`${DEMO.immichKey}\` and \`${DEMO.nextcloudKey}\` connections they use were added to **Settings → Gallery View → Providers** (an existing connection with the same key was left unchanged). Remove them there when you are done trying the plugin.`
+            ? `The Immich and Nextcloud notes load photos from public demo servers. The \`${DEMO.immichKey}\` and \`${DEMO.nextcloudKey}\` connections they use were added to **Settings → Gallery View → Providers**. Remove them there when you are done trying the plugin.`
             : `The Immich and Nextcloud notes load photos from public demo servers. The share-link notes (10, 11 and 14) work right away. The other Immich and Nextcloud notes need these two connections; add them in **Settings → Gallery View → Providers**:`;
+
+        // A demo key already used by a connection to another server: those notes won't reach the demo
+        const conflicts = (options.conflicts ?? []).map(c =>
+            `> [!WARNING] \`${c.key}\` points to another server\n` +
+            `> You already had a connection named \`${c.key}\` (${c.baseUrl}), so it was not changed, and the notes that use it will not find the demo photos. ` +
+            `Rename or delete it in **Settings → Gallery View → Providers**, then add the demo connection below with the key \`${c.key}\`.\n`
+        ).join('\n');
 
         return `## Demo servers
 ${intro}
-
+${conflicts ? `\n${conflicts}` : ''}
 | Connection | Key | Server URL | Credentials |
 |---|---|---|---|
 | Immich | \`${DEMO.immichKey}\` | \`${DEMO.immichUrl}\` | API key \`${DEMO.immichApiKey}\` |

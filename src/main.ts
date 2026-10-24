@@ -7,7 +7,7 @@ import { GalleryProcessor, RefreshSources } from './processors/GalleryProcessor'
 import { VaultWatcher } from './utils/VaultWatcher';
 import { LazyLoader } from './utils/LazyLoader';
 import { ShowcaseGenerator } from './generators/ShowcaseGenerator';
-import { addDemoConnections } from './generators/DemoServers';
+import { addDemoConnections, DemoConnectionConflict } from './generators/DemoServers';
 import { DemoConnectionsModal } from './ui/DemoConnectionsModal';
 import { GallerySettingsTab } from './ui/GallerySettingsTab';
 import { GalleryPluginSettings, DEFAULT_SETTINGS } from './models/settings';
@@ -224,15 +224,20 @@ export default class GalleryPlugin extends Plugin {
         const choice = await new DemoConnectionsModal(this.app).ask();
         if (choice === 'cancel') return;
 
+        let conflicts: DemoConnectionConflict[] = [];
         if (choice === 'add') {
-            const added = addDemoConnections(this.settings);
-            if (added.length > 0) {
+            const result = addDemoConnections(this.settings);
+            conflicts = result.conflicts;
+            if (result.added.length > 0) {
                 await this.saveSettings();
                 this.refreshGalleries(['immich', 'nextcloud']);
             }
+            for (const conflict of conflicts) {
+                new Notice(`Gallery View: a connection named "${conflict.key}" already exists and points to ${conflict.baseUrl}, so it was not changed. The showcase notes that use it will not reach the demo server; see the welcome note.`, 10000);
+            }
         }
 
-        await generator.generateShowcase({ demoConnections: choice === 'add' ? 'added' : 'declined' });
+        await generator.generateShowcase({ demoConnections: choice === 'add' ? 'added' : 'declined', conflicts });
     }
 
     /**

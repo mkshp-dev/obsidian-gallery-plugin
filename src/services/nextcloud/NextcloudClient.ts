@@ -99,17 +99,25 @@ export class NextcloudClient {
 
       const url = `${this.baseUrl}/remote.php/dav/files/${encodeURIComponent(this.connection.username)}${normalizedPath}`;
 
+      // throw: false so failures can name the folder and server instead of "Request failed, status 404"
       const response = await requestUrl({
         url: url,
         method: 'PROPFIND',
         headers: {
           ...this.getHeaders(),
           'Depth': recursive ? 'infinity' : '1'
-        }
+        },
+        throw: false
       });
 
+      if (response.status === 404) {
+        throw new Error(`Folder '${normalizedPath}' not found on ${this.baseUrl} (connection '${this.connection.key}')`);
+      }
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Authentication failed for ${this.baseUrl} (connection '${this.connection.key}'). Check the username and app password.`);
+      }
       if (response.status !== 200 && response.status !== 207) {
-        throw new Error(`Failed to list files. Status: ${response.status}`);
+        throw new Error(`Failed to list files in '${normalizedPath}' on ${this.baseUrl}. Status: ${response.status}`);
       }
 
       return this.parseWebdavResponse(response.text, normalizedPath, mimeTypesFilter);

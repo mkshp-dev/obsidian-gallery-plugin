@@ -40,20 +40,39 @@ export const DEMO_NEXTCLOUD_CONNECTION: INextcloudConnection = {
     appPassword: DEMO.nextcloudAppPassword
 };
 
+/** A user connection that already uses a demo key but points at another server */
+export interface DemoConnectionConflict {
+    key: string;
+    baseUrl: string;
+}
+
+export interface DemoConnectionsResult {
+    /** Keys of the connections that were added */
+    added: string[];
+    /** Demo keys left alone because a connection to a different server already uses them */
+    conflicts: DemoConnectionConflict[];
+}
+
+const sameServer = (a: string, b: string) => a.replace(/\/+$/, '').toLowerCase() === b.replace(/\/+$/, '').toLowerCase();
+
 /**
- * Add the demo connections to `settings`, skipping any whose key is already taken so a user's
- * own connection (or an earlier copy of the demo one) is never overwritten.
- * Returns the keys that were added; the caller saves the settings.
+ * Add the demo connections to `settings`. A connection whose key is already taken is never
+ * overwritten: if it points at the demo server it already works, otherwise it is reported as a
+ * conflict so the user can be told the demo notes will not reach the demo server.
+ * The caller saves the settings.
  */
-export function addDemoConnections(settings: GalleryPluginSettings): string[] {
-    const added: string[] = [];
-    if (!settings.immichConnections.some(c => c.key === DEMO_IMMICH_CONNECTION.key)) {
-        settings.immichConnections.push({ ...DEMO_IMMICH_CONNECTION });
-        added.push(DEMO_IMMICH_CONNECTION.key);
-    }
-    if (!settings.nextcloudConnections.some(c => c.key === DEMO_NEXTCLOUD_CONNECTION.key)) {
-        settings.nextcloudConnections.push({ ...DEMO_NEXTCLOUD_CONNECTION });
-        added.push(DEMO_NEXTCLOUD_CONNECTION.key);
-    }
-    return added;
+export function addDemoConnections(settings: GalleryPluginSettings): DemoConnectionsResult {
+    const result: DemoConnectionsResult = { added: [], conflicts: [] };
+    const addTo = <T extends { key: string; baseUrl: string }>(connections: T[], demo: T) => {
+        const existing = connections.find(c => c.key === demo.key);
+        if (!existing) {
+            connections.push({ ...demo });
+            result.added.push(demo.key);
+        } else if (!sameServer(existing.baseUrl, demo.baseUrl)) {
+            result.conflicts.push({ key: existing.key, baseUrl: existing.baseUrl });
+        }
+    };
+    addTo(settings.immichConnections, DEMO_IMMICH_CONNECTION);
+    addTo(settings.nextcloudConnections, DEMO_NEXTCLOUD_CONNECTION);
+    return result;
 }

@@ -69,9 +69,18 @@ describe('showcase notes', () => {
 
         expect(added).toContain('were added to **Settings → Gallery View → Providers**');
         expect(declined).toContain('need these two connections');
+        expect(added).not.toContain('[!WARNING]');
         for (const note of [added, declined]) {
             expect(note).toContain(DEMO.immichApiKey);
             expect(note).toContain(DEMO.nextcloudAppPassword);
         }
+    });
+
+    test('the welcome note warns about a demo key taken by another server', async () => {
+        const notes = await generateNotes({ demoConnections: 'added', conflicts: [{ key: 'nextcloud-demo', baseUrl: 'https://old.example.com' }] });
+        const welcome = notes.get('GalleryDemo/00 - Welcome.md')!;
+
+        expect(welcome).toContain('> [!WARNING] `nextcloud-demo` points to another server');
+        expect(welcome).toContain('(https://old.example.com), so it was not changed');
     });
 });

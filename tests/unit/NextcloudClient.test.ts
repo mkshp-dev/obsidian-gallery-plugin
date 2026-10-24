@@ -289,6 +289,19 @@ describe('NextcloudClient', () => {
             expect(files[0].contentType).toBe('image/png');
         });
 
+        it('names the folder and server when the folder does not exist', async () => {
+            (requestUrl as jest.Mock).mockResolvedValue({ status: 404, text: '' });
+
+            await expect(client.listFiles('/Missing')).rejects.toThrow(/Folder '\/Missing\/' not found on https:\/\/cloud\.example\.com/);
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({ method: 'PROPFIND', throw: false }));
+        });
+
+        it('reports an authentication failure for 401', async () => {
+            (requestUrl as jest.Mock).mockResolvedValue({ status: 401, text: '' });
+
+            await expect(client.listFiles('/Photos')).rejects.toThrow('Authentication failed for https://cloud.example.com');
+        });
+
         it('should cache listFiles response', async () => {
             (requestUrl as jest.Mock).mockResolvedValue({ status: 207, text: '<d:multistatus></d:multistatus>' });
 

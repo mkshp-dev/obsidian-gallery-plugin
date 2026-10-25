@@ -6,6 +6,8 @@ export interface ViewBlockOptions {
     itemsPerPage?: number;
     /** Overrides the "Show captions" setting for this gallery */
     captions?: boolean;
+    /** Overrides the "Show gallery frame" setting for this gallery */
+    frame?: boolean;
     /** Justified: target row height in px */
     rowHeight?: number;
     /** Masonry: minimum column width in px */
@@ -40,6 +42,8 @@ export const VIEW_OPTIONS: Record<OptionKey, OptionSpec> = {
     pagination: { views: PAGED_VIEWS, check: isBoolean('pagination') },
     itemsPerPage: { views: PAGED_VIEWS, check: isNumberIn('itemsPerPage', 1, 10000, true) },
     captions: { views: VIEW_TYPES, check: isBoolean('captions') },
+    // The embed view never has a frame
+    frame: { views: VIEW_TYPES.filter(v => v !== 'embed'), check: isBoolean('frame') },
     rowHeight: { views: ['justified'], check: isNumberIn('rowHeight', 40, 1000) },
     columnWidth: { views: ['masonry'], check: isNumberIn('columnWidth', 60, 1000) },
     gap: { views: ['masonry', 'justified'], check: isNumberIn('gap', 0, 64) },

@@ -28,6 +28,8 @@ export interface IGalleryProcessingOptions {
         // Caption settings
         showCaptions?: boolean;
         captionMaxLines?: number;
+        // Gallery frame (border, background, padding); overridable per-gallery via frame:
+        showFrame?: boolean;
         // Pagination defaults (overridable per-gallery via the view: config)
         pagination?: boolean;
         itemsPerPage?: number;
@@ -96,6 +98,7 @@ export class GalleryProcessor {
         ,enableLifecycleLogging: false
         ,showCaptions: true
         ,captionMaxLines: 1
+        ,showFrame: true
         ,pagination: false
         ,itemsPerPage: 24
     };
@@ -636,6 +639,7 @@ export class GalleryProcessor {
             remoteLoadTimeoutMs: settings.timeoutMs,
             allowRemoteImages: settings.allowRemoteImages,
             showCaptions: block.captions ?? settings.showCaptions,
+            frame: block.frame ?? settings.showFrame,
             captionMaxLines: settings.captionMaxLines,
             pagination: block.pagination ?? settings.pagination,
             itemsPerPage: block.itemsPerPage ?? settings.itemsPerPage,

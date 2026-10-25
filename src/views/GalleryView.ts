@@ -132,6 +132,8 @@ export abstract class GalleryView implements IGalleryView {
             this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap, height: options.height };
         }
         if (options.warnings) this.warnings = [...options.warnings];
+        // The frame belongs to the gallery's container, which the view renders into
+        if (typeof options.frame === 'boolean') this.container.classList.toggle('gallery-frameless', !options.frame);
     }
 
     /**

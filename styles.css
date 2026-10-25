@@ -2389,3 +2389,27 @@ button.gallery-settings-tab-btn.is-active {
     gap: 0;
   }
 }
+
+/* ==========================================================================
+   Frameless galleries ("Show gallery frame" off, or frame: false)
+   Drops the box around the gallery (border, shadow, background, rounded
+   corners, inner padding) so images sit directly in the note. Thumbnail tiles
+   keep their card look; masonry/justified keep their gaps. Placed last so it
+   wins over the frame rules above, including the dark-theme shadow.
+   ========================================================================== */
+.gallery-container.gallery-frameless,
+.theme-dark .gallery-container.gallery-frameless {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  /* Thumbnail hover lifts would be clipped at the edges without padding */
+  overflow: visible;
+}
+
+.gallery-frameless .gallery-thumbnail-grid,
+.gallery-frameless .gallery-masonry-layout,
+.gallery-frameless .gallery-justified-layout,
+.gallery-frameless .gallery-carousel {
+  padding: 0;
+}

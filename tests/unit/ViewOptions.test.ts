@@ -32,8 +32,8 @@ describe('readViewOptions', () => {
         const { options, warnings } = readViewOptions({ type: 'masonry', columns: 4, itemPerPage: 10 });
         expect(options).toEqual({});
         expect(warnings).toEqual([
-            'Unknown view option "columns" is ignored. Options for the masonry view: pagination, itemsPerPage, captions, columnWidth, gap.',
-            'Unknown view option "itemPerPage" is ignored. Options for the masonry view: pagination, itemsPerPage, captions, columnWidth, gap.'
+            'Unknown view option "columns" is ignored. Options for the masonry view: pagination, itemsPerPage, captions, frame, columnWidth, gap.',
+            'Unknown view option "itemPerPage" is ignored. Options for the masonry view: pagination, itemsPerPage, captions, frame, columnWidth, gap.'
         ]);
     });
 
@@ -109,5 +109,39 @@ describe('applying view options', () => {
         view.render();
         const lines = Array.from(view.container.querySelectorAll('.gallery-warning-compact')).map(el => el.textContent);
         expect(lines).toEqual(['⚠️ gallery: Unknown view option "foo" is ignored.']);
+    });
+});
+
+describe('gallery frame', () => {
+    const settings = {
+        timeoutMs: 1000, allowRemoteImages: false, showCaptions: true, captionMaxLines: 1,
+        pagination: false, itemsPerPage: 24, errorDisplayMode: 'full', showFrame: true
+    };
+    const runtime = (view: unknown, overrides = {}) =>
+        (GalleryProcessor as any).viewRuntimeOptions({ path: '', view }, { ...settings, ...overrides });
+
+    test('frame follows the setting unless the block overrides it', () => {
+        expect(runtime('masonry').frame).toBe(true);
+        expect(runtime('masonry', { showFrame: false }).frame).toBe(false);
+        expect(runtime({ type: 'masonry', frame: false }).frame).toBe(false);
+        expect(runtime({ type: 'thumbnail', frame: true }, { showFrame: false }).frame).toBe(true);
+    });
+
+    test('frame is not an option for the embed view, which never has one', () => {
+        expect(readViewOptions({ type: 'embed', frame: true }).warnings).toEqual([
+            '"frame" doesn\'t apply to the embed view and is ignored (it applies to: thumbnail, carousel, masonry, justified).'
+        ]);
+        expect(viewOptionErrors({ type: 'masonry', frame: 'no' })).toEqual(['view.frame must be true or false']);
+    });
+
+    test('the view marks its container frameless, and can switch back', () => {
+        const container = createContainer();
+        const view = new MasonryView(container);
+        view.setOptions({ frame: false });
+        view.update([image()]);
+        expect(container.classList.contains('gallery-frameless')).toBe(true);
+
+        view.setOptions({ frame: true });
+        expect(container.classList.contains('gallery-frameless')).toBe(false);
     });
 });

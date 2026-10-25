@@ -125,11 +125,22 @@ export class GallerySettingsTab extends PluginSettingTab {
             },
             {
                 type: 'group',
+                heading: 'Appearance',
+                items: [
+                    {
+                        name: 'Show gallery frame',
+                        desc: 'Draw a border, background and padding around each gallery. Turn off to place images directly in the note. A gallery can override this with frame: true or false.',
+                        control: { type: 'toggle', key: 'showFrame', defaultValue: true }
+                    }
+                ]
+            },
+            {
+                type: 'group',
                 heading: 'Captions',
                 items: [
                     {
                         name: 'Show captions',
-                        desc: 'Display image captions below gallery images.',
+                        desc: 'Show captions under images. When off, a caption appears over an image only on hover.',
                         control: { type: 'toggle', key: 'showCaptions', defaultValue: true }
                     },
                     {

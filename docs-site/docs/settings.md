@@ -17,6 +17,7 @@ The General tab controls core plugin behavior and remote image handling.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Error messages | `Show` | When a gallery can't be shown, `Show` puts a one-line message (starting with ⚠️) in its place; `Hide` shows nothing. |
+| Show gallery frame | `On` | Draws a border, background and padding around each gallery. Turn it off to place images directly in the note; thumbnail tiles keep their card look. A gallery can override this with `frame: true` or `frame: false` in its `view:` block. The embed view never has a frame. |
 | Show captions | `On` | On: captions show under each image in every view, and take up space in the layout. Off: a caption appears over an image only while you hover over it or focus it with the keyboard (not on touch screens). A gallery can override this with `captions: true` or `captions: false` in its `view:` block. |
 | Caption max lines | `1` | Controls the maximum number of text lines displayed for image captions before truncating with an ellipsis (configurable between 1 and 10). |
 | Allow remote images | Off | Enable loading images from external URLs. Disabled by default to protect your privacy. If disabled, any `external` sources in your blocks will be skipped. |

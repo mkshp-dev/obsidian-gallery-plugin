@@ -226,6 +226,8 @@ export interface ViewRuntimeOptions {
   captionMaxLines?: number;
   pagination?: boolean;
   itemsPerPage?: number;
+  /** Draw the gallery's frame: border, background, shadow and padding */
+  frame?: boolean;
   /** Justified: target row height in px */
   rowHeight?: number;
   /** Masonry: minimum column width in px */

@@ -15,6 +15,8 @@ export interface GalleryPluginSettings {
     // Enable verbose lifecycle logging to help debug detach/reattach behavior
     enableLifecycleLogging?: boolean;
     showCaptions: boolean;
+    // Draw the border, background and padding around each gallery (overridable per gallery with frame:)
+    showFrame: boolean;
     captionMaxLines: number;
     // Pagination defaults (can be overridden per-gallery via the view: config)
     defaultPagination: boolean;
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: GalleryPluginSettings = {
     gracePeriodMs: 30000,
     enableLifecycleLogging: false,
     showCaptions: true,
+    showFrame: true,
     captionMaxLines: 1,
     defaultPagination: false,
     defaultItemsPerPage: 24,

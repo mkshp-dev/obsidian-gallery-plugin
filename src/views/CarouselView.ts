@@ -4,13 +4,23 @@ import { IImageSource } from '../models/interfaces';
 
 /**
  * CarouselView
- * Horizontal scrolling carousel with keyboard and mouse controls.
+ * One image at a time on a fixed-height stage, with arrow buttons, keyboard and swipe navigation,
+ * a "3 / 12" counter, and dots for short galleries.
+ *
+ * Tunable from CSS: --gallery-carousel-height (the stage height), or per gallery with `height`.
  */
 export class CarouselView extends GalleryView {
+    /** Above this many images, the dots are left out and the counter alone shows the position */
+    private static readonly MAX_DOTS = 12;
+
     private viewport: HTMLElement | null = null;
     private containerEl: HTMLElement | null = null;
     private currentIndex = 0;
     private trackEl: HTMLElement | null = null;
+    private prevBtn: HTMLButtonElement | null = null;
+    private nextBtn: HTMLButtonElement | null = null;
+    private counterEl: HTMLElement | null = null;
+    private dots: HTMLElement[] = [];
     /** Slide image elements in render order; loaded on demand around the current slide */
     private slides: Array<{ imgEl: HTMLImageElement; image: IImageSource; requested: boolean }> = [];
 
@@ -54,29 +64,36 @@ export class CarouselView extends GalleryView {
                 this.expandImage(img);
             });
         });
-        // Prev/Next controls (visual)
-        const prev = this.createElement(this.containerEl, 'button', { cls: 'gallery-carousel-nav prev', text: '‹' });
-        const next = this.createElement(this.containerEl, 'button', { cls: 'gallery-carousel-nav next', text: '›' });
-        prev.setAttribute('aria-label', 'Previous image');
-        next.setAttribute('aria-label', 'Next image');
+        const count = this._images.length;
+        if (typeof this.layoutOptions.height === 'number') {
+            this.containerEl.style.setProperty('--gallery-carousel-height', `${this.layoutOptions.height}px`);
+        }
 
-        prev.addEventListener('click', () => this.prev());
-        next.addEventListener('click', () => this.next());
+        // Arrows and counter sit on the stage; none of the controls are needed for a single image
+        this.prevBtn = null;
+        this.nextBtn = null;
+        this.counterEl = null;
+        this.dots = [];
+        if (count > 1) {
+            this.prevBtn = this.createElement(this.viewport, 'button', { cls: 'gallery-carousel-nav prev', attr: { 'aria-label': 'Previous image' } }) as HTMLButtonElement;
+            this.nextBtn = this.createElement(this.viewport, 'button', { cls: 'gallery-carousel-nav next', attr: { 'aria-label': 'Next image' } }) as HTMLButtonElement;
+            this.prevBtn.addEventListener('click', (e: MouseEvent) => { e.stopPropagation(); this.prev(); });
+            this.nextBtn.addEventListener('click', (e: MouseEvent) => { e.stopPropagation(); this.next(); });
 
-        // Indicators
-        const indicators = this.createElement(this.containerEl, 'div', { cls: 'gallery-carousel-indicators' });
-        this._images.forEach((_, idx) => {
-            const dot = this.createElement(indicators, 'button', { cls: 'gallery-carousel-indicator' });
-            dot.setAttribute('aria-label', `Go to image ${idx + 1}`);
-            dot.addEventListener('click', () => this.goTo(idx));
-            // dot may have addClass shim from createElement — only add if non-empty
-            if (idx === this.currentIndex) {
-                const obsDot = dot as unknown as { addClass?(cls: string): void };
-            if (obsDot.addClass) {
-                obsDot.addClass('active');
+            this.counterEl = this.createElement(this.viewport, 'div', { cls: 'gallery-carousel-counter', attr: { 'aria-live': 'polite' } });
+
+            if (count <= CarouselView.MAX_DOTS) {
+                const indicators = this.createElement(this.containerEl, 'div', { cls: 'gallery-carousel-indicators' });
+                this._images.forEach((_, idx) => {
+                    const dot = this.createElement(indicators, 'button', {
+                        cls: 'gallery-carousel-indicator',
+                        attr: { 'aria-label': `Go to image ${idx + 1}` }
+                    });
+                    dot.addEventListener('click', () => this.goTo(idx));
+                    this.dots.push(dot);
+                });
             }
-            }
-        });
+        }
 
         // Keyboard support
         this.containerEl.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -90,7 +107,7 @@ export class CarouselView extends GalleryView {
         // Touch support - basic swipe
         this.addTouchSupport(this.viewport);
 
-        this.loadAround(this.currentIndex);
+        this.goTo(this.currentIndex);
         this.renderWarnings(this.container);
     }
 
@@ -104,6 +121,10 @@ export class CarouselView extends GalleryView {
         this.trackEl = null;
         this.viewport = null;
         this.containerEl = null;
+        this.prevBtn = null;
+        this.nextBtn = null;
+        this.counterEl = null;
+        this.dots = [];
         super.destroy();
     }
 
@@ -121,13 +142,16 @@ export class CarouselView extends GalleryView {
 
         this.currentIndex = index;
         this.loadAround(index);
-        const width = this.viewport.clientWidth;
-        if (this.trackEl) { this.trackEl.style.transform = `translateX(-${index * width}px)`; }
+        // A percentage keeps the slide aligned when the pane is resized
+        this.trackEl.style.transform = `translateX(-${index * 100}%)`;
 
-        // Update indicators
-        const indicators = this.containerEl?.querySelectorAll('.gallery-carousel-indicator') || [];
-        indicators.forEach((node, idx) => {
-            node.classList.toggle('active', idx === index);
+        const count = this._images.length;
+        if (this.prevBtn) this.prevBtn.disabled = index === 0;
+        if (this.nextBtn) this.nextBtn.disabled = index === count - 1;
+        if (this.counterEl) this.counterEl.textContent = `${index + 1} / ${count}`;
+        this.dots.forEach((dot, idx) => {
+            dot.classList.toggle('active', idx === index);
+            if (idx === index) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current');
         });
     }
 

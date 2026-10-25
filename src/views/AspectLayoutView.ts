@@ -60,7 +60,7 @@ export abstract class AspectLayoutView extends GalleryView {
     const root = this.createElement(this.container, 'div', { cls: this.layoutClass });
     this.root = root;
     // Per-gallery sizes override the theme/snippet values for this gallery only
-    for (const [option, variable] of Object.entries(this.layoutVariables) as [keyof typeof this.layoutOptions, string][]) {
+    for (const [option, variable] of Object.entries(this.layoutVariables) as ['rowHeight' | 'columnWidth' | 'gap', string][]) {
       const px = this.layoutOptions[option];
       if (typeof px === 'number') root.style.setProperty(variable, `${px}px`);
     }

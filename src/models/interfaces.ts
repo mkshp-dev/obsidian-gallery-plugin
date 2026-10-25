@@ -232,6 +232,8 @@ export interface ViewRuntimeOptions {
   columnWidth?: number;
   /** Masonry and justified: space between images in px */
   gap?: number;
+  /** Carousel: stage height in px */
+  height?: number;
   /** Notes shown under the gallery, e.g. ignored view options */
   warnings?: string[];
 }

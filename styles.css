@@ -207,36 +207,57 @@
   padding: 8px;
 }
 
-/* Carousel View */
+/* Carousel View
+   A fixed-height stage (--gallery-carousel-height, or `height` per gallery) shows one image at a
+   time. Arrows and a "3 / 12" counter sit on the stage; dots underneath for up to 12 images. */
 .gallery-carousel {
+  --gallery-carousel-height: 420px;
   position: relative;
-  padding: 16px;
+  padding: 12px;
+  outline: none;
+}
+
+.gallery-carousel:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--interactive-accent);
+  border-radius: var(--radius-l, 10px);
 }
 
 .gallery-carousel-viewport {
+  position: relative;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-l, 10px);
+  background: var(--background-secondary);
 }
 
 .gallery-carousel-container {
   display: flex;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .gallery-carousel-item {
   flex: 0 0 100%;
-  max-height: 440px;
+  min-width: 0;
+  box-sizing: border-box;
+  height: var(--gallery-carousel-height);
+  padding: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  cursor: zoom-in;
 }
 
 .gallery-carousel-image {
+  display: block;
   max-width: 100%;
-  max-height: 380px;
+  max-height: calc(var(--gallery-carousel-height) - 16px);
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: var(--radius-s, 4px);
+}
+
+/* Leave room for a caption under the image */
+.gallery-carousel-item:has(> .gallery-caption.is-below) .gallery-carousel-image {
+  max-height: calc(var(--gallery-carousel-height) - 16px - 3.5em);
 }
 
 .gallery-carousel-item .gallery-caption.is-below {
@@ -245,59 +266,142 @@
   width: 100%;
 }
 
-.gallery-carousel-nav {
+/* Arrows: shown on hover or keyboard focus (always on touch screens), hidden at the ends */
+button.gallery-carousel-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
   border: none;
-  width: 40px;
-  height: 40px;
   border-radius: 50%;
+  box-shadow: none;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+button.gallery-carousel-nav:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+/* Chevron drawn with two borders */
+button.gallery-carousel-nav::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
+
+button.gallery-carousel-nav.prev {
+  left: 10px;
+}
+
+button.gallery-carousel-nav.prev::before {
+  transform: translateX(2px) rotate(-45deg);
+}
+
+button.gallery-carousel-nav.next {
+  right: 10px;
+}
+
+button.gallery-carousel-nav.next::before {
+  transform: translateX(-2px) rotate(135deg);
+}
+
+.gallery-carousel:hover button.gallery-carousel-nav,
+.gallery-carousel:focus-within button.gallery-carousel-nav {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  button.gallery-carousel-nav {
+    opacity: 1;
+  }
+}
+
+.gallery-carousel button.gallery-carousel-nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gallery-carousel-counter {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   z-index: 2;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
-.gallery-carousel-nav:hover {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-.gallery-carousel-nav:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.gallery-carousel-nav.prev {
-  left: 16px;
-}
-
-.gallery-carousel-nav.next {
-  right: 16px;
-}
-
+/* Dots: the current one stretches into an accent-coloured pill */
 .gallery-carousel-indicators {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.gallery-carousel-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--background-modifier-border);
+button.gallery-carousel-indicator {
+  width: 7px;
+  height: 7px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 999px;
+  box-shadow: none;
+  background: var(--text-faint);
+  opacity: 0.5;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: width 0.25s ease, background 0.25s ease, opacity 0.25s ease;
 }
 
-.gallery-carousel-indicator.active {
+button.gallery-carousel-indicator:hover {
+  opacity: 0.85;
+}
+
+button.gallery-carousel-indicator.active {
+  width: 22px;
   background: var(--interactive-accent);
+  opacity: 1;
+}
+
+button.gallery-carousel-indicator:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .gallery-carousel {
+    --gallery-carousel-height: 300px;
+    padding: 8px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-carousel-container,
+  button.gallery-carousel-indicator {
+    transition: none;
+  }
 }
 
 /* Masonry and Justified Views
@@ -495,11 +599,6 @@
     padding: 16px;
   }
   
-  .gallery-carousel-nav {
-    width: 40px;
-    height: 40px;
-  }
-  
   /* Better touch targets for mobile */
   .gallery-thumbnail-item {
     min-height: 44px;
@@ -524,11 +623,6 @@
   
   .gallery-thumbnail-item:hover {
     transform: translateY(-2px) scale(1.01);
-  }
-  
-  .gallery-carousel-nav {
-    width: 36px;
-    height: 36px;
   }
   
   /* Reduce animations on smaller screens */
@@ -690,16 +784,6 @@
   box-shadow: none;
 }
 
-/* RTL Support */
-[dir="rtl"] .gallery-carousel-nav.gallery-prev {
-  right: 10px;
-  left: auto;
-}
-
-[dir="rtl"] .gallery-carousel-nav.gallery-next {
-  left: 10px;
-  right: auto;
-}
 
 /* Professional Empty State Styles */
 .gallery-empty-state {

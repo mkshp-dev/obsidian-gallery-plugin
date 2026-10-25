@@ -12,6 +12,8 @@ export interface ViewBlockOptions {
     columnWidth?: number;
     /** Masonry and justified: space between images in px */
     gap?: number;
+    /** Carousel: stage height in px */
+    height?: number;
 }
 
 type OptionKey = keyof ViewBlockOptions;
@@ -40,7 +42,8 @@ export const VIEW_OPTIONS: Record<OptionKey, OptionSpec> = {
     captions: { views: VIEW_TYPES, check: isBoolean('captions') },
     rowHeight: { views: ['justified'], check: isNumberIn('rowHeight', 40, 1000) },
     columnWidth: { views: ['masonry'], check: isNumberIn('columnWidth', 60, 1000) },
-    gap: { views: ['masonry', 'justified'], check: isNumberIn('gap', 0, 64) }
+    gap: { views: ['masonry', 'justified'], check: isNumberIn('gap', 0, 64) },
+    height: { views: ['carousel'], check: isNumberIn('height', 120, 1500) }
 };
 
 const OPTION_KEYS = Object.keys(VIEW_OPTIONS) as OptionKey[];

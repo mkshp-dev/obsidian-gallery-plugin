@@ -642,6 +642,7 @@ export class GalleryProcessor {
             rowHeight: block.rowHeight,
             columnWidth: block.columnWidth,
             gap: block.gap,
+            height: block.height,
             warnings: settings.errorDisplayMode === 'hidden' ? [] : warnings
         };
     }

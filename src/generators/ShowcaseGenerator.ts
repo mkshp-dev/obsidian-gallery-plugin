@@ -372,14 +372,16 @@ view:
 ---
 
 ### Carousel View
-A horizontal scrolling strip — ideal for a curated set of highlights.
+One image at a time on a fixed-height stage — ideal for a curated set of highlights. Hover to show the arrows, use ← / → once it is focused, or swipe. \`height\` sets the stage height in pixels (default 420).
 
 \`\`\`obs-gallery
 sources:
   - type: local
     path: GalleryDemo/Assets
+    recursive: true
 view:
   type: carousel
+  height: 360
 \`\`\`
 
 ---

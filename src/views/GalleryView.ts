@@ -22,7 +22,7 @@ export abstract class GalleryView implements IGalleryView {
     public itemsPerPage: number = 24;
     protected currentPage: number = 1;
     /** Per-gallery layout sizes from the block's view: options (px); views that support them apply them */
-    protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number } = {};
+    protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number; height?: number } = {};
     /** Notes shown under the gallery, such as ignored view options */
     protected warnings: string[] = [];
 
@@ -127,8 +127,8 @@ export abstract class GalleryView implements IGalleryView {
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
         // Passed together for each gallery, so a key that is present but undefined clears an earlier value
-        if ('rowHeight' in options || 'columnWidth' in options || 'gap' in options) {
-            this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap };
+        if ('rowHeight' in options || 'columnWidth' in options || 'gap' in options || 'height' in options) {
+            this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap, height: options.height };
         }
         if (options.warnings) this.warnings = [...options.warnings];
     }

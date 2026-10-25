@@ -53,6 +53,7 @@ view:                  # long form, with options
 | `rowHeight` | number of pixels, 40–1000 | 220 | Target row height. `justified` only. |
 | `columnWidth` | number of pixels, 60–1000 | 220 | Minimum column width; the number of columns follows the note's width. `masonry` only. |
 | `gap` | number of pixels, 0–64 | 8 (masonry), 4 (justified) | Space between images. `masonry` and `justified`. |
+| `height` | number of pixels, 120–1500 | 420 | Height of the stage. `carousel` only. |
 
 These options override the plugin settings, and any [CSS snippet](./views/masonry.md#customizing-with-css) sizes, for this gallery only:
 

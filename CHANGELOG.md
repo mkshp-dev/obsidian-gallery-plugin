@@ -2,7 +2,11 @@
 
 ## In-progress
 
+## 2.6.1 - 2026-10-25
+
 - **No `:has()` in the stylesheet**: The carousel used a `:has()` selector to leave room for captions under the image, which Obsidian's review bot flags because it can slow down style updates. The carousel now marks those slides with a class instead; it looks the same.
+
+
 ## 2.6.0 - 2026-10-25
 
 - **Galleries without a frame**: New **Show gallery frame** setting (Settings → Appearance) and `frame:` view option. With the frame off, a gallery drops its border, shadow, background and padding and sits directly in the note; thumbnail tiles keep their card look, and masonry and justified keep their gaps.

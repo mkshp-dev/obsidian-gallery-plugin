@@ -180,6 +180,8 @@ jest.mock('obsidian', () => ({
   PluginSettingTab: class MockPluginSettingTab {},
   Setting: class MockSetting {},
   requestUrl: jest.fn(),
+  // Records the icon name so tests can check which icon a button got
+  setIcon: (el: HTMLElement, icon: string) => el.setAttribute('data-icon', icon),
   parseYaml: jest.fn().mockImplementation((yamlStr: string) => {
     const { parse } = require('yaml');
     try {

@@ -10,13 +10,15 @@ interface JustifiedRow {
 /**
  * JustifiedView
  * Rows of equal height that exactly fill the width, with each image uncropped at its own width
- * (the layout used by Immich, Google Photos and Flickr). Captions show over the image on hover.
+ * (the layout used by Immich, Google Photos and Flickr). With captions on, each row grows by the
+ * caption line under its images; the row height is the image height.
  *
  * Tunable from CSS: --gallery-justified-row-height (target row height) and --gallery-justified-gap.
  */
 export class JustifiedView extends AspectLayoutView {
   protected readonly layoutClass = 'gallery-justified-layout';
   protected readonly tileClass = 'gallery-justified-tile';
+  protected readonly layoutVariables = { rowHeight: '--gallery-justified-row-height', gap: '--gallery-justified-gap' };
 
   private static readonly ROW_HEIGHT = 220;
   private static readonly GAP = 4;

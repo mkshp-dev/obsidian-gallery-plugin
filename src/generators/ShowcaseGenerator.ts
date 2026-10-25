@@ -372,14 +372,16 @@ view:
 ---
 
 ### Carousel View
-A horizontal scrolling strip — ideal for a curated set of highlights.
+One image at a time on a fixed-height stage — ideal for a curated set of highlights. Hover to show the arrows, use ← / → once it is focused, or swipe. \`height\` sets the stage height in pixels (default 420).
 
 \`\`\`obs-gallery
 sources:
   - type: local
     path: GalleryDemo/Assets
+    recursive: true
 view:
   type: carousel
+  height: 360
 \`\`\`
 
 ---
@@ -412,6 +414,46 @@ view:
 \`\`\`
 
 Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination** — the per-gallery \`pagination\`/\`itemsPerPage\` keys shown above override that default.
+
+---
+
+### Per-gallery layout and captions
+Masonry and justified galleries can set their own sizes in pixels, and any gallery can choose its captions (\`captions: true\` under the images, \`captions: false\` only on hover) and drop its frame with \`frame: false\`, as the masonry example below does. These override the plugin settings for this gallery only.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: justified
+  rowHeight: 140
+  gap: 2
+  captions: false
+\`\`\`
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: masonry
+  columnWidth: 150
+  gap: 12
+  frame: false
+\`\`\`
+
+An option the view doesn't use, or a misspelt one, is ignored and shown as a note under the gallery:
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+view:
+  type: masonry
+  rowHeight: 200
+\`\`\`
 `;
         await this.app.vault.create(`${this.basePath}/03 - Views.md`, content);
     }
@@ -1412,15 +1454,14 @@ view:
             '',
             '---',
             '',
-            '## Error display mode',
+            '## Error messages setting',
             '',
-            'You can control whether errors are shown at all in **Settings → Gallery View → Error display mode**:',
+            'You can control whether errors are shown at all in **Settings → Gallery View → Error messages**:',
             '',
-            '| Mode | What you see |',
+            '| Setting | What you see |',
             '|---|---|',
-            '| Full *(default)* | Compact `\u26a0\ufe0f gallery: …` line |',
-            '| Text | Same compact line |',
-            '| Hidden | Nothing — errors are silently suppressed |'
+            '| Show *(default)* | Compact `\u26a0\ufe0f gallery: …` line, plus notes about ignored view options |',
+            '| Hide | Nothing — errors and notes are hidden |'
         ];
 
         const content = lines.join('\n') + '\n';

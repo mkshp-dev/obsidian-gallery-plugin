@@ -37,7 +37,8 @@
         "views/carousel",
         "views/masonry",
         "views/justified",
-        "views/embed"
+        "views/embed",
+        "views/image-viewer"
       ]
     },
     "settings",

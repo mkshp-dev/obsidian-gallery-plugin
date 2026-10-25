@@ -17,3 +17,7 @@ view:
   type: carousel
 ```
 ````
+
+Move between slides with the arrow buttons, the dots under the slides, the **←** / **→** keys (with the carousel focused), or by swiping on a touch screen. Click a slide to open it in the [image viewer](./image-viewer.md).
+
+The carousel always holds every image, so the `pagination` and `itemsPerPage` view options don't apply to it.

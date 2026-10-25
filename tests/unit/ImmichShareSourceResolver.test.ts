@@ -185,6 +185,13 @@ describe('ImmichShareSourceResolver', () => {
             url: 'https://immich.example.com/api/assets/123/thumbnail?key=abc1234'
         }));
 
+        // The image viewer fetches the preview size through the same share session
+        (requestUrl as jest.Mock).mockResolvedValueOnce({ status: 200, arrayBuffer: new ArrayBuffer(4) });
+        await result.images[0].resolveLargeUrl!();
+        expect(requestUrl).toHaveBeenLastCalledWith(expect.objectContaining({
+            url: 'https://immich.example.com/api/assets/123/thumbnail?size=preview&key=abc1234'
+        }));
+
         // Destroying the image releases the blob URL it acquired
         result.images[0].destroy!();
         expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:share');

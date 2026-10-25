@@ -5,7 +5,7 @@ sidebar_position: 6
 # Troubleshooting
 
 > [!TIP]
-> You can control how errors appear in gallery blocks by adjusting the **Error display mode** setting in **Settings → Gallery View → General**. Set it to `Full` to see styled error cards, `Text only` for plain text, or `Hidden` to suppress display errors entirely (useful if you prefer to check the developer console instead).
+> You can choose whether errors appear in gallery blocks with the **Error messages** setting in **Settings → Gallery View → General**. `Show` puts a one-line message where the gallery would be; `Hide` shows nothing (useful if you prefer to check the developer console instead).
 
 ## Gallery not appearing
 

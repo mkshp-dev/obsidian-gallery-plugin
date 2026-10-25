@@ -4,6 +4,8 @@ sidebar_position: 3
 
 # Masonry view
 
+![Masonry view screenshot](Masonry.png)
+
 A Pinterest-style layout: columns of equal width, with each image at its natural height and nothing cropped. Images fill the columns in reading order, left to right, each going into whichever column is currently shortest, so there are no gaps under short images.
 
 ````markdown
@@ -41,9 +43,25 @@ view:
 
 Pagination can also be turned on by default for every gallery via **Settings → Gallery View → Pagination**; the per-gallery `pagination`/`itemsPerPage` keys shown above override that default. The same keys work in every view.
 
+### Column width and spacing
+
+Set them for one gallery in its `view:` block, in pixels:
+
+````markdown
+```obs-gallery
+sources:
+  - type: local
+    path: Photos/AllTrips
+view:
+  type: masonry
+  columnWidth: 300   # minimum column width (default 220)
+  gap: 12            # space between images (default 8)
+```
+````
+
 ### Customizing with CSS
 
-The column width and spacing are CSS variables, so a [CSS snippet](https://help.obsidian.md/snippets) can change them:
+To change the defaults for every gallery, set the same values as CSS variables in a [CSS snippet](https://help.obsidian.md/snippets):
 
 ```css
 .gallery-masonry-layout {

@@ -164,6 +164,53 @@ describe('ImageSource', () => {
         });
     });
 
+    describe('large version for the image viewer', () => {
+        let spyRelease: jest.SpyInstance;
+
+        beforeEach(() => {
+            spyRelease = jest.spyOn(ObjectUrlManager, 'releaseByUrl').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            spyRelease.mockRestore();
+        });
+
+        it('falls back to the display URL when there is no larger version', async () => {
+            const img = new ImageSource('immich://c/search/asset/1', 'immich', 'a', undefined, undefined, () => Promise.resolve('blob:thumb'));
+            await expect(img.resolveLargeUrl()).resolves.toBe('blob:thumb');
+        });
+
+        it('fetches the larger version once, and releases it with the thumbnail on destroy', async () => {
+            const large = jest.fn(() => Promise.resolve('blob:preview'));
+            const img = new ImageSource('immich://c/search/asset/1', 'immich', 'a', undefined, undefined, () => Promise.resolve('blob:thumb'));
+            img.setLargeLoader(large);
+
+            await img.resolveDisplayUrl();
+            await expect(img.resolveLargeUrl()).resolves.toBe('blob:preview');
+            await expect(img.resolveLargeUrl()).resolves.toBe('blob:preview');
+            expect(large).toHaveBeenCalledTimes(1);
+            // The gallery keeps showing the thumbnail
+            expect(img.getDisplayUrl()).toBe('blob:thumb');
+
+            img.destroy();
+            expect(spyRelease).toHaveBeenCalledWith('blob:thumb');
+            expect(spyRelease).toHaveBeenCalledWith('blob:preview');
+        });
+
+        it('releases a larger version that arrives after the image was destroyed', async () => {
+            let resolveLarge: (url: string) => void = () => {};
+            const img = new ImageSource('immich://c/search/asset/1', 'immich', 'a', undefined, undefined, () => Promise.resolve('blob:thumb'));
+            img.setLargeLoader(() => new Promise<string>(resolve => { resolveLarge = resolve; }));
+
+            const pending = img.resolveLargeUrl();
+            img.destroy();
+            resolveLarge('blob:late-preview');
+
+            await expect(pending).rejects.toThrow('destroyed');
+            expect(spyRelease).toHaveBeenCalledWith('blob:late-preview');
+        });
+    });
+
     describe('caption', () => {
         it('should support caption property in constructor and factory methods', () => {
             const img = new ImageSource('images/pic.jpg', 'local', 'pic', undefined, 'A custom caption');

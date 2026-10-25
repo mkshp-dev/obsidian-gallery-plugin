@@ -4,6 +4,8 @@ sidebar_position: 4
 
 # Justified view
 
+![Justified view screenshot](Justified.png)
+
 Rows of equal height that exactly fill the width of the note, with every image shown uncropped at its own width. This is the layout photo apps such as Immich, Google Photos and Flickr use for their timelines.
 
 ````markdown

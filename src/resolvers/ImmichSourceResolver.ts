@@ -189,6 +189,8 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
 
                     const image = new ImageSource(logicalPath, 'immich', originalFileName, undefined, description,
                         () => client.getAssetBlobUrl(assetId, representation));
+                    // Tile views load small thumbnails; the image viewer uses the preview size instead
+                    if (representation === 'thumbnail') image.setLargeLoader(() => client.getAssetBlobUrl(assetId, 'preview'));
                     image.dimensions = extractImmichDimensions(asset);
                     return image;
                 } catch (e) {

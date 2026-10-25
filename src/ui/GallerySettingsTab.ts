@@ -1,12 +1,44 @@
-import { App, PluginSettingTab, Setting, Notice, type SettingDefinitionItem, type SettingGroup } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, setIcon, type SettingDefinitionItem } from 'obsidian';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { NextcloudClient } from '../services/nextcloud/NextcloudClient';
 import type GalleryPlugin from '../main';
 import { DEFAULT_SETTINGS } from '../models/settings';
+import { IImmichConnection, INextcloudConnection } from '../models/interfaces';
+import { ConnectionBase, connectionHost, connectionProblems } from './providerConnections';
+
+/** A provider-specific field shown on a connection card, after the shared connection key */
+interface FieldSpec<T> {
+    prop: keyof T & string;
+    name: string;
+    desc: string;
+    placeholder: string;
+    /** Masked, with a show/hide button */
+    secret?: boolean;
+    /** When set, the field must be filled in; the value names it in the warning */
+    required?: string;
+}
+
+/** Everything the Providers tab needs to render and manage one provider's connections */
+interface ProviderSpec<T extends ConnectionBase> {
+    id: 'immich' | 'nextcloud';
+    label: string;
+    icon: string;
+    connections: () => T[];
+    create: () => T;
+    fields: FieldSpec<T>[];
+    test: (conn: T) => Promise<{ success: boolean; message: string }>;
+    /** Drop cached listings for a connection key, so edited credentials take effect */
+    invalidate: (key: string) => void;
+}
+
+type ConnectionStatus = { state: 'untested' | 'testing' | 'ok' | 'error'; message?: string };
 
 export class GallerySettingsTab extends PluginSettingTab {
     plugin: GalleryPlugin;
     private activeTab: 'general' | 'providers' = 'general';
+    /** Expanded connection cards and last test results, kept while the settings window is open */
+    private openCards = new Set<string>();
+    private connectionStatus = new Map<string, ConnectionStatus>();
 
     constructor(app: App, plugin: GalleryPlugin) {
         super(app, plugin);
@@ -60,9 +92,9 @@ export class GallerySettingsTab extends PluginSettingTab {
                 heading: 'Plugin preferences',
                 items: [
                     {
-                        name: 'Error display mode',
-                        desc: 'How to display errors when the block processor encounters them.',
-                        control: { type: 'dropdown', key: 'errorDisplayMode', options: { full: 'Full', text: 'Text only', hidden: 'Hidden' }, defaultValue: 'full' }
+                        name: 'Error messages',
+                        desc: 'When a gallery cannot be shown, show a one-line message in its place, or show nothing.',
+                        control: { type: 'dropdown', key: 'errorDisplayMode', options: { full: 'Show', hidden: 'Hide' }, defaultValue: 'full' }
                     },
                     {
                         name: 'Allow remote images',
@@ -93,11 +125,22 @@ export class GallerySettingsTab extends PluginSettingTab {
             },
             {
                 type: 'group',
+                heading: 'Appearance',
+                items: [
+                    {
+                        name: 'Show gallery frame',
+                        desc: 'Draw a border, background and padding around each gallery. Turn off to place images directly in the note. A gallery can override this with frame: true or false.',
+                        control: { type: 'toggle', key: 'showFrame', defaultValue: true }
+                    }
+                ]
+            },
+            {
+                type: 'group',
                 heading: 'Captions',
                 items: [
                     {
                         name: 'Show captions',
-                        desc: 'Display image captions below gallery images.',
+                        desc: 'Show captions under images. When off, a caption appears over an image only on hover.',
                         control: { type: 'toggle', key: 'showCaptions', defaultValue: true }
                     },
                     {
@@ -131,235 +174,275 @@ export class GallerySettingsTab extends PluginSettingTab {
         return [
             {
                 type: 'group',
-                heading: 'Immich authenticated providers',
-                desc: 'Configure authenticated access to your personal immich library. Note: Public immich-share links do not require configuration here.',
+                heading: 'Immich',
+                desc: 'Connections to your Immich servers, for immich sources. Share links (immich-share) need no connection.',
                 items: [
                     {
                         name: 'Connections',
-                        render: (setting: Setting, group: SettingGroup) => this.renderImmichConnections(setting, group)
+                        render: (setting: Setting) => this.renderProvider(setting, this.immichSpec())
                     }
                 ]
             },
             {
                 type: 'group',
-                heading: 'Nextcloud authenticated providers',
-                desc: 'Configure authenticated access to your Nextcloud files. Note: Public share links do not require configuration here.',
+                heading: 'Nextcloud',
+                desc: 'Connections to your Nextcloud servers, for nextcloud sources. Share links (nextcloud-share) need no connection.',
                 items: [
                     {
                         name: 'Connections',
-                        render: (setting: Setting, group: SettingGroup) => this.renderNextcloudConnections(setting, group)
+                        render: (setting: Setting) => this.renderProvider(setting, this.nextcloudSpec())
                     }
                 ]
             }
         ];
     }
 
-    private renderImmichConnections(setting: Setting, group: SettingGroup): void {
+    private immichSpec(): ProviderSpec<IImmichConnection> {
+        return {
+            id: 'immich',
+            label: 'Immich',
+            icon: 'image',
+            connections: () => this.plugin.settings.immichConnections,
+            create: () => ({ key: '', baseUrl: '', apiKey: '' }),
+            fields: [
+                { prop: 'baseUrl', name: 'Server URL', desc: 'For example https://photos.example.com', placeholder: 'https://photos.example.com' },
+                { prop: 'apiKey', name: 'API key', desc: 'Create one in Immich under Account settings → API keys. Read access is enough.', placeholder: 'API key', secret: true, required: 'API key' }
+            ],
+            test: conn => new ImmichClient(conn).validateConnection(),
+            invalidate: key => ImmichClient.invalidateCache(key)
+        };
+    }
+
+    private nextcloudSpec(): ProviderSpec<INextcloudConnection> {
+        return {
+            id: 'nextcloud',
+            label: 'Nextcloud',
+            icon: 'cloud',
+            connections: () => this.plugin.settings.nextcloudConnections,
+            create: () => ({ key: '', baseUrl: '', username: '', appPassword: '' }),
+            fields: [
+                { prop: 'baseUrl', name: 'Server URL', desc: 'For example https://cloud.example.com', placeholder: 'https://cloud.example.com' },
+                { prop: 'username', name: 'Username', desc: 'Your login name, not your display name.', placeholder: 'Username', required: 'username' },
+                { prop: 'appPassword', name: 'App password', desc: 'Create one in Nextcloud under Personal settings → Security.', placeholder: 'App password', secret: true, required: 'app password' }
+            ],
+            test: conn => new NextcloudClient(conn).validateConnection(),
+            invalidate: key => NextcloudClient.invalidateCache(key)
+        };
+    }
+
+    /** One provider section: a card per connection, an empty state, and an add button */
+    private renderProvider<T extends ConnectionBase>(setting: Setting, spec: ProviderSpec<T>): void {
         setting.settingEl.empty();
-        setting.settingEl.addClass('gallery-immich-connections-setting');
-        const containerEl = setting.settingEl.createDiv('immich-connections-container');
+        setting.settingEl.addClass('gallery-provider-setting');
+        const listEl = setting.settingEl.createDiv('gallery-provider-list');
+        const connections = spec.connections();
 
-        this.plugin.settings.immichConnections.forEach((conn, index) => {
-            const connDetails = containerEl.createEl('details', {
-                cls: 'immich-connection-item'
+        if (connections.length === 0) {
+            const empty = listEl.createDiv('gallery-provider-empty');
+            empty.createSpan({ text: `No ${spec.label} connections yet.` });
+            empty.createSpan({
+                cls: 'gallery-provider-empty-hint',
+                text: 'Run "Create showcase notes" to try the plugin with the read-only demo servers.'
             });
+        }
 
-            if (!conn.key && !conn.baseUrl && !conn.apiKey) {
-                connDetails.setAttribute('open', 'true');
-            }
+        connections.forEach((conn, index) => this.renderConnectionCard(listEl, spec, conn, index));
 
-            const summary = connDetails.createEl('summary', { cls: 'immich-connection-summary' });
-
-            const titleSpan = summary.createSpan({ cls: 'immich-connection-title' });
-            const getTitle = (key: string) => key ? `Immich: ${key}` : 'New Immich connection';
-            titleSpan.setText(getTitle(conn.key));
-
-            const contentDiv = connDetails.createDiv('immich-connection-content');
-
-            new Setting(contentDiv)
-                .setName('Connection key')
-                .setDesc('A stable reference used in gallery blocks (e.g. Home).')
-                .addText(text => text
-                    .setPlaceholder('Home')
-                    .setValue(conn.key || '')
-                    .onChange(async (value) => {
-                        this.plugin.settings.immichConnections[index].key = value;
-                        await this.plugin.saveSettings();
-                        titleSpan.setText(getTitle(value));
-                    })
-                );
-
-            new Setting(contentDiv)
-                .setName('Base URL')
-                .setDesc('The base URL of your server.')
-                .addText(text => text
-                    .setPlaceholder('https://immich.example.com')
-                    .setValue(conn.baseUrl)
-                    .onChange(async (value) => {
-                        this.plugin.settings.immichConnections[index].baseUrl = value;
-                        await this.plugin.saveSettings();
-                    })
-                );
-
-            new Setting(contentDiv)
-                .setName('API key')
-                .setDesc('Your personal API key.')
-                .addText(text => text
-                    .setPlaceholder('Your API key')
-                    .setValue(conn.apiKey)
-                    .onChange(async (value) => {
-                        this.plugin.settings.immichConnections[index].apiKey = value;
-                        await this.plugin.saveSettings();
-                    })
-                );
-
-            new Setting(contentDiv)
-                .addButton(btn => btn
-                    .setButtonText('Test connection')
-                    .onClick(async () => {
-                        const client = new ImmichClient(conn);
-                        const result = await client.validateConnection();
-                        new Notice(result.message);
-                    })
-                )
-                .addButton(btn => btn
-                    .setButtonText('Remove connection')
-                    .setDestructive()
-                    .onClick(async () => {
-                        this.plugin.settings.immichConnections.splice(index, 1);
-                        await this.plugin.saveSettings();
-                        this.plugin.refreshGalleries(['immich']);
-                        this.update();
-                    })
-                );
-        });
-
-        new Setting(containerEl)
+        new Setting(listEl)
+            .setClass('gallery-provider-add')
             .addButton(btn => btn
-                .setButtonText('Add immich connection')
-                .setCta()
+                .setButtonText(`Add ${spec.label} connection`)
                 .onClick(async () => {
-                    this.plugin.settings.immichConnections.push({
-                        key: '',
-                        baseUrl: '',
-                        apiKey: ''
-                    });
+                    connections.push(spec.create());
+                    this.openCards.add(`${spec.id}:${connections.length - 1}`);
                     await this.plugin.saveSettings();
-                    this.plugin.refreshGalleries(['immich']);
                     this.update();
                 })
             );
     }
 
-    private renderNextcloudConnections(setting: Setting, group: SettingGroup): void {
-        setting.settingEl.empty();
-        setting.settingEl.addClass('gallery-nextcloud-connections-setting');
-        const containerEl = setting.settingEl.createDiv('nextcloud-connections-container');
+    private renderConnectionCard<T extends ConnectionBase>(listEl: HTMLElement, spec: ProviderSpec<T>, conn: T, index: number): void {
+        const cardId = `${spec.id}:${index}`;
+        const isNew = !conn.key && !conn.baseUrl;
+        const card = listEl.createDiv('gallery-provider-card');
+        if (this.openCards.has(cardId) || isNew) card.addClass('is-open');
 
-        this.plugin.settings.nextcloudConnections.forEach((conn, index) => {
-            const connDetails = containerEl.createEl('details', {
-                cls: 'nextcloud-connection-item'
-            });
+        // Header: always visible, toggles the body
+        const header = card.createDiv({ cls: 'gallery-provider-card-header', attr: { role: 'button', tabindex: '0' } });
+        setIcon(header.createSpan('gallery-provider-card-icon'), spec.icon);
+        const titles = header.createDiv('gallery-provider-card-titles');
+        const keyEl = titles.createSpan('gallery-provider-card-key');
+        const hostEl = titles.createSpan('gallery-provider-card-host');
+        const statusEl = header.createSpan('gallery-provider-status');
+        setIcon(header.createSpan('gallery-provider-card-chevron'), 'chevron-right');
 
-            if (!conn.key && !conn.baseUrl && !conn.username) {
-                connDetails.setAttribute('open', 'true');
+        const problemsEl = card.createDiv('gallery-provider-card-problems');
+
+        const refreshHeader = () => {
+            keyEl.setText(conn.key.trim() || 'Unnamed connection');
+            keyEl.toggleClass('is-unnamed', !conn.key.trim());
+            hostEl.setText(connectionHost(conn.baseUrl) || 'No server URL');
+
+            const status = this.connectionStatus.get(cardId) ?? { state: 'untested' as const };
+            statusEl.className = `gallery-provider-status is-${status.state}`;
+            statusEl.setText({ untested: 'Not tested', testing: 'Testing…', ok: 'Connected', error: 'Failed' }[status.state]);
+            statusEl.setAttr('title', status.message ?? '');
+
+            const credentials: Record<string, string> = {};
+            for (const field of spec.fields) {
+                if (field.required) credentials[field.required] = String(conn[field.prop] ?? '');
             }
+            problemsEl.empty();
+            for (const problem of connectionProblems(conn, spec.connections(), credentials)) {
+                const row = problemsEl.createDiv('gallery-provider-problem');
+                setIcon(row.createSpan('gallery-provider-problem-icon'), 'alert-triangle');
+                row.createSpan({ text: problem });
+            }
+            usageCode.setText(`connection: ${conn.key.trim() || '<key>'}`);
+        };
 
-            const summary = connDetails.createEl('summary', { cls: 'nextcloud-connection-summary' });
-
-            const titleSpan = summary.createSpan({ cls: 'nextcloud-connection-title' });
-            const getTitle = (key: string) => key ? `Nextcloud: ${key}` : 'New Nextcloud connection';
-            titleSpan.setText(getTitle(conn.key));
-
-            const contentDiv = connDetails.createDiv('nextcloud-connection-content');
-
-            new Setting(contentDiv)
-                .setName('Connection key')
-                .setDesc('A stable reference used in gallery blocks (e.g. Home).')
-                .addText(text => text
-                    .setPlaceholder('Home')
-                    .setValue(conn.key || '')
-                    .onChange(async (value) => {
-                        this.plugin.settings.nextcloudConnections[index].key = value;
-                        await this.plugin.saveSettings();
-                        titleSpan.setText(getTitle(value));
-                    })
-                );
-
-            new Setting(contentDiv)
-                .setName('Base URL')
-                .setDesc('The base URL of your server.')
-                .addText(text => text
-                    .setPlaceholder('https://cloud.example.com')
-                    .setValue(conn.baseUrl)
-                    .onChange(async (value) => {
-                        this.plugin.settings.nextcloudConnections[index].baseUrl = value;
-                        await this.plugin.saveSettings();
-                    })
-                );
-
-            new Setting(contentDiv)
-                .setName('Username')
-                .setDesc('Your nextcloud username.')
-                .addText(text => text
-                    .setPlaceholder('Username')
-                    .setValue(conn.username)
-                    .onChange(async (value) => {
-                        this.plugin.settings.nextcloudConnections[index].username = value;
-                        await this.plugin.saveSettings();
-                    })
-                );
-
-            new Setting(contentDiv)
-                .setName('App password')
-                .setDesc('Your nextcloud app password.')
-                .addText(text => {
-                    text.inputEl.type = 'password';
-                    text.setPlaceholder('App password')
-                        .setValue(conn.appPassword)
-                        .onChange(async (value) => {
-                            this.plugin.settings.nextcloudConnections[index].appPassword = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-
-            new Setting(contentDiv)
-                .addButton(btn => btn
-                    .setButtonText('Test connection')
-                    .onClick(async () => {
-                        const client = new NextcloudClient(conn);
-                        const result = await client.validateConnection();
-                        new Notice(result.message);
-                    })
-                )
-                .addButton(btn => btn
-                    .setButtonText('Remove connection')
-                    .setDestructive()
-                    .onClick(async () => {
-                        this.plugin.settings.nextcloudConnections.splice(index, 1);
-                        await this.plugin.saveSettings();
-                        this.plugin.refreshGalleries(['nextcloud']);
-                        this.update();
-                    })
-                );
+        const toggle = () => {
+            const open = !card.hasClass('is-open');
+            card.toggleClass('is-open', open);
+            header.setAttr('aria-expanded', String(open));
+            if (open) this.openCards.add(cardId); else this.openCards.delete(cardId);
+        };
+        header.setAttr('aria-expanded', String(card.hasClass('is-open')));
+        header.addEventListener('click', toggle);
+        header.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggle();
+            }
         });
 
-        new Setting(containerEl)
-            .addButton(btn => btn
-                .setButtonText('Add nextcloud connection')
-                .setCta()
-                .onClick(async () => {
-                    this.plugin.settings.nextcloudConnections.push({
-                        key: '',
-                        baseUrl: '',
-                        username: '',
-                        appPassword: ''
+        // Body
+        const body = card.createDiv('gallery-provider-card-body');
+
+        // Changing a field forgets the last test result; leaving it re-fetches only galleries using this provider
+        let keyOnFocus = conn.key;
+        const onEdited = async () => {
+            this.connectionStatus.delete(cardId);
+            await this.plugin.saveSettings();
+            refreshHeader();
+        };
+        const onCommitted = () => {
+            spec.invalidate(keyOnFocus);
+            spec.invalidate(conn.key);
+            keyOnFocus = conn.key;
+            this.plugin.refreshGalleries([spec.id]);
+        };
+
+        new Setting(body)
+            .setName('Connection key')
+            .setDesc('The name gallery blocks use for this connection.')
+            .addText(text => {
+                text.setPlaceholder('Home')
+                    .setValue(conn.key)
+                    .onChange(async value => {
+                        conn.key = value;
+                        await onEdited();
                     });
-                    await this.plugin.saveSettings();
-                    this.plugin.refreshGalleries(['nextcloud']);
-                    this.update();
+                text.inputEl.addEventListener('focus', () => { keyOnFocus = conn.key; });
+                text.inputEl.addEventListener('change', onCommitted);
+            });
+
+        for (const field of spec.fields) {
+            new Setting(body)
+                .setName(field.name)
+                .setDesc(field.desc)
+                .addText(text => {
+                    text.setPlaceholder(field.placeholder)
+                        .setValue(String(conn[field.prop] ?? ''))
+                        .onChange(async value => {
+                            (conn as Record<string, unknown>)[field.prop] = value;
+                            await onEdited();
+                        });
+                    text.inputEl.addEventListener('change', onCommitted);
+                    if (field.secret) {
+                        text.inputEl.type = 'password';
+                        text.inputEl.addClass('gallery-provider-secret');
+                    }
                 })
-            );
+                .then(row => {
+                    if (!field.secret) return;
+                    row.addExtraButton(btn => btn
+                        .setIcon('eye')
+                        .setTooltip('Show')
+                        .onClick(() => {
+                            const input = row.controlEl.querySelector('input');
+                            if (!input) return;
+                            const reveal = input.type === 'password';
+                            input.type = reveal ? 'text' : 'password';
+                            btn.setIcon(reveal ? 'eye-off' : 'eye').setTooltip(reveal ? 'Hide' : 'Show');
+                        }));
+                });
+        }
+
+        // How to use it in a gallery block
+        const usage = body.createDiv('gallery-provider-usage');
+        usage.createSpan({ cls: 'gallery-provider-usage-label', text: 'Use in gallery blocks:' });
+        const usageCode = usage.createEl('code');
+        const copyBtn = usage.createEl('button', { cls: 'clickable-icon gallery-provider-copy', attr: { 'aria-label': 'Copy' } });
+        setIcon(copyBtn, 'copy');
+        copyBtn.addEventListener('click', () => {
+            void navigator.clipboard.writeText(usageCode.getText()).then(() => new Notice('Copied'));
+        });
+
+        // Actions
+        const actions = new Setting(body).setClass('gallery-provider-actions');
+        actions.addButton(btn => btn
+            .setButtonText('Test connection')
+            .onClick(async () => {
+                btn.setDisabled(true);
+                this.connectionStatus.set(cardId, { state: 'testing' });
+                refreshHeader();
+                try {
+                    const result = await spec.test(conn);
+                    this.connectionStatus.set(cardId, { state: result.success ? 'ok' : 'error', message: result.message });
+                    if (!result.success) new Notice(result.message);
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    this.connectionStatus.set(cardId, { state: 'error', message });
+                    new Notice(message);
+                } finally {
+                    btn.setDisabled(false);
+                    refreshHeader();
+                }
+            }));
+        actions.addButton(btn => {
+            let armed = false;
+            let disarm: number | undefined;
+            btn.setButtonText('Remove')
+                .setDestructive()
+                .onClick(async () => {
+                    if (!armed) {
+                        // First click arms the button; removing needs a second click within a few seconds
+                        armed = true;
+                        btn.setButtonText('Click again to remove');
+                        disarm = window.setTimeout(() => {
+                            armed = false;
+                            btn.setButtonText('Remove');
+                        }, 4000);
+                        return;
+                    }
+                    window.clearTimeout(disarm);
+                    spec.connections().splice(index, 1);
+                    spec.invalidate(conn.key);
+                    this.forgetCards(spec.id);
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries([spec.id]);
+                    this.update();
+                });
+        });
+
+        refreshHeader();
+    }
+
+    /** Card state is keyed by position, so drop a provider's state when its list changes */
+    private forgetCards(providerId: string): void {
+        for (const id of [...this.openCards]) if (id.startsWith(`${providerId}:`)) this.openCards.delete(id);
+        for (const id of [...this.connectionStatus.keys()]) if (id.startsWith(`${providerId}:`)) this.connectionStatus.delete(id);
     }
 
     getControlValue(key: string): unknown {

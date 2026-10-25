@@ -1,5 +1,6 @@
 import { Logger } from "../utils/Logger";
-import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
+import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions, ViewRuntimeOptions } from '../models/interfaces';
+import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import type { ViewType } from '../models/viewTypes';
 
@@ -21,6 +22,10 @@ export abstract class GalleryView implements IGalleryView {
     public paginationEnabled: boolean = false;
     public itemsPerPage: number = 24;
     protected currentPage: number = 1;
+    /** Per-gallery layout sizes from the block's view: options (px); views that support them apply them */
+    protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number; height?: number } = {};
+    /** Notes shown under the gallery, such as ignored view options */
+    protected warnings: string[] = [];
 
     protected lastFocusedElement: HTMLElement | null = null;
     protected activeModal: HTMLElement | null = null;
@@ -115,13 +120,30 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Apply runtime options to the view. Subclasses may override to react immediately.
      */
-    setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number } = {}): void {
+    setOptions(options: ViewRuntimeOptions = {}): void {
         if (typeof options.remoteLoadTimeoutMs === 'number') this.remoteLoadTimeoutMs = options.remoteLoadTimeoutMs;
         if (typeof options.allowRemoteImages === 'boolean') this.allowRemoteImages = options.allowRemoteImages;
         if (typeof options.showCaptions === 'boolean') this.showCaptions = options.showCaptions;
         if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
+        // Passed together for each gallery, so a key that is present but undefined clears an earlier value
+        if ('rowHeight' in options || 'columnWidth' in options || 'gap' in options || 'height' in options) {
+            this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap, height: options.height };
+        }
+        if (options.warnings) this.warnings = [...options.warnings];
+        // The frame belongs to the gallery's container, which the view renders into
+        if (typeof options.frame === 'boolean') this.container.classList.toggle('gallery-frameless', !options.frame);
+    }
+
+    /**
+     * Render the gallery's warnings (e.g. ignored view options) as muted lines. Views call this at
+     * the end of render(), since rendering clears the container.
+     */
+    protected renderWarnings(parent: HTMLElement): void {
+        for (const warning of this.warnings) {
+            this.createElement(parent, 'div', { cls: 'gallery-warning-compact', text: `⚠️ gallery: ${warning}` });
+        }
     }
 
     /**
@@ -206,16 +228,20 @@ export abstract class GalleryView implements IGalleryView {
     }
 
     /**
-     * Render caption element for image if showCaptions is true
+     * Render an image's caption, the same way in every view:
+     * - captions on: below the image (`is-below`), taking up space in the layout
+     * - captions off: over the bottom of the image (`is-overlay`), shown only on hover or keyboard
+     *   focus, and not at all on touch screens
+     * `overlayParent` is the element the overlay is positioned over; pass the image's frame when
+     * the image is smaller than `parent`.
      */
-    protected renderCaption(parent: HTMLElement, image: IImageSource): HTMLElement | null {
-        if (!this.showCaptions) return null;
-
+    protected renderCaption(parent: HTMLElement, image: IImageSource, overlayParent: HTMLElement = parent): HTMLElement | null {
         const captionText = image.caption ?? image.displayName;
         if (!captionText) return null;
 
-        const captionEl = this.createElement(parent, 'div', {
-            cls: 'gallery-caption',
+        const below = this.showCaptions;
+        const captionEl = this.createElement(below ? parent : overlayParent, 'div', {
+            cls: `gallery-caption ${below ? 'is-below' : 'is-overlay'}`,
             text: captionText
         });
         captionEl.style.setProperty('--gallery-caption-max-lines', String(this.captionMaxLines));
@@ -610,9 +636,11 @@ export abstract class GalleryView implements IGalleryView {
         };
         modal.addEventListener('keydown', modalKeyHandler);
 
-        // Cleanup handler
+        // Cleanup handler; `disposers` collects teardown for listeners added further down
+        const disposers: Array<() => void> = [];
         const cleanup = () => {
             try {
+                disposers.forEach(dispose => dispose());
                 modal.removeEventListener('keydown', closeOnEscape);
                 doc.removeEventListener('focus', keepFocus, true);
                 modal.removeEventListener('keydown', modalKeyHandler);
@@ -624,71 +652,42 @@ export abstract class GalleryView implements IGalleryView {
         };
         (modal as unknown as { __cleanup?: () => void }).__cleanup = cleanup;
 
-        // Build HTML layout
+        // Build the layout: a full-screen stage, a toolbar floating over its top edge, arrows on its
+        // sides, the caption at its bottom, and a details panel that slides in from the right
         const content = this.createElement(modal, 'div', { cls: 'gallery-modal-content' });
+        const hasSeveral = this._images.length > 1;
+        if (!hasSeveral) content.classList.add('is-single');
 
-        // TOOLBAR
+        const iconButton = (parent: HTMLElement, cls: string, icon: string, label: string) => {
+            const btn = this.createElement(parent, 'button', {
+                cls: `gallery-modal-tool-btn ${cls}`,
+                attr: { 'aria-label': label, 'title': label }
+            }) as HTMLButtonElement;
+            setIcon(btn, icon);
+            return btn;
+        };
+
+        // TOOLBAR: position and name on the left, tools on the right
         const toolbar = this.createElement(content, 'div', { cls: 'gallery-modal-toolbar' });
+        const titleEl = this.createElement(toolbar, 'div', { cls: 'gallery-modal-title' });
+        const counterEl = this.createElement(titleEl, 'span', { cls: 'gallery-modal-counter' });
+        const nameEl = this.createElement(titleEl, 'span', { cls: 'gallery-modal-name' });
+        const tools = this.createElement(toolbar, 'div', { cls: 'gallery-modal-tools' });
 
-        // Play/Pause Slideshow Button
-        const playBtn = this.createElement(toolbar, 'button', {
-            cls: 'gallery-modal-tool-btn play-btn',
-            attr: { 'aria-label': 'Play slideshow', 'title': 'Play slideshow' }
-        });
-        playBtn.textContent = '▶'; // play symbol
+        const playBtn = iconButton(tools, 'play-btn', 'play', 'Play slideshow');
+        if (!hasSeveral) playBtn.classList.add('is-hidden');
+        const zoomOutBtn = iconButton(tools, 'zoom-out-btn', 'zoom-out', 'Zoom out');
+        const zoomInBtn = iconButton(tools, 'zoom-in-btn', 'zoom-in', 'Zoom in');
 
-        // Zoom Buttons
-        const zoomOutBtn = this.createElement(toolbar, 'button', {
-            cls: 'gallery-modal-tool-btn zoom-out-btn',
-            attr: { 'aria-label': 'Zoom out', 'title': 'Zoom out' }
-        });
-        zoomOutBtn.textContent = '➖';
+        const zoomResetBtn = iconButton(tools, 'zoom-reset-btn', 'rotate-ccw', 'Reset zoom');
+        const infoBtn = iconButton(tools, 'info-btn', 'info', 'Show details');
 
-        const zoomInBtn = this.createElement(toolbar, 'button', {
-            cls: 'gallery-modal-tool-btn zoom-in-btn',
-            attr: { 'aria-label': 'Zoom in', 'title': 'Zoom in' }
-        });
-        zoomInBtn.textContent = '➕';
-
-        const zoomResetBtn = this.createElement(toolbar, 'button', {
-            cls: 'gallery-modal-tool-btn zoom-reset-btn',
-            attr: { 'aria-label': 'Reset zoom', 'title': 'Reset zoom' }
-        });
-        zoomResetBtn.textContent = '🔄';
-
-        // Info Panel Button
-        const infoBtn = this.createElement(toolbar, 'button', {
-            cls: 'gallery-modal-tool-btn info-btn',
-            attr: { 'aria-label': 'Toggle info', 'title': 'Toggle info' }
-        });
-        infoBtn.textContent = 'ℹ️';
-
-        // Download/Open original Button
-        const downloadBtn = this.createElement(toolbar, 'button', {
-            cls: 'gallery-modal-tool-btn download-btn',
-            attr: { 'aria-label': 'Open original image', 'title': 'Open original image' }
-        });
-        downloadBtn.textContent = '🔗';
-
-        // Close Button
-        const closeBtn = this.createElement(toolbar, 'button', {
-            cls: 'gallery-modal-close-btn',
-            attr: { 'aria-label': 'Close image dialog', 'title': 'Close', 'role': 'button' }
-        });
-        closeBtn.textContent = '×';
+        const downloadBtn = iconButton(tools, 'download-btn', 'external-link', 'Open or save image');
+        const closeBtn = iconButton(tools, 'gallery-modal-close-btn', 'x', 'Close');
         closeBtn.addEventListener('click', (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
             this.closeModal(modal);
-        });
-
-        // Click to close modal when clicking outside content
-        modal.addEventListener('click', (e: MouseEvent) => {
-            if (e.target === modal) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.closeModal(modal);
-            }
         });
 
         // Set initial focus
@@ -697,24 +696,7 @@ export abstract class GalleryView implements IGalleryView {
             try { modal.focus(); } catch (error) { Logger.debug('Ignored error:', error); }
         }, 0);
 
-        // Prev/Next Nav elements
-        const prevBtn = this.createElement(content, 'button', {
-            cls: 'gallery-modal-nav prev',
-            text: '\u2039'
-        });
-        prevBtn.setAttribute('aria-label', 'Previous image');
-        prevBtn.setAttribute('title', 'Previous image');
-        prevBtn.addEventListener('click', () => navigate(-1));
-
-        const nextBtn = this.createElement(content, 'button', {
-            cls: 'gallery-modal-nav next',
-            text: '\u203A'
-        });
-        nextBtn.setAttribute('aria-label', 'Next image');
-        nextBtn.setAttribute('title', 'Next image');
-        nextBtn.addEventListener('click', () => navigate(1));
-
-        // Main Viewer Workspace (holds image and info side-by-side or stacked)
+        // Main Viewer Workspace (holds the stage and the details panel side by side)
         const viewerArea = this.createElement(content, 'div', { cls: 'gallery-modal-viewer' });
 
         // Image container & Zoom track
@@ -722,6 +704,28 @@ export abstract class GalleryView implements IGalleryView {
         const img = this.createElement(imgContainer, 'img', {
             attr: { 'alt': image.displayName }
         }) as HTMLImageElement;
+        const captionEl = this.createElement(imgContainer, 'div', { cls: 'gallery-modal-caption' });
+
+        // Prev/Next arrows, centred on the stage; hidden for a single image
+        const prevBtn = this.createElement(imgContainer, 'button', {
+            cls: 'gallery-modal-nav prev',
+            attr: { 'aria-label': 'Previous image', 'title': 'Previous image' }
+        });
+        const nextBtn = this.createElement(imgContainer, 'button', {
+            cls: 'gallery-modal-nav next',
+            attr: { 'aria-label': 'Next image', 'title': 'Next image' }
+        });
+        prevBtn.addEventListener('click', (e: MouseEvent) => { e.stopPropagation(); navigate(-1); });
+        nextBtn.addEventListener('click', (e: MouseEvent) => { e.stopPropagation(); navigate(1); });
+
+        // Click on the backdrop around the photo closes the viewer
+        imgContainer.addEventListener('click', (e: MouseEvent) => {
+            if (e.target === imgContainer) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.closeModal(modal);
+            }
+        });
 
         // Info / Metadata drawer
         const infoPanel = this.createElement(viewerArea, 'div', { cls: 'gallery-modal-info-panel' });
@@ -756,6 +760,28 @@ export abstract class GalleryView implements IGalleryView {
             }
         };
 
+        // Toolbar text and caption for the image on screen
+        const updateHeader = (srcImage: IImageSource) => {
+            const index = this._images.findIndex(imgSrc => imgSrc.path === srcImage.path);
+            counterEl.textContent = hasSeveral && index >= 0 ? `${index + 1} / ${this._images.length}` : '';
+            nameEl.textContent = srcImage.displayName || '';
+            captionEl.textContent = srcImage.caption ?? '';
+            captionEl.classList.toggle('is-empty', !srcImage.caption);
+            modal.setAttribute('aria-label', srcImage.displayName || 'Image dialog');
+        };
+
+        // Controls fade out after a few seconds without mouse movement, and come back on any input
+        let idleTimer: number | undefined;
+        const wakeControls = () => {
+            content.classList.remove('is-idle');
+            window.clearTimeout(idleTimer);
+            idleTimer = window.setTimeout(() => content.classList.add('is-idle'), 2500);
+        };
+        content.addEventListener('mousemove', wakeControls);
+        modal.addEventListener('keydown', wakeControls);
+        disposers.push(() => window.clearTimeout(idleTimer));
+        wakeControls();
+
         // Zoom state variables
         let currentScale = 1;
         let isDragging = false;
@@ -763,11 +789,12 @@ export abstract class GalleryView implements IGalleryView {
         let translateX = 0, translateY = 0;
 
         const updateZoomTransform = () => {
+            content.classList.toggle('is-zoomed', currentScale > 1);
             img.setCssStyles({ transform: `translate(${translateX}px, ${translateY}px) scale(${currentScale})` });
             if (currentScale > 1) {
                 img.setCssStyles({ cursor: isDragging ? 'grabbing' : 'grab' });
             } else {
-                img.setCssStyles({ cursor: 'default' });
+                img.setCssStyles({ cursor: 'zoom-in' });
                 translateX = 0;
                 translateY = 0;
                 img.setCssStyles({ transform: 'scale(1)' });
@@ -791,6 +818,12 @@ export abstract class GalleryView implements IGalleryView {
         zoomOutBtn.addEventListener('click', () => zoom(1 / 1.3));
         zoomResetBtn.addEventListener('click', resetZoom);
 
+        // Double-click toggles between fitted and 2.5x
+        img.addEventListener('dblclick', (e: MouseEvent) => {
+            e.preventDefault();
+            if (currentScale > 1) resetZoom(); else zoom(2.5);
+        });
+
         // Zoom wheel handler
         img.addEventListener('wheel', (e: WheelEvent) => {
             e.preventDefault();
@@ -801,7 +834,8 @@ export abstract class GalleryView implements IGalleryView {
             }
         }, { passive: false });
 
-        // Pan/Drag handlers
+        // Pan/Drag handlers. The move/up listeners are on the document so a drag can leave the
+        // image; they are removed when the viewer closes.
         img.addEventListener('mousedown', (e: MouseEvent) => {
             if (currentScale <= 1) return;
             e.preventDefault();
@@ -810,19 +844,37 @@ export abstract class GalleryView implements IGalleryView {
             startY = e.clientY - translateY;
             img.setCssStyles({ cursor: 'grabbing' });
         });
-
-        doc.addEventListener('mousemove', (e: MouseEvent) => {
+        const onDragMove = (e: MouseEvent) => {
             if (!isDragging) return;
             translateX = e.clientX - startX;
             translateY = e.clientY - startY;
             updateZoomTransform();
-        });
-
-        doc.addEventListener('mouseup', () => {
+        };
+        const onDragEnd = () => {
             if (isDragging) {
                 isDragging = false;
                 updateZoomTransform();
             }
+        };
+        doc.addEventListener('mousemove', onDragMove);
+        doc.addEventListener('mouseup', onDragEnd);
+        disposers.push(() => {
+            doc.removeEventListener('mousemove', onDragMove);
+            doc.removeEventListener('mouseup', onDragEnd);
+        });
+
+        // Swipe left/right on touch screens to change image (not while zoomed in)
+        let touchStartX = 0;
+        let touchStartY = 0;
+        imgContainer.addEventListener('touchstart', (e: TouchEvent) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        imgContainer.addEventListener('touchend', (e: TouchEvent) => {
+            if (currentScale > 1 || !hasSeveral) return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) navigate(dx < 0 ? 1 : -1);
         });
 
         // Toggle info panel
@@ -831,12 +883,16 @@ export abstract class GalleryView implements IGalleryView {
             infoVisible = !infoVisible;
             infoBtn.classList.toggle('active', infoVisible);
             infoPanel.classList.toggle('visible', infoVisible);
+            const label = infoVisible ? 'Hide details' : 'Show details';
+            infoBtn.setAttribute('aria-label', label);
+            infoBtn.setAttribute('title', label);
         });
 
-        // Download/Open Original
+        // Open/save the image, at the size the viewer shows rather than the gallery's thumbnail
         downloadBtn.addEventListener('click', () => {
             const target = currentImage;
-            this.resolveImageUrl(target).then(displayUrl => {
+            const resolveUrl = target.resolveLargeUrl ? target.resolveLargeUrl() : this.resolveImageUrl(target);
+            resolveUrl.then(displayUrl => {
                 if (!displayUrl) return;
                 const a = doc.body.createEl('a', {
                     href: displayUrl,
@@ -854,6 +910,7 @@ export abstract class GalleryView implements IGalleryView {
             const token = ++modalLoadToken;
             resetZoom();
             updateInfoPanel(srcImage);
+            updateHeader(srcImage);
 
             if (srcImage.type === 'external' && !this.allowRemoteImages) {
                 imgEl.alt = 'External image blocked';
@@ -874,12 +931,46 @@ export abstract class GalleryView implements IGalleryView {
                     imgEl.src = temp.src;
                     imgEl.setCssStyles({ opacity: '1' });
                 } catch (error) { Logger.debug('Ignored error:', error); }
+                loadLargeVersion(imgEl, srcImage, token);
+                preloadNeighbours(srcImage);
             }, () => {
                 if (token !== modalLoadToken) return;
                 imgEl.alt = 'Failed to load';
                 imgEl.src = '';
                 imgEl.setCssStyles({ opacity: '1' });
             });
+        };
+
+        // Galleries of remote thumbnails show the thumbnail first, then swap in the larger
+        // version once it has downloaded and decoded, unless the user has moved on.
+        const loadLargeVersion = (imgEl: HTMLImageElement, srcImage: IImageSource, token: number) => {
+            if (!srcImage.resolveLargeUrl) return;
+            srcImage.resolveLargeUrl()
+                .then(url => {
+                    if (token !== modalLoadToken || url === imgEl.src) return;
+                    const large = new Image();
+                    large.onload = () => {
+                        if (token === modalLoadToken) imgEl.src = url;
+                    };
+                    large.src = url;
+                })
+                .catch((error: unknown) => Logger.debug('Could not load the larger image:', error));
+        };
+
+        // Fetch the images either side in the background, so stepping through is instant
+        const preloadNeighbours = (srcImage: IImageSource) => {
+            if (!hasSeveral) return;
+            const index = this._images.findIndex(imgSrc => imgSrc.path === srcImage.path);
+            if (index < 0) return;
+            const count = this._images.length;
+            for (const neighbour of [this._images[(index + 1) % count], this._images[(index - 1 + count) % count]]) {
+                if (!neighbour || neighbour === srcImage) continue;
+                if (neighbour.type === 'external' && !this.allowRemoteImages) continue;
+                const resolve = neighbour.resolveLargeUrl ? neighbour.resolveLargeUrl() : this.resolveImageUrl(neighbour);
+                resolve
+                    .then(url => { new Image().src = url; })
+                    .catch((error: unknown) => Logger.debug('Could not preload image:', error));
+            }
         };
 
         // Initial Load
@@ -889,7 +980,7 @@ export abstract class GalleryView implements IGalleryView {
         const toggleSlideshow = () => {
             this.slideshowPlaying = !this.slideshowPlaying;
             playBtn.classList.toggle('playing', this.slideshowPlaying);
-            playBtn.textContent = this.slideshowPlaying ? '⏸' : '▶';
+            setIcon(playBtn, this.slideshowPlaying ? 'pause' : 'play');
             const playTitle = this.slideshowPlaying ? 'Pause slideshow' : 'Play slideshow';
             playBtn.setAttribute('title', playTitle);
             playBtn.setAttribute('aria-label', playTitle);
@@ -909,6 +1000,7 @@ export abstract class GalleryView implements IGalleryView {
 
         // Navigation function
         const navigate = (delta: number, isSlideshow = false) => {
+            if (!hasSeveral) return;
             // Pause slideshow if manually triggered navigation, or keep it going if slideshow triggered
             if (!isSlideshow && this.slideshowPlaying) {
                 toggleSlideshow();

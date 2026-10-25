@@ -4,7 +4,9 @@ import { IImmichConnection, INextcloudConnection } from './interfaces';
  * Plugin settings
  */
 export interface GalleryPluginSettings {
-    errorDisplayMode?: 'full' | 'text' | 'hidden';
+    // 'full' shows a one-line message, 'hidden' shows nothing. Older versions also had 'text',
+    // which looked the same as 'full'; loadSettings migrates it.
+    errorDisplayMode?: 'full' | 'hidden';
     allowRemoteImages: boolean;
     remoteLoadTimeoutMs: number;
     validateRemoteContentType?: boolean;
@@ -13,6 +15,8 @@ export interface GalleryPluginSettings {
     // Enable verbose lifecycle logging to help debug detach/reattach behavior
     enableLifecycleLogging?: boolean;
     showCaptions: boolean;
+    // Draw the border, background and padding around each gallery (overridable per gallery with frame:)
+    showFrame: boolean;
     captionMaxLines: number;
     // Pagination defaults (can be overridden per-gallery via the view: config)
     defaultPagination: boolean;
@@ -29,6 +33,7 @@ export const DEFAULT_SETTINGS: GalleryPluginSettings = {
     gracePeriodMs: 30000,
     enableLifecycleLogging: false,
     showCaptions: true,
+    showFrame: true,
     captionMaxLines: 1,
     defaultPagination: false,
     defaultItemsPerPage: 24,

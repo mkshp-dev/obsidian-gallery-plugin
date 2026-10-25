@@ -110,4 +110,12 @@ describe('GalleryPlugin Settings Migration', () => {
         // 3: should have a generated key
         expect(conns[2].key).toMatch(/^conn_/);
     });
+
+    it('migrates the removed "Text only" error display to "Show" and keeps the others', async () => {
+        for (const [stored, expected] of [['text', 'full'], ['full', 'full'], ['hidden', 'hidden']]) {
+            plugin.loadData = jest.fn().mockResolvedValue({ errorDisplayMode: stored });
+            await plugin.loadSettings();
+            expect(plugin.settings.errorDisplayMode).toBe(expected);
+        }
+    });
 });

@@ -127,7 +127,11 @@ export class NextcloudClient {
     }
   }
 
-  public async getFileBlobUrl(path: string, representation: 'thumbnail' | 'original', fileId?: string): Promise<string> {
+  /**
+   * Fetch a file as a blob URL. 'thumbnail' (256 px) and 'large' (2048 px) use Nextcloud's preview
+   * endpoint, keeping the aspect ratio, and fall back to the original file if previews fail.
+   */
+  public async getFileBlobUrl(path: string, representation: 'thumbnail' | 'large' | 'original', fileId?: string): Promise<string> {
     // Stable key for ObjectUrlManager: connectionKey + representation + path
     const urlKey = `nextcloud:${this.connection.key}:${representation}:${path}`;
     try {
@@ -138,17 +142,18 @@ export class NextcloudClient {
     }
   }
 
-  private async fetchFileBlob(path: string, representation: 'thumbnail' | 'original', fileId?: string): Promise<Blob> {
+  private async fetchFileBlob(path: string, representation: 'thumbnail' | 'large' | 'original', fileId?: string): Promise<Blob> {
     // Normalize path
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     const originalUrl = `${this.baseUrl}/remote.php/dav/files/${encodeURIComponent(this.connection.username)}${normalizedPath}`;
 
     let response: RequestUrlResponse;
-    if (representation === 'thumbnail' && fileId) {
+    if (representation !== 'original' && fileId) {
+      const size = representation === 'large' ? 2048 : 256;
       // a=1 keeps the image's aspect ratio (Nextcloud crops previews to x*y by default).
       // throw: false so a failed preview (e.g. preview generation disabled) reaches the fallback below
       response = await requestUrl({
-        url: `${this.baseUrl}/index.php/core/preview?fileId=${fileId}&x=256&y=256&a=1`,
+        url: `${this.baseUrl}/index.php/core/preview?fileId=${fileId}&x=${size}&y=${size}&a=1`,
         method: 'GET',
         headers: this.getHeaders(),
         throw: false
@@ -156,7 +161,7 @@ export class NextcloudClient {
 
       // Fallback for thumbnail if preview endpoint fails
       if (response.status !== 200) {
-        Logger.debug(`Thumbnail preview failed for ${fileId}, falling back to original`);
+        Logger.debug(`Preview (${representation}) failed for ${fileId}, falling back to original`);
         response = await requestUrl({ url: originalUrl, method: 'GET', headers: this.getHeaders() });
       }
     } else {

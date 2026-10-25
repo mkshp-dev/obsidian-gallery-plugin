@@ -205,11 +205,39 @@ export interface IImageSource {
    */
   resolveDisplayUrl?(): Promise<string>;
 
+  /**
+   * Get a URL for viewing the image large (the image viewer). Remote sources whose galleries show
+   * thumbnails fetch a larger version; others return the display URL.
+   */
+  resolveLargeUrl?(): Promise<string>;
+
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;
 
   /** Destroys the image source, cleaning up any resources (like blob URLs) */
   destroy?(): void;
+}
+
+/** Settings and per-gallery `view:` options passed to a view before it renders */
+export interface ViewRuntimeOptions {
+  remoteLoadTimeoutMs?: number;
+  allowRemoteImages?: boolean;
+  showCaptions?: boolean;
+  captionMaxLines?: number;
+  pagination?: boolean;
+  itemsPerPage?: number;
+  /** Draw the gallery's frame: border, background, shadow and padding */
+  frame?: boolean;
+  /** Justified: target row height in px */
+  rowHeight?: number;
+  /** Masonry: minimum column width in px */
+  columnWidth?: number;
+  /** Masonry and justified: space between images in px */
+  gap?: number;
+  /** Carousel: stage height in px */
+  height?: number;
+  /** Notes shown under the gallery, e.g. ignored view options */
+  warnings?: string[];
 }
 
 export interface IGalleryView {
@@ -241,7 +269,7 @@ export interface IGalleryView {
   isImageVisible(image: IImageSource): boolean;
 
   /** Optional runtime settings API */
-  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number }): void;
+  setOptions?(options: ViewRuntimeOptions): void;
 
   /** Optional runtime property for remote load timeout */
   remoteLoadTimeoutMs?: number;

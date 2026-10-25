@@ -1,6 +1,6 @@
 import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
-import { IImageSource } from '../models/interfaces';
+import { IImageSource, ViewRuntimeOptions } from '../models/interfaces';
 import { LazyLoader } from '../utils/LazyLoader';
 
 /**
@@ -18,7 +18,7 @@ export class EmbedView extends GalleryView {
     super('embed', container);
   }
 
-  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number } = {}): void {
+  setOptions(options: ViewRuntimeOptions = {}): void {
     super.setOptions(options);
     if (this.loader && typeof options.remoteLoadTimeoutMs === 'number') {
       this.loader.updateOptions({ timeoutMs: options.remoteLoadTimeoutMs });
@@ -67,7 +67,9 @@ export class EmbedView extends GalleryView {
         }
       });
 
-      const el = this.createElement(wrapper, 'img', { cls: 'gallery-embed-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;
+      // The frame hugs the image (which can be narrower than the note), so a hover caption sits on it
+      const frame = this.createElement(wrapper, 'div', { cls: 'gallery-media-frame' });
+      const el = this.createElement(frame, 'img', { cls: 'gallery-embed-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;
 
       if (img.type === 'external' && !this.allowRemoteImages) {
         el.alt = img.displayName || 'External image blocked';
@@ -80,10 +82,11 @@ export class EmbedView extends GalleryView {
         loader.observe(el, () => this.resolveImageUrl(img), (error) => this.handleImageError(img, error));
       }
 
-      this.renderCaption(wrapper, img);
+      this.renderCaption(wrapper, img, frame);
     });
 
     this.renderPaginationControls(this.container);
+    this.renderWarnings(this.container);
   }
 
   update(images: IImageSource[]): void {

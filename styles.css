@@ -116,28 +116,10 @@
   filter: brightness(1.1) contrast(1.05);
 }
 
-/* Caption overlay */
-.gallery-thumbnail-caption {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 10px 12px;
-  background: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.0));
-  color: white;
-  font-size: 0.95rem;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
-}
-
-.gallery-thumbnail-item:hover .gallery-thumbnail-caption,
-.gallery-thumbnail-item:focus-visible .gallery-thumbnail-caption {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Image caption (subtitle) - rendered below images when enabled */
+/* Image captions, the same in every view:
+   - captions on (.is-below): under the image, part of the layout
+   - captions off (.is-overlay): over the bottom of the image, only on hover or keyboard focus,
+     hidden on touch screens */
 .gallery-caption {
   --gallery-caption-max-lines: 1;
   font-size: 0.8rem;
@@ -151,6 +133,45 @@
   line-clamp: var(--gallery-caption-max-lines);
   word-break: break-word;
   width: 100%;
+}
+
+.gallery-caption.is-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  padding: 18px 10px 6px;
+  color: #fff;
+  text-align: left;
+  font-size: var(--font-ui-small);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+:hover > .gallery-caption.is-overlay,
+:focus-visible .gallery-caption.is-overlay,
+:focus-visible > .gallery-caption.is-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (hover: none) {
+  .gallery-caption.is-overlay {
+    display: none;
+  }
+}
+
+/* Wraps an image that is smaller than its slot (carousel, embed), so hover captions sit on the image */
+.gallery-media-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  vertical-align: top;
 }
 
 /* Enhanced Loading State */
@@ -186,97 +207,201 @@
   padding: 8px;
 }
 
-/* Carousel View */
+/* Carousel View
+   A fixed-height stage (--gallery-carousel-height, or `height` per gallery) shows one image at a
+   time. Arrows and a "3 / 12" counter sit on the stage; dots underneath for up to 12 images. */
 .gallery-carousel {
+  --gallery-carousel-height: 420px;
   position: relative;
-  padding: 16px;
+  padding: 12px;
+  outline: none;
+}
+
+.gallery-carousel:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--interactive-accent);
+  border-radius: var(--radius-l, 10px);
 }
 
 .gallery-carousel-viewport {
+  position: relative;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-l, 10px);
+  background: var(--background-secondary);
 }
 
 .gallery-carousel-container {
   display: flex;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .gallery-carousel-item {
   flex: 0 0 100%;
-  max-height: 440px;
+  min-width: 0;
+  box-sizing: border-box;
+  height: var(--gallery-carousel-height);
+  padding: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  cursor: zoom-in;
 }
 
 .gallery-carousel-image {
+  display: block;
   max-width: 100%;
-  max-height: 380px;
+  max-height: calc(var(--gallery-carousel-height) - 16px);
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: var(--radius-s, 4px);
 }
 
-.gallery-carousel-item .gallery-caption {
+/* Leave room for a caption under the image */
+.gallery-carousel-item:has(> .gallery-caption.is-below) .gallery-carousel-image {
+  max-height: calc(var(--gallery-carousel-height) - 16px - 3.5em);
+}
+
+.gallery-carousel-item .gallery-caption.is-below {
   margin-top: 8px;
   text-align: center;
   width: 100%;
 }
 
-.gallery-carousel-nav {
+/* Arrows: shown on hover or keyboard focus (always on touch screens), hidden at the ends */
+button.gallery-carousel-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
   border: none;
-  width: 40px;
-  height: 40px;
   border-radius: 50%;
+  box-shadow: none;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+button.gallery-carousel-nav:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+/* Chevron drawn with two borders */
+button.gallery-carousel-nav::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
+
+button.gallery-carousel-nav.prev {
+  left: 10px;
+}
+
+button.gallery-carousel-nav.prev::before {
+  transform: translateX(2px) rotate(-45deg);
+}
+
+button.gallery-carousel-nav.next {
+  right: 10px;
+}
+
+button.gallery-carousel-nav.next::before {
+  transform: translateX(-2px) rotate(135deg);
+}
+
+.gallery-carousel:hover button.gallery-carousel-nav,
+.gallery-carousel:focus-within button.gallery-carousel-nav {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  button.gallery-carousel-nav {
+    opacity: 1;
+  }
+}
+
+.gallery-carousel button.gallery-carousel-nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gallery-carousel-counter {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   z-index: 2;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
-.gallery-carousel-nav:hover {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-.gallery-carousel-nav:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.gallery-carousel-nav.prev {
-  left: 16px;
-}
-
-.gallery-carousel-nav.next {
-  right: 16px;
-}
-
+/* Dots: the current one stretches into an accent-coloured pill */
 .gallery-carousel-indicators {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.gallery-carousel-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--background-modifier-border);
+button.gallery-carousel-indicator {
+  width: 7px;
+  height: 7px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 999px;
+  box-shadow: none;
+  background: var(--text-faint);
+  opacity: 0.5;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: width 0.25s ease, background 0.25s ease, opacity 0.25s ease;
 }
 
-.gallery-carousel-indicator.active {
+button.gallery-carousel-indicator:hover {
+  opacity: 0.85;
+}
+
+button.gallery-carousel-indicator.active {
+  width: 22px;
   background: var(--interactive-accent);
+  opacity: 1;
+}
+
+button.gallery-carousel-indicator:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .gallery-carousel {
+    --gallery-carousel-height: 300px;
+    padding: 8px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-carousel-container,
+  button.gallery-carousel-indicator {
+    transition: none;
+  }
 }
 
 /* Masonry and Justified Views
@@ -320,8 +445,8 @@
 
 .gallery-justified-row {
   display: flex;
+  align-items: flex-start;
   gap: var(--gallery-justified-gap);
-  height: var(--gallery-row-height, var(--gallery-justified-row-height));
 }
 
 .gallery-tile {
@@ -350,44 +475,18 @@
   aspect-ratio: var(--gallery-tile-ratio, 1.5);
 }
 
-.gallery-masonry-tile .gallery-caption {
+.gallery-tile .gallery-caption.is-below {
   background: var(--background-primary);
 }
 
 .gallery-justified-tile {
   flex: var(--gallery-tile-grow, 0) 1 var(--gallery-tile-basis, 0px);
   min-width: 0;
-  height: 100%;
 }
 
+/* The row height is the image height; a caption below adds to the row */
 .gallery-justified-tile .gallery-tile-image {
-  height: 100%;
-}
-
-/* Justified tiles have a fixed height, so captions sit over the bottom of the image */
-.gallery-justified-tile .gallery-caption {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 16px 8px 6px;
-  color: #fff;
-  text-align: left;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
-  pointer-events: none;
-}
-
-/* On devices that can hover, show justified captions only on hover or keyboard focus */
-@media (hover: hover) {
-  .gallery-justified-tile .gallery-caption {
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-
-  .gallery-justified-tile:hover .gallery-caption,
-  .gallery-justified-tile:focus-visible .gallery-caption {
-    opacity: 1;
-  }
+  height: var(--gallery-row-height, var(--gallery-justified-row-height));
 }
 
 @container (max-width: 480px) {
@@ -428,7 +527,7 @@
   height: auto;
 }
 
-.gallery-embed-item .gallery-caption {
+.gallery-embed-item .gallery-caption.is-below {
   margin-top: 0.25em;
   color: var(--text-muted);
   font-size: 0.85em;
@@ -500,11 +599,6 @@
     padding: 16px;
   }
   
-  .gallery-carousel-nav {
-    width: 40px;
-    height: 40px;
-  }
-  
   /* Better touch targets for mobile */
   .gallery-thumbnail-item {
     min-height: 44px;
@@ -529,11 +623,6 @@
   
   .gallery-thumbnail-item:hover {
     transform: translateY(-2px) scale(1.01);
-  }
-  
-  .gallery-carousel-nav {
-    width: 36px;
-    height: 36px;
   }
   
   /* Reduce animations on smaller screens */
@@ -695,16 +784,6 @@
   box-shadow: none;
 }
 
-/* RTL Support */
-[dir="rtl"] .gallery-carousel-nav.gallery-prev {
-  right: 10px;
-  left: auto;
-}
-
-[dir="rtl"] .gallery-carousel-nav.gallery-next {
-  left: 10px;
-  right: auto;
-}
 
 /* Professional Empty State Styles */
 .gallery-empty-state {
@@ -985,22 +1064,23 @@
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
 }
 
-/* Upgraded Modal/Lightbox Styles */
+/* Image viewer (lightbox): a full-screen dark stage. The toolbar floats over the top edge and the
+   arrows over the sides; both fade out after a few seconds without mouse movement (.is-idle). */
 .gallery-modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   opacity: 0;
-  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gallery-modal.gallery-modal-open {
@@ -1013,84 +1093,111 @@
 
 .gallery-modal-content {
   position: relative;
-  width: 90vw;
-  height: 90vh;
-  background: var(--background-primary);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--background-modifier-border);
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  color: #fff;
 }
 
-/* Modal Toolbar */
+/* Toolbar floating over the top of the stage */
 .gallery-modal-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--background-secondary);
-  border-bottom: 1px solid var(--background-modifier-border);
-  z-index: 1005;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px 28px;
+  background: linear-gradient(rgba(0, 0, 0, 0.6), transparent);
+  pointer-events: none;
+  transition: opacity 0.25s ease;
 }
 
-.gallery-modal-tool-btn {
+.gallery-modal-title,
+.gallery-modal-tools {
+  pointer-events: auto;
+}
+
+.gallery-modal-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  font-size: var(--font-ui-small);
+}
+
+.gallery-modal-counter {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.gallery-modal-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+}
+
+.gallery-modal-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+button.gallery-modal-tool-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  box-shadow: none;
   background: transparent;
-  border: none;
-  border-radius: 6px;
-  width: 36px;
-  height: 36px;
-  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  color: var(--text-normal);
-  opacity: 0.8;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.gallery-modal-tool-btn:hover {
-  background: var(--background-modifier-hover);
-  opacity: 1;
-  transform: scale(1.05);
+button.gallery-modal-tool-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
-.gallery-modal-tool-btn.active {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  opacity: 1;
+button.gallery-modal-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 
-.gallery-modal-tool-btn.playing {
-  color: var(--text-error);
+button.gallery-modal-tool-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
 }
 
-.gallery-modal-close-btn {
-  background: var(--background-modifier-error-hover);
-  color: var(--text-error);
-  border: none;
-  border-radius: 6px;
-  width: 36px;
-  height: 36px;
-  font-size: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  margin-left: 8px;
+button.gallery-modal-tool-btn.active,
+button.gallery-modal-tool-btn.playing {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
-.gallery-modal-close-btn:hover {
-  background: var(--text-error);
-  color: white;
+button.gallery-modal-tool-btn.is-hidden {
+  display: none;
 }
 
-/* Main Viewer Area */
+button.gallery-modal-close-btn {
+  margin-left: 6px;
+}
+
+/* Main Viewer Area: the stage, plus the details panel when open */
 .gallery-modal-viewer {
   flex: 1;
   display: flex;
@@ -1098,33 +1205,52 @@
   position: relative;
 }
 
-/* Image Container */
 .gallery-modal-image-container {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  background: #090909; /* dark canvas background for photos */
   overflow: hidden;
 }
 
 .gallery-modal-image-container img {
-  max-width: 95%;
-  max-height: 95%;
+  max-width: calc(100% - 128px);
+  max-height: calc(100% - 112px);
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
+  cursor: zoom-in;
   transition: opacity 0.2s ease-in-out;
   will-change: transform;
 }
 
-/* Sidebar Info Panel */
+/* Caption under the photo, over a soft gradient */
+.gallery-modal-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 28px 80px 18px;
+  text-align: center;
+  font-size: var(--font-ui-medium);
+  color: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.gallery-modal-caption.is-empty,
+.gallery-modal-content.is-zoomed .gallery-modal-caption {
+  display: none;
+}
+
+/* Sidebar Info Panel, dark to match the stage */
 .gallery-modal-info-panel {
   width: 0;
-  max-width: 300px;
-  background: var(--background-secondary);
-  border-left: 1px solid var(--background-modifier-border);
+  max-width: 320px;
+  background: rgba(20, 20, 20, 0.95);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
   overflow-y: auto;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0;
@@ -1133,15 +1259,15 @@
 }
 
 .gallery-modal-info-panel.visible {
-  width: 300px;
-  padding: 20px;
+  width: 320px;
+  padding: 64px 20px 20px;
 }
 
 .info-title {
   margin: 0 0 16px 0;
-  font-size: 1.25em;
-  font-weight: bold;
-  color: var(--text-normal);
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #fff;
   word-break: break-word;
 }
 
@@ -1156,7 +1282,7 @@
   flex-direction: column;
   gap: 4px;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--background-modifier-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .info-row:last-child {
@@ -1164,54 +1290,110 @@
 }
 
 .info-label {
-  font-size: 0.8em;
+  font-size: 0.75em;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .info-value {
   font-size: 0.9em;
-  color: var(--text-normal);
+  color: rgba(255, 255, 255, 0.92);
   word-break: break-all;
 }
 
-/* Prev/Next buttons (Floating over image area) */
-.gallery-modal-nav {
+/* Prev/Next arrows over the sides of the stage: CSS-drawn chevrons on a translucent circle */
+button.gallery-modal-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  width: 48px;
-  height: 48px;
+  z-index: 2;
+  width: 46px;
+  height: 46px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
   border-radius: 50%;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1002;
-  font-size: 24px;
-  transition: all 0.25s ease;
+  transition: background 0.15s ease, opacity 0.25s ease;
 }
 
-.gallery-modal-nav.prev { left: 16px; }
-.gallery-modal-nav.next { right: 16px; }
+button.gallery-modal-nav::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
 
-.gallery-modal-nav:hover {
-  background: rgba(0, 0, 0, 0.8);
-  transform: translateY(-50%) scale(1.1);
-  border-color: var(--interactive-accent);
+button.gallery-modal-nav.prev {
+  left: 20px;
+}
+
+button.gallery-modal-nav.prev::before {
+  transform: translateX(3px) rotate(-45deg);
+}
+
+button.gallery-modal-nav.next {
+  right: 20px;
+}
+
+button.gallery-modal-nav.next::before {
+  transform: translateX(-3px) rotate(135deg);
+}
+
+button.gallery-modal-nav:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+button.gallery-modal-nav:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.gallery-modal-content.is-single button.gallery-modal-nav {
+  display: none;
+}
+
+/* Idle: hide the controls until the mouse moves or a key is pressed */
+.gallery-modal-content.is-idle .gallery-modal-toolbar,
+.gallery-modal-content.is-idle button.gallery-modal-nav {
+  opacity: 0;
+}
+
+.gallery-modal-content.is-idle {
+  cursor: none;
+}
+
+/* Touch screens have no hover, so keep the controls visible */
+@media (hover: none) {
+  .gallery-modal-content.is-idle .gallery-modal-toolbar,
+  .gallery-modal-content.is-idle button.gallery-modal-nav {
+    opacity: 1;
+  }
+
+  .gallery-modal-content.is-idle {
+    cursor: auto;
+  }
 }
 
 /* Mobile responsive layout */
 @media (max-width: 600px) {
-  .gallery-modal-content {
-    width: 95vw;
-    height: 95vh;
+  .gallery-modal-image-container img {
+    max-width: 100%;
+    max-height: calc(100% - 120px);
+  }
+  .gallery-modal-caption {
+    padding: 24px 16px 14px;
   }
   .gallery-modal-info-panel.visible {
     width: 100%;
@@ -1219,18 +1401,27 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    height: 35vh;
+    height: 40vh;
+    padding: 20px;
     border-left: none;
-    border-top: 1px solid var(--background-modifier-border);
-    z-index: 1004;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 4;
   }
-  .gallery-modal-nav {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
+  button.gallery-modal-nav {
+    width: 38px;
+    height: 38px;
   }
-  .gallery-modal-nav.prev { left: 8px; }
-  .gallery-modal-nav.next { right: 8px; }
+  button.gallery-modal-nav.prev { left: 8px; }
+  button.gallery-modal-nav.next { right: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-modal,
+  .gallery-modal-toolbar,
+  button.gallery-modal-nav,
+  .gallery-modal-caption {
+    transition: none;
+  }
 }
 
 /* Professional Error Placeholder Styles */
@@ -1437,6 +1628,14 @@
   gap: 0.35em;
   color: var(--text-error);
   font-size: var(--font-ui-small);
+  padding: 2px var(--size-4-2);
+  opacity: 0.85;
+}
+
+/* Non-fatal notes under a gallery, e.g. ignored view options */
+.gallery-warning-compact {
+  color: var(--text-warning, var(--color-orange));
+  font-size: var(--font-ui-smaller);
   padding: 2px var(--size-4-2);
   opacity: 0.85;
 }
@@ -1949,78 +2148,268 @@ button.gallery-settings-tab-btn.is-active {
 }
 
 /* ==========================================================================
-   Full-Width Immich Connections Layout (Providers Tab)
+   Providers Tab: connection cards (shared by Immich and Nextcloud)
    ========================================================================== */
 
-.setting-item.gallery-immich-connections-setting {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
+.setting-item.gallery-provider-setting {
+  display: block;
   border-top: none;
   padding-top: 4px;
 }
 
-.setting-item.gallery-immich-connections-setting .setting-item-info {
-  width: 100%;
-  max-width: 100%;
-  margin-bottom: 4px;
-}
-
-.setting-item.gallery-immich-connections-setting .setting-item-name {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text-normal);
-}
-
-.setting-item.gallery-immich-connections-setting .setting-item-control {
-  width: 100%;
-  max-width: 100%;
-  justify-content: flex-start;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.immich-connections-container {
-  width: 100%;
+.gallery-provider-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.immich-connection-item {
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--background-secondary);
+.gallery-provider-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.gallery-provider-empty-hint {
+  color: var(--text-faint);
+}
+
+.gallery-provider-card {
   border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 0;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  border-radius: var(--radius-m, 8px);
+  background: var(--background-primary-alt);
+  transition: border-color 0.15s ease;
 }
 
-.immich-connection-item:hover {
+.gallery-provider-card:hover,
+.gallery-provider-card.is-open {
   border-color: var(--background-modifier-border-hover);
 }
 
-.immich-connection-summary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.95rem;
-  outline: none;
-  user-select: none;
-  padding: 4px 0;
-  color: var(--text-normal);
+.gallery-provider-card-header {
   display: flex;
   align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: var(--radius-m, 8px);
 }
 
-.immich-connection-title {
-  margin-left: 8px;
+.gallery-provider-card-header:focus-visible {
+  box-shadow: 0 0 0 2px var(--interactive-accent);
+  outline: none;
 }
 
-.immich-connection-content {
-  margin-top: 10px;
-  padding-top: 10px;
+.gallery-provider-card-icon,
+.gallery-provider-card-chevron {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.gallery-provider-card-icon svg,
+.gallery-provider-card-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+.gallery-provider-card-chevron {
+  transition: transform 0.15s ease;
+}
+
+.gallery-provider-card.is-open .gallery-provider-card-chevron {
+  transform: rotate(90deg);
+}
+
+.gallery-provider-card-titles {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.gallery-provider-card-key {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+  color: var(--text-normal);
+  white-space: nowrap;
+}
+
+.gallery-provider-card-key.is-unnamed {
+  font-family: var(--font-interface);
+  font-weight: 500;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.gallery-provider-card-host {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Status label: a coloured dot plus text */
+.gallery-provider-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.gallery-provider-status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.gallery-provider-status.is-testing::before {
+  background: var(--color-yellow);
+}
+
+.gallery-provider-status.is-ok {
+  color: var(--color-green);
+}
+
+.gallery-provider-status.is-ok::before {
+  background: var(--color-green);
+}
+
+.gallery-provider-status.is-error {
+  color: var(--text-error);
+}
+
+.gallery-provider-status.is-error::before {
+  background: var(--text-error);
+}
+
+.gallery-provider-card-problems:empty {
+  display: none;
+}
+
+.gallery-provider-card-problems {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 12px 8px 38px;
+}
+
+.gallery-provider-problem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-warning, var(--color-orange));
+}
+
+.gallery-provider-problem-icon {
+  display: inline-flex;
+}
+
+.gallery-provider-problem-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.gallery-provider-card-body {
+  display: none;
+  padding: 0 12px 8px;
   border-top: 1px solid var(--background-modifier-border);
+}
+
+.gallery-provider-card.is-open .gallery-provider-card-body {
+  display: block;
+}
+
+.gallery-provider-card-body .setting-item {
+  padding: 10px 0;
+}
+
+.gallery-provider-card-body .setting-item:first-child {
+  border-top: none;
+}
+
+.gallery-provider-secret {
+  font-family: var(--font-monospace);
+}
+
+.gallery-provider-usage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.gallery-provider-usage code {
+  font-size: var(--font-ui-small);
+}
+
+.gallery-provider-copy {
+  padding: 2px;
+}
+
+.gallery-provider-card-body .setting-item.gallery-provider-actions,
+.setting-item.gallery-provider-add {
+  border-top: none;
+  padding: 8px 0 0;
+}
+
+.setting-item.gallery-provider-add {
+  padding-top: 4px;
+}
+
+/* Button-only rows: no name column, buttons start at the left */
+.gallery-provider-add .setting-item-info,
+.gallery-provider-actions .setting-item-info {
+  display: none;
+}
+
+.gallery-provider-add .setting-item-control,
+.gallery-provider-actions .setting-item-control {
+  justify-content: flex-start;
+}
+
+@media (max-width: 600px) {
+  .gallery-provider-card-titles {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+/* ==========================================================================
+   Frameless galleries ("Show gallery frame" off, or frame: false)
+   Drops the box around the gallery (border, shadow, background, rounded
+   corners, inner padding) so images sit directly in the note. Thumbnail tiles
+   keep their card look; masonry/justified keep their gaps. Placed last so it
+   wins over the frame rules above, including the dark-theme shadow.
+   ========================================================================== */
+.gallery-container.gallery-frameless,
+.theme-dark .gallery-container.gallery-frameless {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  /* Thumbnail hover lifts would be clipped at the edges without padding */
+  overflow: visible;
+}
+
+.gallery-frameless .gallery-thumbnail-grid,
+.gallery-frameless .gallery-masonry-layout,
+.gallery-frameless .gallery-justified-layout,
+.gallery-frameless .gallery-carousel {
+  padding: 0;
 }

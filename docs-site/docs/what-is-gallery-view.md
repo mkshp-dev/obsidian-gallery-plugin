@@ -9,7 +9,7 @@ sidebar_position: 1
 ## Features
 
 - Display images in thumbnail grids, carousels, masonry columns, or justified rows
-- Click thumbnails to open a full-size modal viewer
+- Click any image to open a full-size viewer with a slideshow, zoom and image details
 - Scan folders recursively for large collections
 - Load images from external URLs, Immich, or Nextcloud (shared links and authenticated connections)
 

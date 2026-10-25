@@ -43,7 +43,7 @@ To add them by hand instead, use **Settings → Gallery View → Providers** (se
 | Field | Value |
 |---|---|
 | Key | `immich-demo` |
-| Base URL | `https://demo-immich.mkshp.dev` |
+| Server URL | `https://demo-immich.mkshp.dev` |
 | API key | `Y8jMqmnnv5ME9wJl78U1D4cIgSGcigtMemcgWMxxE` |
 
 What's on the server: 57 assets (55 photos, 2 videos) taken between January 2024 and October 2026, 10 of them favorites.
@@ -59,7 +59,7 @@ What's on the server: 57 assets (55 photos, 2 videos) taken between January 2024
 | Field | Value |
 |---|---|
 | Key | `nextcloud-demo` |
-| Base URL | `https://demo-nextcloud.mkshp.dev` |
+| Server URL | `https://demo-nextcloud.mkshp.dev` |
 | Username | `demo` |
 | App password | `psMXy2P4j2YZSjJuALSukdyzkjhIBAAqgUkQVFavPQPyRqkZfrkAXZhIknna8IIpLHsVgr8M` |
 

@@ -2,6 +2,7 @@ import { App } from 'obsidian';
 import { ShowcaseGenerator, ShowcaseOptions } from '../../src/generators/ShowcaseGenerator';
 import { DEMO } from '../../src/generators/DemoServers';
 import { ParameterParser } from '../../src/processors/ParameterParser';
+import { readViewOptions } from '../../src/models/viewOptions';
 
 // jsdom has no canvas implementation, so stub the image renderer
 jest.mock('../../src/generators/DemoImageFactory', () => {
@@ -43,6 +44,10 @@ describe('showcase notes', () => {
             if (path.includes('Error states')) continue;
             for (const block of galleryBlocks(content)) {
                 expect(() => ParameterParser.parseAndValidate(block)).not.toThrow();
+                // No ignored view options, except where a note shows that on purpose
+                if (!block.includes('rowHeight: 200')) {
+                    expect(readViewOptions(ParameterParser.parseAndValidate(block).view).warnings).toEqual([]);
+                }
                 checked++;
             }
         }

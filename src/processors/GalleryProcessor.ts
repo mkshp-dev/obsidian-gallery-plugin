@@ -1,11 +1,12 @@
 import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
-import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceConfig, ObsidianDOMExtensions, SourceType } from '../models/interfaces';
+import { IGalleryConfig, IContentScanner, IGalleryView, IImageSource, ISourceConfig, ObsidianDOMExtensions, SourceType, ViewRuntimeOptions } from '../models/interfaces';
 import { GallerySourceResolveContext } from '../resolvers/GallerySourceResolver';
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { resolveViewType } from '../models/viewTypes';
+import { readViewOptions } from '../models/viewOptions';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
@@ -13,7 +14,7 @@ import { ImageLoader } from '../utils/ImageLoader';
 import { IImmichConnection, INextcloudConnection } from '../models/interfaces';
 
 export interface IGalleryProcessingOptions {
-  errorDisplayMode?: 'full' | 'text' | 'hidden';
+  errorDisplayMode?: 'full' | 'hidden';
   showLoadingFeedback?: boolean;
   enableValidation?: boolean;
   maxRetries?: number;
@@ -27,6 +28,8 @@ export interface IGalleryProcessingOptions {
         // Caption settings
         showCaptions?: boolean;
         captionMaxLines?: number;
+        // Gallery frame (border, background, padding); overridable per-gallery via frame:
+        showFrame?: boolean;
         // Pagination defaults (overridable per-gallery via the view: config)
         pagination?: boolean;
         itemsPerPage?: number;
@@ -95,6 +98,7 @@ export class GalleryProcessor {
         ,enableLifecycleLogging: false
         ,showCaptions: true
         ,captionMaxLines: 1
+        ,showFrame: true
         ,pagination: false
         ,itemsPerPage: 24
     };
@@ -492,15 +496,7 @@ export class GalleryProcessor {
                     try {
                         // Preferred: view has a setOptions API
                         if (view.setOptions) {
-                            const paginationOverrides = GalleryProcessor.getViewPaginationOverrides(config);
-                            view.setOptions({
-                                remoteLoadTimeoutMs: options.timeoutMs,
-                                allowRemoteImages: options.allowRemoteImages,
-                                showCaptions: options.showCaptions,
-                                captionMaxLines: options.captionMaxLines,
-                                pagination: paginationOverrides.pagination ?? options.pagination,
-                                itemsPerPage: paginationOverrides.itemsPerPage ?? options.itemsPerPage
-                            });
+                            view.setOptions(GalleryProcessor.viewRuntimeOptions(config, options));
                         }
                     } catch (error) { Logger.debug('Ignored error:', error); }
 
@@ -633,20 +629,26 @@ export class GalleryProcessor {
     }
 
     /**
-     * Extract per-gallery pagination overrides from the config's view: block,
-     * e.g. `view: { type: grid, pagination: true, itemsPerPage: 12 }`.
-     * Returns undefined values for anything not explicitly set, so callers can
-     * fall back to the plugin-wide defaults.
+     * Options for a gallery's view: the plugin settings, overridden by the block's view: options
+     * (pagination, itemsPerPage, captions, sizes). Ignored view options become warnings shown
+     * under the gallery, unless error messages are hidden.
      */
-    private static getViewPaginationOverrides(config: IGalleryConfig): { pagination?: boolean; itemsPerPage?: number } {
-        const view = config.view;
-        if (!view || typeof view !== 'object') return {};
-
-        const raw = view as Record<string, unknown>;
-        const overrides: { pagination?: boolean; itemsPerPage?: number } = {};
-        if (typeof raw.pagination === 'boolean') overrides.pagination = raw.pagination;
-        if (typeof raw.itemsPerPage === 'number' && raw.itemsPerPage > 0) overrides.itemsPerPage = raw.itemsPerPage;
-        return overrides;
+    private static viewRuntimeOptions(config: IGalleryConfig, settings: Required<IGalleryProcessingOptions>): ViewRuntimeOptions {
+        const { options: block, warnings } = readViewOptions(config.view);
+        return {
+            remoteLoadTimeoutMs: settings.timeoutMs,
+            allowRemoteImages: settings.allowRemoteImages,
+            showCaptions: block.captions ?? settings.showCaptions,
+            frame: block.frame ?? settings.showFrame,
+            captionMaxLines: settings.captionMaxLines,
+            pagination: block.pagination ?? settings.pagination,
+            itemsPerPage: block.itemsPerPage ?? settings.itemsPerPage,
+            rowHeight: block.rowHeight,
+            columnWidth: block.columnWidth,
+            gap: block.gap,
+            height: block.height,
+            warnings: settings.errorDisplayMode === 'hidden' ? [] : warnings
+        };
     }
 
     /**
@@ -824,15 +826,7 @@ export class GalleryProcessor {
             const currentOpts = { ...this.DEFAULT_OPTIONS, ...(this.getOptions ? this.getOptions() : {}) };
 
             if (gallery.view.setOptions) {
-                const paginationOverrides = GalleryProcessor.getViewPaginationOverrides(gallery.config);
-                gallery.view.setOptions({
-                    remoteLoadTimeoutMs: currentOpts.timeoutMs,
-                    allowRemoteImages: currentOpts.allowRemoteImages,
-                    showCaptions: currentOpts.showCaptions,
-                    captionMaxLines: currentOpts.captionMaxLines,
-                    pagination: paginationOverrides.pagination ?? currentOpts.pagination,
-                    itemsPerPage: paginationOverrides.itemsPerPage ?? currentOpts.itemsPerPage
-                });
+                gallery.view.setOptions(GalleryProcessor.viewRuntimeOptions(gallery.config, currentOpts));
             }
 
             if (refreshSources === 'none') {

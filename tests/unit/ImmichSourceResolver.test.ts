@@ -117,6 +117,23 @@ describe('ImmichSourceResolver', () => {
         expect(getBlobUrlMock).toHaveBeenCalledWith('asset1', 'original');
     });
 
+    it('gives tile-view images a preview-size version for the image viewer', async () => {
+        const source: IImmichSourceConfig = { type: 'immich', connection: 'home', filters: { albumIds: ['album1'] } };
+        (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue([{ id: 'asset1', originalFileName: 'photo1.jpg' }]);
+        const getBlobUrlMock = (ImmichClient.prototype.getAssetBlobUrl as jest.Mock)
+            .mockImplementation(async (_id: string, rep: string) => `blob:${rep}`);
+
+        const tile = (await resolver.resolve(source, { viewType: 'masonry' })).images[0];
+        await expect(tile.resolveDisplayUrl!()).resolves.toBe('blob:thumbnail');
+        await expect(tile.resolveLargeUrl!()).resolves.toBe('blob:preview');
+
+        // The carousel already loads the preview size, so it has no separate larger version
+        getBlobUrlMock.mockClear();
+        const slide = (await resolver.resolve(source, { viewType: 'carousel' })).images[0];
+        await expect(slide.resolveLargeUrl!()).resolves.toBe('blob:preview');
+        expect(getBlobUrlMock).toHaveBeenCalledTimes(1);
+    });
+
     it('should resolve and fetch blobs successfully for favorites', async () => {
         const source: IImmichSourceConfig = { type: 'immich', connection: 'home', filters: { isFavorite: true } };
 

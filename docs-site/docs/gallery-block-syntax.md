@@ -49,7 +49,7 @@ view:                  # long form, with options
 | `type` | `thumbnail`, `carousel`, `masonry`, `justified`, `embed` | `thumbnail` | The layout. The older name `grid` is still accepted and renders as `masonry`. |
 | `pagination` | `true` / `false` | The **Enable pagination by default** setting (off) | Show a fixed number of images per page with Prev/Next buttons, instead of one long scroll. All views except `carousel`. |
 | `itemsPerPage` | whole number, 1–10000 | The **Images per page** setting (24) | Images per page when pagination is on. All views except `carousel`. |
-| `captions` | `true` / `false` | The **Show captions** setting (on) | Show or hide captions for this gallery. All views. |
+| `captions` | `true` / `false` | The **Show captions** setting (on) | `true`: captions under each image. `false`: captions only on hover. All views. |
 | `rowHeight` | number of pixels, 40–1000 | 220 | Target row height. `justified` only. |
 | `columnWidth` | number of pixels, 60–1000 | 220 | Minimum column width; the number of columns follows the note's width. `masonry` only. |
 | `gap` | number of pixels, 0–64 | 8 (masonry), 4 (justified) | Space between images. `masonry` and `justified`. |

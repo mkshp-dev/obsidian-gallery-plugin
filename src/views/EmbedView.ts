@@ -67,7 +67,9 @@ export class EmbedView extends GalleryView {
         }
       });
 
-      const el = this.createElement(wrapper, 'img', { cls: 'gallery-embed-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;
+      // The frame hugs the image (which can be narrower than the note), so a hover caption sits on it
+      const frame = this.createElement(wrapper, 'div', { cls: 'gallery-media-frame' });
+      const el = this.createElement(frame, 'img', { cls: 'gallery-embed-image', attr: { alt: img.displayName || `Image ${idx + 1}` } }) as HTMLImageElement;
 
       if (img.type === 'external' && !this.allowRemoteImages) {
         el.alt = img.displayName || 'External image blocked';
@@ -80,7 +82,7 @@ export class EmbedView extends GalleryView {
         loader.observe(el, () => this.resolveImageUrl(img), (error) => this.handleImageError(img, error));
       }
 
-      this.renderCaption(wrapper, img);
+      this.renderCaption(wrapper, img, frame);
     });
 
     this.renderPaginationControls(this.container);

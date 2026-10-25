@@ -29,7 +29,7 @@ For Immich and Nextcloud galleries, the viewer first shows the small image the g
 
 ## Captions
 
-Captions show under the images (over them on hover in the justified view) and in the viewer's details. Where they come from:
+With captions on, they show under each image. With captions off, a caption appears over the bottom of an image only while you hover over it or focus it with the keyboard, and not at all on touch screens. Captions also appear in the image viewer's details (ℹ️). Where they come from:
 
 | Source | Caption |
 |---|---|
@@ -37,4 +37,4 @@ Captions show under the images (over them on hover in the justified view) and in
 | `immich`, `immich-share` | The photo's description in Immich, otherwise the file name |
 | `local`, `nextcloud`, `nextcloud-share` | The file name |
 
-Turn captions off, or change how many lines they may use, in [Settings](../settings.md#general-tab).
+Turn captions on or off, or change how many lines they may use, in [Settings](../settings.md#general-tab). A gallery can override the setting with `captions: true` or `captions: false` in its `view:` block.

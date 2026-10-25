@@ -10,7 +10,8 @@ interface JustifiedRow {
 /**
  * JustifiedView
  * Rows of equal height that exactly fill the width, with each image uncropped at its own width
- * (the layout used by Immich, Google Photos and Flickr). Captions show over the image on hover.
+ * (the layout used by Immich, Google Photos and Flickr). With captions on, each row grows by the
+ * caption line under its images; the row height is the image height.
  *
  * Tunable from CSS: --gallery-justified-row-height (target row height) and --gallery-justified-gap.
  */

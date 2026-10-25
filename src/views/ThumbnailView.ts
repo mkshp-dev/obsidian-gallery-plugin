@@ -150,12 +150,7 @@ export class ThumbnailView extends GalleryView {
             }
         });
 
-        // Caption overlay (visible on hover/focus only when persistent captions are disabled)
-        if (!this.showCaptions) {
-            itemEl.createDiv({ cls: 'gallery-thumbnail-caption', text: image.displayName || '' });
-        }
-
-        // Persistent subtitle caption (always visible when enabled)
+        // Caption below the image, or a hover overlay when captions are off
         this.renderCaption(itemEl, image);
 
         // Set initial opacity to 0 for fade-in effect

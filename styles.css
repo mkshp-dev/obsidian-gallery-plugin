@@ -116,28 +116,10 @@
   filter: brightness(1.1) contrast(1.05);
 }
 
-/* Caption overlay */
-.gallery-thumbnail-caption {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 10px 12px;
-  background: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.0));
-  color: white;
-  font-size: 0.95rem;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
-}
-
-.gallery-thumbnail-item:hover .gallery-thumbnail-caption,
-.gallery-thumbnail-item:focus-visible .gallery-thumbnail-caption {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Image caption (subtitle) - rendered below images when enabled */
+/* Image captions, the same in every view:
+   - captions on (.is-below): under the image, part of the layout
+   - captions off (.is-overlay): over the bottom of the image, only on hover or keyboard focus,
+     hidden on touch screens */
 .gallery-caption {
   --gallery-caption-max-lines: 1;
   font-size: 0.8rem;
@@ -151,6 +133,45 @@
   line-clamp: var(--gallery-caption-max-lines);
   word-break: break-word;
   width: 100%;
+}
+
+.gallery-caption.is-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  padding: 18px 10px 6px;
+  color: #fff;
+  text-align: left;
+  font-size: var(--font-ui-small);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+:hover > .gallery-caption.is-overlay,
+:focus-visible .gallery-caption.is-overlay,
+:focus-visible > .gallery-caption.is-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (hover: none) {
+  .gallery-caption.is-overlay {
+    display: none;
+  }
+}
+
+/* Wraps an image that is smaller than its slot (carousel, embed), so hover captions sit on the image */
+.gallery-media-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  vertical-align: top;
 }
 
 /* Enhanced Loading State */
@@ -218,7 +239,7 @@
   border-radius: 4px;
 }
 
-.gallery-carousel-item .gallery-caption {
+.gallery-carousel-item .gallery-caption.is-below {
   margin-top: 8px;
   text-align: center;
   width: 100%;
@@ -320,8 +341,8 @@
 
 .gallery-justified-row {
   display: flex;
+  align-items: flex-start;
   gap: var(--gallery-justified-gap);
-  height: var(--gallery-row-height, var(--gallery-justified-row-height));
 }
 
 .gallery-tile {
@@ -350,44 +371,18 @@
   aspect-ratio: var(--gallery-tile-ratio, 1.5);
 }
 
-.gallery-masonry-tile .gallery-caption {
+.gallery-tile .gallery-caption.is-below {
   background: var(--background-primary);
 }
 
 .gallery-justified-tile {
   flex: var(--gallery-tile-grow, 0) 1 var(--gallery-tile-basis, 0px);
   min-width: 0;
-  height: 100%;
 }
 
+/* The row height is the image height; a caption below adds to the row */
 .gallery-justified-tile .gallery-tile-image {
-  height: 100%;
-}
-
-/* Justified tiles have a fixed height, so captions sit over the bottom of the image */
-.gallery-justified-tile .gallery-caption {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 16px 8px 6px;
-  color: #fff;
-  text-align: left;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
-  pointer-events: none;
-}
-
-/* On devices that can hover, show justified captions only on hover or keyboard focus */
-@media (hover: hover) {
-  .gallery-justified-tile .gallery-caption {
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-
-  .gallery-justified-tile:hover .gallery-caption,
-  .gallery-justified-tile:focus-visible .gallery-caption {
-    opacity: 1;
-  }
+  height: var(--gallery-row-height, var(--gallery-justified-row-height));
 }
 
 @container (max-width: 480px) {
@@ -428,7 +423,7 @@
   height: auto;
 }
 
-.gallery-embed-item .gallery-caption {
+.gallery-embed-item .gallery-caption.is-below {
   margin-top: 0.25em;
   color: var(--text-muted);
   font-size: 0.85em;

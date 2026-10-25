@@ -1,6 +1,8 @@
 import { CarouselView } from '../../src/views/CarouselView';
 import { MasonryView } from '../../src/views/MasonryView';
 import { EmbedView } from '../../src/views/EmbedView';
+import { ThumbnailView } from '../../src/views/ThumbnailView';
+import { JustifiedView } from '../../src/views/JustifiedView';
 import { IImageSource } from '../../src/models/interfaces';
 
 // Minimal mock container that implements a subset of Obsidian's DOM helpers
@@ -155,7 +157,7 @@ describe('Gallery Views - Caption Rendering', () => {
     expect(captionEl.textContent).toBe('Scenic mountain view');
   });
 
-  test('does not render .gallery-caption when showCaptions is false', () => {
+  test('renders the caption as a hover overlay, not below, when showCaptions is false', () => {
     const container = createMockContainer();
     const view = new MasonryView(container as any);
     view.setOptions({ showCaptions: false });
@@ -164,8 +166,39 @@ describe('Gallery Views - Caption Rendering', () => {
     view.update([img]);
     view.render();
 
-    const captionEl = container.querySelector('.gallery-caption');
-    expect(captionEl).toBeNull();
+    expect(container.querySelector('.gallery-caption.is-below')).toBeNull();
+    expect(container.querySelector('.gallery-caption.is-overlay')?.textContent).toBe('Scenic mountain view');
+  });
+
+  describe('every view follows the same caption rule', () => {
+    const views: Array<[string, new (c: HTMLElement) => any, string]> = [
+      ['thumbnail', ThumbnailView, '.gallery-thumbnail-item'],
+      ['carousel', CarouselView, '.gallery-carousel-item'],
+      ['embed', EmbedView, '.gallery-embed-item'],
+      ['masonry', MasonryView, '.gallery-tile'],
+      ['justified', JustifiedView, '.gallery-tile']
+    ];
+
+    test.each(views)('%s: captions on -> below the image, off -> hover overlay on the image', (_name, ViewClass, itemSelector) => {
+      for (const showCaptions of [true, false]) {
+        const container = createMockContainer();
+        const view = new ViewClass(container as any);
+        view.setOptions({ showCaptions });
+        view.update([makeImageWithCaption('photo.jpg', 'Photo Title', 'Scenic mountain view')]);
+
+        const captions = container.querySelectorAll('.gallery-caption');
+        expect(captions).toHaveLength(1);
+        const caption = captions[0] as HTMLElement;
+        expect(caption.classList.contains(showCaptions ? 'is-below' : 'is-overlay')).toBe(true);
+        expect(caption.textContent).toBe('Scenic mountain view');
+        expect(caption.closest(itemSelector)).not.toBeNull();
+        // Overlays sit on the image: inside its frame where the image is smaller than its slot
+        if (!showCaptions && (_name === 'carousel' || _name === 'embed')) {
+          expect(caption.parentElement?.classList.contains('gallery-media-frame')).toBe(true);
+          expect(caption.parentElement?.querySelector('img')).not.toBeNull();
+        }
+      }
+    });
   });
 
   test('falls back to displayName if caption is undefined', () => {

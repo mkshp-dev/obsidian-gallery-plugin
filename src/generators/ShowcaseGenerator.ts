@@ -416,7 +416,7 @@ Pagination can also be turned on for every gallery by default in **Settings → 
 ---
 
 ### Per-gallery layout and captions
-Masonry and justified galleries can set their own sizes in pixels, and any gallery can turn captions on or off for itself. These override the plugin settings for this gallery only.
+Masonry and justified galleries can set their own sizes in pixels, and any gallery can choose its captions: \`captions: true\` shows them under the images, \`captions: false\` only on hover. These override the plugin settings for this gallery only.
 
 \`\`\`obs-gallery
 sources:

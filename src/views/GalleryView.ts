@@ -225,16 +225,20 @@ export abstract class GalleryView implements IGalleryView {
     }
 
     /**
-     * Render caption element for image if showCaptions is true
+     * Render an image's caption, the same way in every view:
+     * - captions on: below the image (`is-below`), taking up space in the layout
+     * - captions off: over the bottom of the image (`is-overlay`), shown only on hover or keyboard
+     *   focus, and not at all on touch screens
+     * `overlayParent` is the element the overlay is positioned over; pass the image's frame when
+     * the image is smaller than `parent`.
      */
-    protected renderCaption(parent: HTMLElement, image: IImageSource): HTMLElement | null {
-        if (!this.showCaptions) return null;
-
+    protected renderCaption(parent: HTMLElement, image: IImageSource, overlayParent: HTMLElement = parent): HTMLElement | null {
         const captionText = image.caption ?? image.displayName;
         if (!captionText) return null;
 
-        const captionEl = this.createElement(parent, 'div', {
-            cls: 'gallery-caption',
+        const below = this.showCaptions;
+        const captionEl = this.createElement(below ? parent : overlayParent, 'div', {
+            cls: `gallery-caption ${below ? 'is-below' : 'is-overlay'}`,
             text: captionText
         });
         captionEl.style.setProperty('--gallery-caption-max-lines', String(this.captionMaxLines));

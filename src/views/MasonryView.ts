@@ -52,9 +52,9 @@ export class MasonryView extends AspectLayoutView {
     this.columns.forEach((column, c) => this.syncChildren(column, assigned[c]));
   }
 
-  /** Height a caption adds below each image (captions are clamped to the same line count) */
+  /** Height a caption adds below each image (captions are clamped to the same line count); hover captions add none */
   private measureCaptionHeight(): number {
-    const caption = this.root?.querySelector<HTMLElement>('.gallery-caption');
+    const caption = this.root?.querySelector<HTMLElement>('.gallery-caption.is-below');
     return caption ? caption.offsetHeight : 0;
   }
 }

@@ -38,13 +38,14 @@ export class CarouselView extends GalleryView {
         if (this.currentIndex >= this._images.length) this.currentIndex = 0;
         this._images.forEach((img) => {
             const item = this.createElement(this.trackEl!, 'div', { cls: 'gallery-carousel-item', attr: { 'data-image-path': img.path } });
-            const el = this.createElement(item, 'img', { cls: 'gallery-carousel-image', attr: { alt: img.displayName } });
+            // The frame hugs the image, so a hover caption sits on the image rather than the slide
+            const frame = this.createElement(item, 'div', { cls: 'gallery-media-frame' });
+            const el = this.createElement(frame, 'img', { cls: 'gallery-carousel-image', attr: { alt: img.displayName } });
 
             // Loaded on demand (see loadAround) so only slides near the current one are fetched
             this.slides.push({ imgEl: el as HTMLImageElement, image: img, requested: false });
 
-            // Render caption below carousel image
-            this.renderCaption(item, img);
+            this.renderCaption(item, img, frame);
 
             // Click to expand
             item.addEventListener('click', (e: MouseEvent) => {

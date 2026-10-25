@@ -73,6 +73,14 @@ describe('CarouselView controls', () => {
     expect(q(container, '.gallery-carousel-indicators')).toBeNull();
   });
 
+  test('marks slides whose caption sits below the image, so CSS can leave room for it', () => {
+    const below = render(2, { showCaptions: true }).container;
+    expect(below.querySelectorAll('.gallery-carousel-item.has-caption-below')).toHaveLength(2);
+
+    const hover = render(2, { showCaptions: false }).container;
+    expect(hover.querySelectorAll('.gallery-carousel-item.has-caption-below')).toHaveLength(0);
+  });
+
   test('the height option sets the stage height for this gallery', () => {
     const { container } = render(2, { height: 300 });
     expect(q(container, '.gallery-carousel')!.style.getPropertyValue('--gallery-carousel-height')).toBe('300px');

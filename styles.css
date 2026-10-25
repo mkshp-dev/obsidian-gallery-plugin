@@ -256,7 +256,7 @@
 }
 
 /* Leave room for a caption under the image */
-.gallery-carousel-item:has(> .gallery-caption.is-below) .gallery-carousel-image {
+.gallery-carousel-item.has-caption-below .gallery-carousel-image {
   max-height: calc(var(--gallery-carousel-height) - 16px - 3.5em);
 }
 

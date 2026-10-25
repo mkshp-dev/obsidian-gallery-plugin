@@ -1454,15 +1454,14 @@ view:
             '',
             '---',
             '',
-            '## Error display mode',
+            '## Error messages setting',
             '',
-            'You can control whether errors are shown at all in **Settings → Gallery View → Error display mode**:',
+            'You can control whether errors are shown at all in **Settings → Gallery View → Error messages**:',
             '',
-            '| Mode | What you see |',
+            '| Setting | What you see |',
             '|---|---|',
-            '| Full *(default)* | Compact `\u26a0\ufe0f gallery: …` line |',
-            '| Text | Same compact line |',
-            '| Hidden | Nothing — errors are silently suppressed |'
+            '| Show *(default)* | Compact `\u26a0\ufe0f gallery: …` line, plus notes about ignored view options |',
+            '| Hide | Nothing — errors and notes are hidden |'
         ];
 
         const content = lines.join('\n') + '\n';

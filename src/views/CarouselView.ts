@@ -55,7 +55,9 @@ export class CarouselView extends GalleryView {
             // Loaded on demand (see loadAround) so only slides near the current one are fetched
             this.slides.push({ imgEl: el as HTMLImageElement, image: img, requested: false });
 
-            this.renderCaption(item, img, frame);
+            const caption = this.renderCaption(item, img, frame);
+            // Lets CSS leave room under the image without a :has() selector
+            if (caption?.classList.contains('is-below')) item.classList.add('has-caption-below');
 
             // Click to expand
             item.addEventListener('click', (e: MouseEvent) => {

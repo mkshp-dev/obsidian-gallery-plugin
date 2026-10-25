@@ -2,6 +2,8 @@
 
 ## In-progress
 
+## 2.6.0 - 2026-10-25
+
 - **Galleries without a frame**: New **Show gallery frame** setting (Settings → Appearance) and `frame:` view option. With the frame off, a gallery drops its border, shadow, background and padding and sits directly in the note; thumbnail tiles keep their card look, and masonry and justified keep their gaps.
 - **Immersive image viewer**: Clicking an image now opens a full-screen dark viewer instead of a framed window, giving the photo the whole screen. The top bar shows the position ("3 / 24") and file name, the caption appears under the photo, and the bar and arrows fade out when the mouse is still. Toolbar buttons use Obsidian's icons instead of emoji, and the arrows are redrawn and centred on the photo (single images have none). New: swipe between images on touch screens, double-click to zoom, and the images either side are preloaded so stepping through is quick. Fixed: the viewer left mouse listeners on the page every time it was opened.
 - **Refreshed carousel**: The carousel now has a fixed-height stage (420 px; set it per gallery with `height`, or for all carousels with `--gallery-carousel-height`), so it no longer changes height between slides. The arrows are drawn chevrons that appear on hover and hide at the first and last slide, a "3 / 12" badge shows the position, and the dots are small with the current one stretched into an accent pill (galleries over 12 images show only the badge). Obsidian's button styles no longer distort the dots and arrows, the slide stays aligned when the pane is resized, and the slide animation respects reduced-motion settings.
@@ -11,6 +13,7 @@
 - **Sharp images in the image viewer**: For Immich and Nextcloud galleries in the thumbnail, masonry and justified views, the viewer showed the gallery's small thumbnail (about 250 px) enlarged. It now shows that thumbnail at once and swaps in Immich's preview size (about 1440 px) or a 2048 px Nextcloud preview as soon as it loads. The 🔗 button (now "Open or save image") uses the larger version too.
 - **Simpler error setting**: "Error display mode" had three options, but "Full" and "Text only" looked the same. It is now **Error messages: Show / Hide**; a saved "Text only" becomes "Show".
 - **Redesigned Providers settings**: Immich and Nextcloud connections are now matching cards that show the key, server and last test result at a glance. Each card lists problems (missing or duplicate key, a server URL without `https://`, empty credentials), hides the Immich API key like the Nextcloud app password, shows the `connection:` line to copy into gallery blocks, and asks for a second click before removing. Edits now take effect right away: leaving a field clears that connection's cached listings and reloads only galleries that use it.
+
 
 ## 2.5.0 - 2026-10-24
 

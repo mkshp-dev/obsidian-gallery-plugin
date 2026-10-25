@@ -1,6 +1,6 @@
 import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
-import { IImageSource } from '../models/interfaces';
+import { IImageSource, ViewRuntimeOptions } from '../models/interfaces';
 import { LazyLoader } from '../utils/LazyLoader';
 
 /**
@@ -18,7 +18,7 @@ export class EmbedView extends GalleryView {
     super('embed', container);
   }
 
-  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number } = {}): void {
+  setOptions(options: ViewRuntimeOptions = {}): void {
     super.setOptions(options);
     if (this.loader && typeof options.remoteLoadTimeoutMs === 'number') {
       this.loader.updateOptions({ timeoutMs: options.remoteLoadTimeoutMs });
@@ -84,6 +84,7 @@ export class EmbedView extends GalleryView {
     });
 
     this.renderPaginationControls(this.container);
+    this.renderWarnings(this.container);
   }
 
   update(images: IImageSource[]): void {

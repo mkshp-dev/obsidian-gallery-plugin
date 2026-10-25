@@ -412,6 +412,45 @@ view:
 \`\`\`
 
 Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination** — the per-gallery \`pagination\`/\`itemsPerPage\` keys shown above override that default.
+
+---
+
+### Per-gallery layout and captions
+Masonry and justified galleries can set their own sizes in pixels, and any gallery can turn captions on or off for itself. These override the plugin settings for this gallery only.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: justified
+  rowHeight: 140
+  gap: 2
+  captions: false
+\`\`\`
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: masonry
+  columnWidth: 150
+  gap: 12
+\`\`\`
+
+An option the view doesn't use, or a misspelt one, is ignored and shown as a note under the gallery:
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+view:
+  type: masonry
+  rowHeight: 200
+\`\`\`
 `;
         await this.app.vault.create(`${this.basePath}/03 - Views.md`, content);
     }

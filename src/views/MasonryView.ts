@@ -11,6 +11,7 @@ import { AspectLayoutView, LayoutTile } from './AspectLayoutView';
 export class MasonryView extends AspectLayoutView {
   protected readonly layoutClass = 'gallery-masonry-layout';
   protected readonly tileClass = 'gallery-masonry-tile';
+  protected readonly layoutVariables = { columnWidth: '--gallery-masonry-column-width', gap: '--gallery-masonry-gap' };
 
   private static readonly COLUMN_WIDTH = 220;
   private static readonly GAP = 8;

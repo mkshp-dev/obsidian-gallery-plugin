@@ -1,6 +1,6 @@
 import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
-import { IImageSource } from '../models/interfaces';
+import { IImageSource, ViewRuntimeOptions } from '../models/interfaces';
 import { LazyLoader } from '../utils/LazyLoader';
 import type { ViewType } from '../models/viewTypes';
 
@@ -31,6 +31,8 @@ export abstract class AspectLayoutView extends GalleryView {
   /** Class of the layout root, e.g. `gallery-masonry-layout`; tiles get `gallery-tile` plus a view class */
   protected abstract readonly layoutClass: string;
   protected abstract readonly tileClass: string;
+  /** CSS variables this layout reads, set per gallery from the block's view: options */
+  protected abstract readonly layoutVariables: Partial<Record<'rowHeight' | 'columnWidth' | 'gap', string>>;
 
   protected root: HTMLElement | null = null;
   protected tiles: LayoutTile[] = [];
@@ -57,6 +59,11 @@ export abstract class AspectLayoutView extends GalleryView {
 
     const root = this.createElement(this.container, 'div', { cls: this.layoutClass });
     this.root = root;
+    // Per-gallery sizes override the theme/snippet values for this gallery only
+    for (const [option, variable] of Object.entries(this.layoutVariables) as [keyof typeof this.layoutOptions, string][]) {
+      const px = this.layoutOptions[option];
+      if (typeof px === 'number') root.style.setProperty(variable, `${px}px`);
+    }
 
     // LazyLoader resolves each image's URL (fetching remote images) only once it nears the viewport
     this.loader = new LazyLoader({
@@ -74,9 +81,10 @@ export abstract class AspectLayoutView extends GalleryView {
     this.observeResize(root);
 
     this.renderPaginationControls(this.container);
+    this.renderWarnings(this.container);
   }
 
-  setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number } = {}): void {
+  setOptions(options: ViewRuntimeOptions = {}): void {
     super.setOptions(options);
     if (this.loader && typeof options.remoteLoadTimeoutMs === 'number') {
       this.loader.updateOptions({ timeoutMs: options.remoteLoadTimeoutMs });

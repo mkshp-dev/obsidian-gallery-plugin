@@ -73,6 +73,7 @@ export class ThumbnailView extends GalleryView {
         });
 
         this.renderPaginationControls(this.container);
+        this.renderWarnings(this.container);
 
         Logger.debug(`Thumbnail view rendered with ${pageImages.length} of ${this._images.length} images`);
     }

@@ -17,6 +17,7 @@ interface JustifiedRow {
 export class JustifiedView extends AspectLayoutView {
   protected readonly layoutClass = 'gallery-justified-layout';
   protected readonly tileClass = 'gallery-justified-tile';
+  protected readonly layoutVariables = { rowHeight: '--gallery-justified-row-height', gap: '--gallery-justified-gap' };
 
   private static readonly ROW_HEIGHT = 220;
   private static readonly GAP = 4;

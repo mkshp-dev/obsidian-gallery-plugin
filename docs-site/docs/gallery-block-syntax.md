@@ -47,10 +47,24 @@ view:                  # long form, with options
 | Key | Values | Default | Description |
 |---|---|---|---|
 | `type` | `thumbnail`, `carousel`, `masonry`, `justified`, `embed` | `thumbnail` | The layout. The older name `grid` is still accepted and renders as `masonry`. |
-| `pagination` | `true` / `false` | The **Enable pagination by default** setting (off) | Show a fixed number of images per page with Prev/Next buttons, instead of one long scroll. Not used by the `carousel` view. |
-| `itemsPerPage` | a whole number above 0 | The **Images per page** setting (24) | Images per page when pagination is on. |
+| `pagination` | `true` / `false` | The **Enable pagination by default** setting (off) | Show a fixed number of images per page with Prev/Next buttons, instead of one long scroll. All views except `carousel`. |
+| `itemsPerPage` | whole number, 1–10000 | The **Images per page** setting (24) | Images per page when pagination is on. All views except `carousel`. |
+| `captions` | `true` / `false` | The **Show captions** setting (on) | Show or hide captions for this gallery. All views. |
+| `rowHeight` | number of pixels, 40–1000 | 220 | Target row height. `justified` only. |
+| `columnWidth` | number of pixels, 60–1000 | 220 | Minimum column width; the number of columns follows the note's width. `masonry` only. |
+| `gap` | number of pixels, 0–64 | 8 (masonry), 4 (justified) | Space between images. `masonry` and `justified`. |
 
-`pagination` and `itemsPerPage` override the plugin-wide defaults in [Settings](./settings.md#general-tab) for this gallery only.
+These options override the plugin settings, and any [CSS snippet](./views/masonry.md#customizing-with-css) sizes, for this gallery only:
+
+```yaml
+view:
+  type: justified
+  rowHeight: 160
+  gap: 2
+  captions: false
+```
+
+A value of the wrong type or out of range (for example `rowHeight: big`) stops the gallery with an error. An unknown option, or one that doesn't apply to the chosen view (for example `rowHeight` on a masonry gallery), is ignored and noted in a line under the gallery, so typos such as `itemPerPage` don't go unnoticed. Turning off **Error messages** in settings hides these notes too.
 
 See the [Views](./category/views) section for each layout, and the [Image viewer](./views/image-viewer.md) for what happens when you click an image.
 

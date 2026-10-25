@@ -31,9 +31,27 @@ For `immich`, `immich-share` and `nextcloud` sources the plugin fetches thumbnai
 
 Add `pagination: true` (optionally with `itemsPerPage`) to page through large collections. See the [Masonry view](./masonry.md#pagination) page for the config keys — they work the same way here.
 
+### Row height and spacing
+
+Set them for one gallery in its `view:` block, in pixels:
+
+````markdown
+```obs-gallery
+sources:
+  - type: immich-share
+    url: https://demo-immich.mkshp.dev/share/7XBAej6IyThZOS7izb78XcEJX7QhYwQBmxtHxaBz7TaaqiP5pxWyZQrN6TIvUGRhI9g
+view:
+  type: justified
+  rowHeight: 280   # target row height (default 220)
+  gap: 2           # space between images (default 4)
+```
+````
+
+Add `captions: false` to hide the hover captions for this gallery.
+
 ### Customizing with CSS
 
-The target row height and spacing are CSS variables, so a [CSS snippet](https://help.obsidian.md/snippets) can change them:
+To change the defaults for every gallery, set the same values as CSS variables in a [CSS snippet](https://help.obsidian.md/snippets):
 
 ```css
 .gallery-justified-layout {

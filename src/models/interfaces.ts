@@ -218,6 +218,24 @@ export interface IImageSource {
   destroy?(): void;
 }
 
+/** Settings and per-gallery `view:` options passed to a view before it renders */
+export interface ViewRuntimeOptions {
+  remoteLoadTimeoutMs?: number;
+  allowRemoteImages?: boolean;
+  showCaptions?: boolean;
+  captionMaxLines?: number;
+  pagination?: boolean;
+  itemsPerPage?: number;
+  /** Justified: target row height in px */
+  rowHeight?: number;
+  /** Masonry: minimum column width in px */
+  columnWidth?: number;
+  /** Masonry and justified: space between images in px */
+  gap?: number;
+  /** Notes shown under the gallery, e.g. ignored view options */
+  warnings?: string[];
+}
+
 export interface IGalleryView {
   /** View type identifier */
   readonly type: ViewType;
@@ -247,7 +265,7 @@ export interface IGalleryView {
   isImageVisible(image: IImageSource): boolean;
 
   /** Optional runtime settings API */
-  setOptions?(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number }): void;
+  setOptions?(options: ViewRuntimeOptions): void;
 
   /** Optional runtime property for remote load timeout */
   remoteLoadTimeoutMs?: number;

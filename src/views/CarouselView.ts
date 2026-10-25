@@ -90,6 +90,7 @@ export class CarouselView extends GalleryView {
         this.addTouchSupport(this.viewport);
 
         this.loadAround(this.currentIndex);
+        this.renderWarnings(this.container);
     }
 
     update(images: IImageSource[]): void {

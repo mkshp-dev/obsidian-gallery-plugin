@@ -17,7 +17,7 @@ The General tab controls core plugin behavior and remote image handling.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Error messages | `Show` | When a gallery can't be shown, `Show` puts a one-line message (starting with ⚠️) in its place; `Hide` shows nothing. |
-| Show captions | `On` | Controls persistent caption display under images in Masonry, Thumbnail, and Carousel views, and on hover in the Justified view. When toggled off, persistent captions are hidden. |
+| Show captions | `On` | Controls persistent caption display under images in Masonry, Thumbnail, and Carousel views, and on hover in the Justified view. When toggled off, persistent captions are hidden. A gallery can override this with `captions: true` or `captions: false` in its `view:` block. |
 | Caption max lines | `1` | Controls the maximum number of text lines displayed for image captions before truncating with an ellipsis (configurable between 1 and 10). |
 | Allow remote images | Off | Enable loading images from external URLs. Disabled by default to protect your privacy. If disabled, any `external` sources in your blocks will be skipped. |
 | Remote load timeout (ms) | 30000 | How long the plugin waits for a remote image to load before giving up. Useful for slow network connections or slow remote servers. |

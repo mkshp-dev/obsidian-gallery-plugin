@@ -1,5 +1,5 @@
 import { Logger } from "../utils/Logger";
-import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions } from '../models/interfaces';
+import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions, ViewRuntimeOptions } from '../models/interfaces';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import type { ViewType } from '../models/viewTypes';
 
@@ -21,6 +21,10 @@ export abstract class GalleryView implements IGalleryView {
     public paginationEnabled: boolean = false;
     public itemsPerPage: number = 24;
     protected currentPage: number = 1;
+    /** Per-gallery layout sizes from the block's view: options (px); views that support them apply them */
+    protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number } = {};
+    /** Notes shown under the gallery, such as ignored view options */
+    protected warnings: string[] = [];
 
     protected lastFocusedElement: HTMLElement | null = null;
     protected activeModal: HTMLElement | null = null;
@@ -115,13 +119,28 @@ export abstract class GalleryView implements IGalleryView {
     /**
      * Apply runtime options to the view. Subclasses may override to react immediately.
      */
-    setOptions(options: { remoteLoadTimeoutMs?: number; allowRemoteImages?: boolean; showCaptions?: boolean; captionMaxLines?: number; pagination?: boolean; itemsPerPage?: number } = {}): void {
+    setOptions(options: ViewRuntimeOptions = {}): void {
         if (typeof options.remoteLoadTimeoutMs === 'number') this.remoteLoadTimeoutMs = options.remoteLoadTimeoutMs;
         if (typeof options.allowRemoteImages === 'boolean') this.allowRemoteImages = options.allowRemoteImages;
         if (typeof options.showCaptions === 'boolean') this.showCaptions = options.showCaptions;
         if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
+        // Passed together for each gallery, so a key that is present but undefined clears an earlier value
+        if ('rowHeight' in options || 'columnWidth' in options || 'gap' in options) {
+            this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap };
+        }
+        if (options.warnings) this.warnings = [...options.warnings];
+    }
+
+    /**
+     * Render the gallery's warnings (e.g. ignored view options) as muted lines. Views call this at
+     * the end of render(), since rendering clears the container.
+     */
+    protected renderWarnings(parent: HTMLElement): void {
+        for (const warning of this.warnings) {
+            this.createElement(parent, 'div', { cls: 'gallery-warning-compact', text: `⚠️ gallery: ${warning}` });
+        }
     }
 
     /**

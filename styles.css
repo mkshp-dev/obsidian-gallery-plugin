@@ -1441,6 +1441,14 @@
   opacity: 0.85;
 }
 
+/* Non-fatal notes under a gallery, e.g. ignored view options */
+.gallery-warning-compact {
+  color: var(--text-warning, var(--color-orange));
+  font-size: var(--font-ui-smaller);
+  padding: 2px var(--size-4-2);
+  opacity: 0.85;
+}
+
 
 /* InlineError Component Styles */
 .gallery-inline-error-container {

@@ -2,8 +2,11 @@
 
 ## In-progress
 
+## 2.6.2 - 2026-10-26
+
 - **Hover captions stay hidden while editing**: With captions off (`captions: false` or **Show captions** off), every caption showed permanently in Live Preview while the editor had focus, as if captions were on. A caption over an image now shows only on hover or when that image has keyboard focus.
 - **View options in the gallery builder**: **Insert gallery** now offers the per-gallery view options for the chosen view: captions and frame for every view, row height (justified), column width (masonry), carousel height, gap (masonry and justified) and pagination. Options left at their default aren't written, and the pagination toggle no longer appears for the carousel, which ignores it.
+
 
 ## 2.6.1 - 2026-10-25
 

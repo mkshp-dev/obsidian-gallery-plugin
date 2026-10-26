@@ -24,12 +24,13 @@ jest.mock('obsidian', () => {
     class MockSetting {
         settingEl: HTMLElement;
         controlEl: HTMLElement;
-        constructor() {
+        constructor(containerEl?: HTMLElement) {
             this.settingEl = document.createElement('div');
             this.controlEl = document.createElement('div');
             this.settingEl.appendChild(this.controlEl);
+            containerEl?.appendChild(this.settingEl);
         }
-        setName() { return this; }
+        setName(name: string) { this.settingEl.dataset.name = name; return this; }
         setDesc() { return this; }
         setHeading() { return this; }
         addText(cb: any) {
@@ -238,8 +239,7 @@ describe('GalleryBuilderModal pagination', () => {
         const container = document.createElement('div');
         (modal as any).addSource('local', container);
         (modal as any).sources[0].path = 'Assets/Photos';
-        (modal as any).pagination = true;
-        (modal as any).itemsPerPage = 12;
+        (modal as any).viewOptions = { pagination: true, itemsPerPage: 12 };
 
         (modal as any).insertGallery();
 
@@ -253,9 +253,58 @@ describe('GalleryBuilderModal pagination', () => {
         const container = document.createElement('div');
         (modal as any).livePreviewContainer = document.createElement('code');
 
-        expect(() => (modal as any).renderPaginationSettings(container)).not.toThrow();
+        expect(() => (modal as any).renderViewOptions(container)).not.toThrow();
 
-        (modal as any).pagination = true;
-        expect(() => (modal as any).renderPaginationSettings(container)).not.toThrow();
+        (modal as any).viewOptions = { pagination: true };
+        expect(() => (modal as any).renderViewOptions(container)).not.toThrow();
+        expect(settingNames(container)).toContain('Images per page');
+    });
+});
+
+const settingNames = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll<HTMLElement>('[data-name]')).map(el => el.dataset.name);
+
+describe('GalleryBuilderModal view options', () => {
+    let mockApp: App;
+    let mockPlugin: GalleryPlugin;
+    let mockEditor: Editor;
+
+    beforeEach(() => {
+        mockApp = {
+            vault: { getAllLoadedFiles: () => [] },
+            workspace: { getActiveFile: () => null }
+        } as unknown as App;
+        mockPlugin = { settings: {} } as unknown as GalleryPlugin;
+        mockEditor = { replaceSelection: jest.fn() } as unknown as Editor;
+    });
+
+    test.each([
+        ['justified', ['Captions', 'Frame', 'Row height', 'Gap', 'Enable pagination']],
+        ['masonry', ['Captions', 'Frame', 'Column width', 'Gap', 'Enable pagination']],
+        ['carousel', ['Captions', 'Frame', 'Carousel height']],
+        ['thumbnail', ['Captions', 'Frame', 'Enable pagination']],
+        ['embed', ['Captions', 'Enable pagination']]
+    ])('shows the options of the %s view', (viewType, expected) => {
+        const modal = new GalleryBuilderModal(mockApp, mockPlugin, mockEditor);
+        const container = document.createElement('div');
+        (modal as any).viewType = viewType;
+
+        (modal as any).renderViewOptions(container);
+
+        expect(settingNames(container)).toEqual(expected);
+    });
+
+    it('inserts the options that apply to the chosen view', () => {
+        const modal = new GalleryBuilderModal(mockApp, mockPlugin, mockEditor);
+        (modal as any).addSource('local', document.createElement('div'));
+        (modal as any).sources[0].path = 'Assets/Photos';
+        (modal as any).viewType = 'justified';
+        // columnWidth and height were set for other views and don't apply to justified
+        (modal as any).viewOptions = { captions: false, frame: true, rowHeight: 150, gap: 15, columnWidth: 300, height: 500 };
+
+        (modal as any).insertGallery();
+
+        const inserted = (mockEditor.replaceSelection as jest.Mock).mock.calls[0][0];
+        expect(inserted).toContain('view:\n  type: justified\n  captions: false\n  frame: true\n  rowHeight: 150\n  gap: 15\n```');
     });
 });

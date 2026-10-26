@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Hover captions stay hidden while editing**: With captions off (`captions: false` or **Show captions** off), every caption showed permanently in Live Preview while the editor had focus, as if captions were on. A caption over an image now shows only on hover or when that image has keyboard focus.
+
 ## 2.6.1 - 2026-10-25
 
 - **No `:has()` in the stylesheet**: The carousel used a `:has()` selector to leave room for captions under the image, which Obsidian's review bot flags because it can slow down style updates. The carousel now marks those slides with a class instead; it looks the same.

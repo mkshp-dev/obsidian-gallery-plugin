@@ -30,9 +30,21 @@ Select the gallery layout from the **View type** dropdown:
 | **Carousel** | Horizontally scrolling view with previous/next navigation. |
 | **Embed** | Continuous, borderless vertical stack at natural image size — feels like part of the note, similar to a native `![[image]]` embed. |
 
-#### Pagination (optional)
+#### View options (optional)
 
-For Masonry, Justified, Thumbnail, and Embed views, toggle **Enable pagination** to page through large collections with Prev/Next controls instead of lazy-loading everything into one continuous scroll. Once enabled, an **Images per page** field appears to set how many images are shown per page.
+Below the view type, the builder shows the [view options](./gallery-block-syntax) that apply to the chosen view. Options left at their default are not written to the block, so the gallery follows the plugin settings.
+
+| Option | Views | Description |
+|--------|-------|-------------|
+| **Captions** | All | **Under images** (`captions: true`) or **On hover only** (`captions: false`). |
+| **Frame** | All but Embed | **Show** or **Hide** the gallery's frame (`frame:`). |
+| **Row height** | Justified | Target row height in pixels (`rowHeight:`). |
+| **Column width** | Masonry | Minimum column width in pixels (`columnWidth:`). |
+| **Carousel height** | Carousel | Height of the slide area in pixels (`height:`). |
+| **Gap** | Masonry, Justified | Space between images in pixels (`gap:`). |
+| **Enable pagination** | All but Carousel | Page through large collections with Prev/Next controls instead of lazy-loading everything into one continuous scroll. Once enabled, an **Images per page** field appears. |
+
+Sizes outside an option's range are left out of the block. Values are kept when you switch view types, so switching back restores them.
 
 ### 2. Add Sources
 

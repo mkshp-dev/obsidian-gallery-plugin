@@ -1,10 +1,15 @@
 import { ISourceConfig } from '../models/interfaces';
+import { VIEW_OPTIONS, ViewBlockOptions } from '../models/viewOptions';
+import { resolveViewType } from '../models/viewTypes';
+
+/** Order the view options are written in */
+const VIEW_OPTION_ORDER: (keyof ViewBlockOptions)[] = ['captions', 'frame', 'rowHeight', 'columnWidth', 'height', 'gap', 'pagination', 'itemsPerPage'];
 
 export class GalleryYamlGenerator {
     static generateYaml(
         sources: Partial<ISourceConfig>[],
         viewType: string,
-        viewOptions: { pagination?: boolean; itemsPerPage?: number } = {}
+        viewOptions: ViewBlockOptions = {}
     ): string {
         if (!sources || sources.length === 0) {
             throw new Error('At least one source is required.');
@@ -215,11 +220,15 @@ export class GalleryYamlGenerator {
 
         yaml += `view:\n`;
         yaml += `  type: ${viewType}\n`;
-        if (viewOptions.pagination) {
-            yaml += `  pagination: true\n`;
-            if (viewOptions.itemsPerPage !== undefined) {
-                yaml += `  itemsPerPage: ${viewOptions.itemsPerPage}\n`;
-            }
+        // Only options the view uses; others would be ignored with a warning under the gallery
+        const type = resolveViewType(viewType);
+        for (const key of VIEW_OPTION_ORDER) {
+            const value = viewOptions[key];
+            if (value === undefined || !VIEW_OPTIONS[key].views.includes(type)) continue;
+            // Pagination is off unless turned on, and itemsPerPage only matters with it on
+            if (key === 'pagination' && !value) continue;
+            if (key === 'itemsPerPage' && !viewOptions.pagination) continue;
+            yaml += `  ${key}: ${value}\n`;
         }
         yaml += '```\n';
 

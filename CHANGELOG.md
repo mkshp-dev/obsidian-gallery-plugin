@@ -2,7 +2,14 @@
 
 ## In-progress
 
+- **Hover captions stay hidden while editing**: With captions off (`captions: false` or **Show captions** off), every caption showed permanently in Live Preview while the editor had focus, as if captions were on. A caption over an image now shows only on hover or when that image has keyboard focus.
+- **View options in the gallery builder**: **Insert gallery** now offers the per-gallery view options for the chosen view: captions and frame for every view, row height (justified), column width (masonry), carousel height, gap (masonry and justified) and pagination. Options left at their default aren't written, and the pagination toggle no longer appears for the carousel, which ignores it.
+
+## 2.6.1 - 2026-10-25
+
 - **No `:has()` in the stylesheet**: The carousel used a `:has()` selector to leave room for captions under the image, which Obsidian's review bot flags because it can slow down style updates. The carousel now marks those slides with a class instead; it looks the same.
+
+
 ## 2.6.0 - 2026-10-25
 
 - **Galleries without a frame**: New **Show gallery frame** setting (Settings → Appearance) and `frame:` view option. With the frame off, a gallery drops its border, shadow, background and padding and sits directly in the note; thumbnail tiles keep their card look, and masonry and justified keep their gaps.

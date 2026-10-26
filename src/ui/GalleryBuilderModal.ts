@@ -4,14 +4,31 @@ import { ISourceConfig, ILocalSourceConfig, INextcloudSourceConfig, INextcloudSh
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 import { NotePathResolver } from '../utils/NotePathResolver';
+import { VIEW_OPTIONS, ViewBlockOptions } from '../models/viewOptions';
+import { resolveViewType } from '../models/viewTypes';
+
+/** A pixel-size view option: its field label, description and the default shown as a placeholder */
+interface SizeOptionField {
+    key: 'rowHeight' | 'columnWidth' | 'gap' | 'height';
+    name: string;
+    desc: string;
+    placeholder: string;
+}
+
+const SIZE_OPTION_FIELDS: SizeOptionField[] = [
+    { key: 'rowHeight', name: 'Row height', desc: 'Target height of each row, in pixels (40–1000).', placeholder: '220' },
+    { key: 'columnWidth', name: 'Column width', desc: 'Minimum width of each column, in pixels (60–1000).', placeholder: '220' },
+    { key: 'height', name: 'Carousel height', desc: 'Height of the slide area, in pixels (120–1500).', placeholder: '420' },
+    { key: 'gap', name: 'Gap', desc: 'Space between images, in pixels (0–64).', placeholder: 'Default' }
+];
 
 export class GalleryBuilderModal extends Modal {
     private plugin: GalleryPlugin;
     private editor: Editor;
 
     private viewType: string = 'masonry';
-    private pagination: boolean = false;
-    private itemsPerPage: number | undefined = undefined;
+    /** View options set in the builder; only those that apply to the chosen view are written */
+    private viewOptions: ViewBlockOptions = {};
     private sources: Partial<ISourceConfig>[] = [];
     private livePreviewContainer!: HTMLElement;
 
@@ -61,12 +78,13 @@ export class GalleryBuilderModal extends Modal {
                 .setValue(this.viewType)
                 .onChange(value => {
                     this.viewType = value;
+                    this.renderViewOptions(viewOptionsContainer);
                     this.refreshLivePreview();
                 })
             );
 
-        const paginationSettingsContainer = viewSection.createDiv('gallery-builder-pagination-settings');
-        this.renderPaginationSettings(paginationSettingsContainer);
+        const viewOptionsContainer = viewSection.createDiv('gallery-builder-view-options');
+        this.renderViewOptions(viewOptionsContainer);
 
         // 2. Sources Section
         const sourcesSection = mainCol.createDiv('gallery-builder-section');
@@ -135,38 +153,89 @@ export class GalleryBuilderModal extends Modal {
     }
 
     /**
-     * Renders the "Enable pagination" toggle and, when enabled, an "Items per
-     * page" field. Applies to Grid, Thumbnail, and Embed views (page through
-     * large collections instead of lazy-loading everything at once).
+     * Renders the view options that apply to the chosen view type (see VIEW_OPTIONS). Values are
+     * kept when switching views, so switching back restores them; the generator writes only the
+     * ones the current view uses. Left at their defaults, options are not written and the
+     * gallery follows the plugin settings.
      */
-    private renderPaginationSettings(container: HTMLElement) {
+    private renderViewOptions(container: HTMLElement) {
         container.empty();
+        const type = resolveViewType(this.viewType);
+        const applies = (key: keyof ViewBlockOptions) => VIEW_OPTIONS[key].views.includes(type);
 
-        new Setting(container)
-            .setName('Enable pagination')
-            .setDesc('Show prev/next page controls instead of lazy-loading the full image list. Applies to grid, thumbnail, and embed views.')
-            .addToggle(toggle => toggle
-                .setValue(this.pagination)
-                .onChange(value => {
-                    this.pagination = value;
-                    this.renderPaginationSettings(container);
-                    this.refreshLivePreview();
-                })
-            );
-
-        if (this.pagination) {
+        if (applies('captions')) {
             new Setting(container)
-                .setName('Images per page')
-                .setDesc('Number of images to display per page.')
-                .addText(text => text
-                    .setPlaceholder('24')
-                    .setValue(this.itemsPerPage?.toString() || '')
+                .setName('Captions')
+                .setDesc('Show captions under the images, or only over an image on hover.')
+                .addDropdown(dropdown => dropdown
+                    .addOptions({ default: 'Plugin setting', below: 'Under images', hover: 'On hover only' })
+                    .setValue(this.viewOptions.captions === undefined ? 'default' : this.viewOptions.captions ? 'below' : 'hover')
                     .onChange(value => {
-                        const parsed = parseInt(value, 10);
-                        this.itemsPerPage = (!isNaN(parsed) && parsed > 0) ? parsed : undefined;
+                        this.viewOptions.captions = value === 'default' ? undefined : value === 'below';
                         this.refreshLivePreview();
                     })
                 );
+        }
+
+        if (applies('frame')) {
+            new Setting(container)
+                .setName('Frame')
+                .setDesc('Draw the gallery inside a frame, or let it sit directly in the note.')
+                .addDropdown(dropdown => dropdown
+                    .addOptions({ default: 'Plugin setting', show: 'Show', hide: 'Hide' })
+                    .setValue(this.viewOptions.frame === undefined ? 'default' : this.viewOptions.frame ? 'show' : 'hide')
+                    .onChange(value => {
+                        this.viewOptions.frame = value === 'default' ? undefined : value === 'show';
+                        this.refreshLivePreview();
+                    })
+                );
+        }
+
+        for (const field of SIZE_OPTION_FIELDS) {
+            if (!applies(field.key)) continue;
+            new Setting(container)
+                .setName(field.name)
+                .setDesc(`${field.desc} Leave empty for the default.`)
+                .addText(text => text
+                    .setPlaceholder(field.placeholder)
+                    .setValue(this.viewOptions[field.key]?.toString() ?? '')
+                    .onChange(value => {
+                        // Out-of-range values would stop the gallery with an error, so they are left out
+                        const parsed = Number(value.trim());
+                        const valid = value.trim() !== '' && VIEW_OPTIONS[field.key].check(parsed) === undefined;
+                        this.viewOptions[field.key] = valid ? parsed : undefined;
+                        this.refreshLivePreview();
+                    })
+                );
+        }
+
+        if (applies('pagination')) {
+            new Setting(container)
+                .setName('Enable pagination')
+                .setDesc('Show prev/next page controls instead of lazy-loading the full image list.')
+                .addToggle(toggle => toggle
+                    .setValue(this.viewOptions.pagination ?? false)
+                    .onChange(value => {
+                        this.viewOptions.pagination = value;
+                        this.renderViewOptions(container);
+                        this.refreshLivePreview();
+                    })
+                );
+
+            if (this.viewOptions.pagination) {
+                new Setting(container)
+                    .setName('Images per page')
+                    .setDesc('Number of images to display per page.')
+                    .addText(text => text
+                        .setPlaceholder('24')
+                        .setValue(this.viewOptions.itemsPerPage?.toString() || '')
+                        .onChange(value => {
+                            const parsed = parseInt(value, 10);
+                            this.viewOptions.itemsPerPage = (!isNaN(parsed) && parsed > 0) ? parsed : undefined;
+                            this.refreshLivePreview();
+                        })
+                    );
+            }
         }
     }
 
@@ -178,10 +247,7 @@ export class GalleryBuilderModal extends Modal {
             return;
         }
         try {
-            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType, {
-                pagination: this.pagination,
-                itemsPerPage: this.itemsPerPage
-            });
+            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType, this.viewOptions);
             this.livePreviewContainer.setText(yaml);
         } catch (e) {
             this.livePreviewContainer.setText(`# Cannot generate preview: ${e instanceof Error ? e.message : String(e)}`);
@@ -1291,10 +1357,7 @@ export class GalleryBuilderModal extends Modal {
 
     private insertGallery() {
         try {
-            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType, {
-                pagination: this.pagination,
-                itemsPerPage: this.itemsPerPage
-            });
+            const yaml = GalleryYamlGenerator.generateYaml(this.sources, this.viewType, this.viewOptions);
             this.editor.replaceSelection(yaml);
             this.close();
         } catch (e) {

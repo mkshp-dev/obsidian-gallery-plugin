@@ -1,3 +1,5 @@
+import { ParameterParser } from '../../src/processors/ParameterParser';
+import { readViewOptions } from '../../src/models/viewOptions';
 import { GalleryYamlGenerator } from '../../src/utils/GalleryYamlGenerator';
 import { ISourceConfig } from '../../src/models/interfaces';
 
@@ -203,6 +205,33 @@ describe('GalleryYamlGenerator', () => {
 
         expect(result).toContain('pagination: true');
         expect(result).not.toContain('itemsPerPage:');
+    });
+
+    it('should emit the view options that apply to the view', () => {
+        const sources: Partial<ISourceConfig>[] = [{ type: 'local', path: 'Assets/Photos' }];
+
+        const result = GalleryYamlGenerator.generateYaml(sources, 'justified', { captions: false, frame: true, rowHeight: 150, gap: 15 });
+
+        expect(result).toContain('view:\n  type: justified\n  captions: false\n  frame: true\n  rowHeight: 150\n  gap: 15\n```');
+    });
+
+    it('should leave out view options the view does not use', () => {
+        const sources: Partial<ISourceConfig>[] = [{ type: 'local', path: 'Assets/Photos' }];
+        const options = { rowHeight: 150, columnWidth: 300, gap: 10, height: 500, frame: false, pagination: true, itemsPerPage: 12 };
+
+        expect(GalleryYamlGenerator.generateYaml(sources, 'carousel', options)).toContain('view:\n  type: carousel\n  frame: false\n  height: 500\n```');
+        expect(GalleryYamlGenerator.generateYaml(sources, 'embed', options)).toContain('view:\n  type: embed\n  pagination: true\n  itemsPerPage: 12\n```');
+    });
+
+    it.each(['thumbnail', 'carousel', 'masonry', 'justified', 'embed'])('should generate a %s block the parser accepts without warnings', (viewType) => {
+        const sources: Partial<ISourceConfig>[] = [{ type: 'local', path: 'Assets/Photos' }];
+        const options = { captions: true, frame: false, rowHeight: 150, columnWidth: 300, gap: 10, height: 500, pagination: true, itemsPerPage: 12 };
+
+        const yaml = GalleryYamlGenerator.generateYaml(sources, viewType, options).replace(/^\s*```obs-gallery\n|```\s*$/g, '');
+        const config = ParameterParser.parseYaml(yaml);
+
+        expect(config.view.type).toBe(viewType);
+        expect(readViewOptions(config.view).warnings).toEqual([]);
     });
 
     it('should throw an error if no sources are provided', () => {

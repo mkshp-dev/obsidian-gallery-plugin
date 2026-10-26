@@ -152,9 +152,11 @@
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
+/* Focus counts only inside the gallery: the Live Preview editor around it is a focused
+   contenteditable, which matches :focus-visible and would show every overlay */
 :hover > .gallery-caption.is-overlay,
-:focus-visible .gallery-caption.is-overlay,
-:focus-visible > .gallery-caption.is-overlay {
+.gallery-view :focus-visible .gallery-caption.is-overlay,
+.gallery-view :focus-visible > .gallery-caption.is-overlay {
   opacity: 1;
   transform: translateY(0);
 }

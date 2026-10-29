@@ -36,6 +36,8 @@ Because GitHub's default token cannot trigger subsequent workflows (e.g. trigger
 ### Step 1 — Prepare the Release Changes
 Ensure all your release changes (such as updates to features, styling, etc.) are committed to `Dev`. Write all your release notes under the `## In-progress` section in [CHANGELOG.md](file:///c:/Users/Asus/Documents/Vaults/plugin_maker/.obsidian/plugins/obsidian-MOC-plugin/CHANGELOG.md).
 
+If the sample photo set for the use-case notes changed (see [scripts/demo-photos.md](scripts/demo-photos.md)), push the photos to `Dev` and wait for the docs deploy first, so the release never offers photos that aren't online yet. The Iceland set must also be on the demo Immich server with the `Iceland` tag, or `Family album (Immich).md` shows "Tag not found".
+
 ### Step 2 — Bump the Version
 Use npm to bump the version without creating a git tag:
 ```bash

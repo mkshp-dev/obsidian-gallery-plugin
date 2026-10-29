@@ -55,6 +55,11 @@ export interface DemoConnectionsResult {
 
 const sameServer = (a: string, b: string) => a.replace(/\/+$/, '').toLowerCase() === b.replace(/\/+$/, '').toLowerCase();
 
+/** True when `settings` already has the Immich demo connection, pointing at the demo server */
+export function hasDemoImmichConnection(settings: GalleryPluginSettings): boolean {
+    return settings.immichConnections.some(c => c.key === DEMO.immichKey && sameServer(c.baseUrl, DEMO.immichUrl));
+}
+
 /**
  * Add the demo connections to `settings`. A connection whose key is already taken is never
  * overwritten: if it points at the demo server it already works, otherwise it is reported as a

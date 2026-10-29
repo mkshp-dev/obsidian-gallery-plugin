@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Use-case notes**: **Create showcase notes** now also writes `GalleryDemo/Use cases/`: notes that show what galleries are for (a travel journal, the same folder in all five layouts, a mood board, a recipe, a paged reference library, a highlights carousel and an Immich family album), each with its gallery block in a collapsed section under the gallery. Their real photos are an optional download (39 photos, about 10 MB, from `docs.mkshp.dev`); the dialog before the notes are created now has a **Download sample photos** toggle, and the notes are still created if the download fails. If you already have `GalleryDemo/`, run the new **Create use-case notes** command to add just these notes. The dialog's **Notes only** button is now **Skip connections**.
+
 ## 2.6.2 - 2026-10-26
 
 - **Hover captions stay hidden while editing**: With captions off (`captions: false` or **Show captions** off), every caption showed permanently in Live Preview while the editor had focus, as if captions were on. A caption over an image now shows only on hover or when that image has keyboard focus.

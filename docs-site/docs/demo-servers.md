@@ -10,6 +10,10 @@ You can try every Immich and Nextcloud source without running your own server. P
 The demo servers are read-only: the credentials below can view photos but cannot change anything. They are run by the plugin's author, so your requests (and your IP address) reach that server. Don't rely on them for anything beyond trying the plugin; they may change or go away.
 :::
 
+:::note Sample photos for the use-case notes
+The dialog shown by **Create showcase notes** and **Create use-case notes** also offers to download 39 sample photos (about 10 MB) for the [use-case notes](use-cases.md). They come from `docs.mkshp.dev`, the host of these docs, not from the demo servers. The download happens once, only if you leave **Download sample photos** on, and the photos are then saved in your vault.
+:::
+
 ## Share links (no setup)
 
 Share links need no connection. Paste any of these into a gallery block:
@@ -46,12 +50,12 @@ To add them by hand instead, use **Settings → Gallery View → Providers** (se
 | Server URL | `https://demo-immich.mkshp.dev` |
 | API key | `Y8jMqmnnv5ME9wJl78U1D4cIgSGcigtMemcgWMxxE` |
 
-What's on the server: 57 assets (55 photos, 2 videos) taken between January 2024 and October 2026, 10 of them favorites.
+What's on the server: 77 assets (75 photos, 2 videos) taken between January 2024 and October 2026, 10 of them favorites. 20 of the photos are an Iceland road trip dated 24–30 August 2026, used by the use-case note **Family album (Immich)**.
 
 | Kind | Values |
 |---|---|
 | Albums | Landscapes `0fe76d50-18b3-4f74-8f7c-3ede043982de` (9) · City `0a33a817-9389-45f5-a99d-6ac12f56dc7f` (6, one video) · Travel `882fef37-436a-49c1-af1a-e444d0216ee0` (7, one video) · People `9a714fd1-36f8-4b3a-ba48-2f3101895dee` (25) |
-| Tags | `Photography` (30) · `Nature` (9) · `Architecture` (5) · `Portraits` (25) |
+| Tags | `Photography` (30) · `Nature` (9) · `Architecture` (5) · `Portraits` (25) · `Iceland` (20) |
 | People | `Alice` · `Bob` · `Carol` · `Dave` (7 photos each) |
 
 ### Nextcloud
@@ -82,12 +86,12 @@ view:
 Every photo and video on the demo servers is free to use. Thanks to the photographers below.
 
 - **CC0 1.0** ([deed](https://creativecommons.org/publicdomain/zero/1.0/)): 51 photos from [StockSnap](https://stocksnap.io) and 2 videos from [Wikimedia Commons](https://commons.wikimedia.org). The videos were converted to MP4 without audio, and some Nextcloud copies were resized or converted to PNG/WebP.
-- **[Unsplash License](https://unsplash.com/license)**: 44 photos from [Unsplash](https://unsplash.com), served by [Lorem Picsum](https://picsum.photos). The `IMG_…` names in the Nextcloud `Camera` folder are made up for the `filenameFilter` examples; the dates in them are not when the photos were taken.
+- **[Unsplash License](https://unsplash.com/license)**: 44 photos from [Unsplash](https://unsplash.com), served by [Lorem Picsum](https://picsum.photos), and 20 Iceland photos on the Immich demo, downloaded from Unsplash. The Iceland photos' dates and captions were set for the demo's made-up road trip; they are not when each photo was taken, and the horse close-up is cropped to a square. The `IMG_…` names in the Nextcloud `Camera` folder are made up for the `filenameFilter` examples; the dates in them are not when the photos were taken.
 
 The names `Alice`, `Bob`, `Carol` and `Dave` in the Immich demo are invented labels for the face-recognition examples, not the names of the people photographed.
 
 <details>
-<summary>Immich demo (57 assets)</summary>
+<summary>Immich demo (77 assets)</summary>
 
 | File | Author | Source | Licence |
 |---|---|---|---|
@@ -148,6 +152,26 @@ The names `Alice`, `Bob`, `Carol` and `Dave` in the Immich demo are invented lab
 | `stocksnap-25.jpg` | Direct Media | [StockSnap](https://stocksnap.io/photo/business-man-DAAZROYMQN) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `ocean-sommaroy.mp4` | Netha Hussain | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Ocean_in_Sommaroy.webm) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `city-timelapse-albury.mp4` | Thennicke | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Wodonga_Place_timelapse_Albury_NSW.webm) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `Aurora over Kirkjufell.jpg` | Landon Arnold | [Unsplash](https://unsplash.com/photos/snow-capped-mountain-under-aurora-PMdiRXbAbhY) | [Unsplash License](https://unsplash.com/license) |
+| `Black sand at Reynisfjara.jpg` | With Paul | [Unsplash](https://unsplash.com/photos/a-large-rock-formation-on-a-beach-next-to-the-ocean-IT6MIkeDr3o) | [Unsplash License](https://unsplash.com/license) |
+| `Canyon of Fjaðrárgljúfur.jpg` | Thomas Fatin | [Unsplash](https://unsplash.com/photos/person-in-blue-jacket-and-blue-denim-jeans-walking-on-green-grass-covered-hill-during-daytime-FHpP-fCpIoo) | [Unsplash License](https://unsplash.com/license) |
+| `Church above Vík.jpg` | Jon Flobrant | [Unsplash](https://unsplash.com/photos/aerial-view-photography-of-white-and-red-concrete-house-near-village-ljKaPW3hFZA) | [Unsplash License](https://unsplash.com/license) |
+| `Diamond Beach ice.jpg` | Andy Mai | [Unsplash](https://unsplash.com/photos/ice-blocks-on-black-stone-fragment-4knR_YzeUVc) | [Unsplash License](https://unsplash.com/license) |
+| `Drifting icebergs at Jökulsárlón.jpg` | Jeremy Bishop | [Unsplash](https://unsplash.com/photos/ice-bergs-and-alp-mountains-facing-calm-body-of-water-h7bQ8VEZtws) | [Unsplash License](https://unsplash.com/license) |
+| `Face to face with an Icelandic horse.jpg` | kyler trautner | [Unsplash](https://unsplash.com/photos/macro-photography-of-brown-horse-uvz0Z9bXGhg) | [Unsplash License](https://unsplash.com/license) |
+| `Glacier view at Jökulsárlón.jpg` | Denys Nevozhai | [Unsplash](https://unsplash.com/photos/brown-soil-and-glacier-mountain-4EV9u4Ru8EQ) | [Unsplash License](https://unsplash.com/license) |
+| `Hallgrímskirkja against a blue sky.jpg` | Toby Elliott | [Unsplash](https://unsplash.com/photos/gray-concrete-pyramid-building-under-blue-sky-12k5U6k2mrQ) | [Unsplash License](https://unsplash.com/license) |
+| `Icebergs in a glacier lagoon.jpg` | Gian-Reto Tarnutzer | [Unsplash](https://unsplash.com/photos/iceberg-on-body-of-water-d8ddeWAc4z4) | [Unsplash License](https://unsplash.com/license) |
+| `Northern lights at Kirkjufell.jpg` | Joshua Earle | [Unsplash](https://unsplash.com/photos/man-standing-beside-the-body-of-water-with-aurora-lights-in-the-sky-Hn8N4I4eHA0) | [Unsplash License](https://unsplash.com/license) |
+| `Puffin on a rock.jpg` | Ray Hennessy | [Unsplash](https://unsplash.com/photos/selective-focus-photography-of-black-and-white-puffin-bird-mpw37yXc_WQ) | [Unsplash License](https://unsplash.com/license) |
+| `Skógafoss from above.jpg` | Adrian Fiodor | [Unsplash](https://unsplash.com/photos/aerial-view-of-a-powerful-waterfall-cascading-over-rocks-dEmsn8I3dHw) | [Unsplash License](https://unsplash.com/license) |
+| `Skógafoss up close.jpg` | Karsten Winegeart | [Unsplash](https://unsplash.com/photos/a-person-standing-in-front-of-a-large-waterfall-v0Py1h6M--c) | [Unsplash License](https://unsplash.com/license) |
+| `Svartifoss and its basalt columns.jpg` | Bailey Galindo | [Unsplash](https://unsplash.com/photos/rocky-waterfalls-ctlDIzk3mRU) | [Unsplash License](https://unsplash.com/license) |
+| `The Blue Lagoon.jpg` | F D | [Unsplash](https://unsplash.com/photos/calm-water-beside-mountain-under-white-clouds-and-blue-sky-vCqclUnCg_8) | [Unsplash License](https://unsplash.com/license) |
+| `Vestrahorn above the Stokksnes dunes.jpg` | Wanderlust in Frame | [Unsplash](https://unsplash.com/photos/brown-grass-field-near-brown-mountain-under-blue-sky-during-daytime-WXlReafPRQQ) | [Unsplash License](https://unsplash.com/license) |
+| `Behind Seljalandsfoss.jpg` | jossemio | [Unsplash](https://unsplash.com/photos/brown-rock-formation-under-white-clouds-during-daytime-9gbMS5A_oKY) | [Unsplash License](https://unsplash.com/license) |
+| `Road through the lava fields.jpg` | Tom Podmore | [Unsplash](https://unsplash.com/photos/gray-concrete-road-near-mountain-under-white-sky-during-daytime-ZkWsC63ultE) | [Unsplash License](https://unsplash.com/license) |
+| `Svínafellsjökull glacier panorama.jpg` | Joseph Corl | [Unsplash](https://unsplash.com/photos/majestic-glacier-flowing-down-a-green-mountainous-landscape-RKVw8t0FEUo) | [Unsplash License](https://unsplash.com/license) |
 
 </details>
 

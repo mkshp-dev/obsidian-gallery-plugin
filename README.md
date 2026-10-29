@@ -70,6 +70,7 @@ Gallery View only makes network requests for sources you configure, or for demo 
 - **Your own sources:** `external`, `immich`, `immich-share`, `nextcloud` and `nextcloud-share` sources contact the server in their URL or connection. External image URLs load only when **Allow remote images** is on.
 - **Demo servers:** the showcase notes for Immich and Nextcloud load photos from public, read-only demo servers run by the plugin's author (`demo-immich.mkshp.dev` and `demo-nextcloud.mkshp.dev`). **Create showcase notes** asks before adding their connections to your settings. When those notes are open, your IP address reaches that server; access logs are kept for about 14 days. See [Try it with the demo servers](https://mkshp-dev.github.io/obsidian-gallery-plugin/docs/demo-servers).
 - **Sample web images:** the showcase's External URLs and Mixed sources notes load sample images from `picsum.photos` when **Allow remote images** is on.
+- **Sample photos (optional):** **Create showcase notes** and **Create use-case notes** can download a set of 39 sample photos (about 10 MB) for the use-case notes from `docs.mkshp.dev`, the documentation site. This happens once, only when you run one of those commands and leave **Download sample photos** on in the dialog; the photos are then saved in your vault under `GalleryDemo/Use cases/_photos/`. See [Use cases](https://docs.mkshp.dev/obsidian-gallery-plugin/docs/use-cases).
 
 The plugin has no telemetry and sends nothing anywhere else.
 

@@ -116,6 +116,8 @@ describe('ShowcaseGenerator', () => {
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/14 - Nextcloud shared link.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/15 - Error states.md', expect.any(String));
         expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/16 - Local test lab.md', expect.any(String));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/Use cases/Start here.md', expect.any(String));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/Use cases/Iceland road trip.md', expect.any(String));
 
         // 4. Verify success notice
         expect(Notice).toHaveBeenCalledWith('Gallery view showcase generated successfully in gallerydemo');

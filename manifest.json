@@ -3,7 +3,7 @@
 	"name": "Gallery View",
 	"version": "2.6.2",
 	"minAppVersion": "1.13.0",
-	"description": "Create interactive image galleries in your notes using obs-gallery code blocks. Supports multiple view types (thumbnail, carousel, grid, embed) and both local vault images and external URLs.",
+	"description": "Turn vault folders, web URLs, Immich and Nextcloud albums into photo galleries in your notes, with masonry, justified, thumbnail, carousel and embed layouts and a full-screen viewer.",
 	"author": "mkshp",
 	"authorUrl": "https://github.com/mkshp-dev",
 	"fundingUrl": {

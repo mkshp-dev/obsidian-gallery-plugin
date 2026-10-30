@@ -43,7 +43,7 @@ function sizedImage(name: string, width: number, height: number): ImageSource {
 }
 
 const tileNames = (parent: Element) =>
-    Array.from(parent.querySelectorAll('.gallery-tile')).map(el => el.getAttribute('aria-label'));
+    Array.from(parent.querySelectorAll('.gallery-tile img')).map(el => el.getAttribute('alt'));
 
 describe('view types', () => {
     test('grid is an alias for masonry', () => {

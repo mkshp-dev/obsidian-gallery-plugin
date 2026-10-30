@@ -176,6 +176,11 @@
   vertical-align: top;
 }
 
+/* The frame's line-height: 0 would leave the overlay caption shorter than its text and clip descenders */
+.gallery-media-frame > .gallery-caption {
+  line-height: var(--line-height-normal, 1.5);
+}
+
 /* Enhanced Loading State */
 .gallery-thumbnail-loading {
   position: absolute;
@@ -1054,9 +1059,9 @@ button.gallery-carousel-indicator:focus-visible {
 }
 
 /* Accessibility */
-.gallery-thumbnail-item:focus,
-.gallery-carousel-nav:focus,
-.gallery-tile:focus {
+.gallery-thumbnail-item:focus-visible,
+.gallery-carousel-nav:focus-visible,
+.gallery-tile:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
@@ -2064,14 +2069,20 @@ button.gallery-builder-remove-icon-btn:hover {
 }
 
 /* Modal Footer */
+/* Sticks to the bottom of the modal, so Insert stays in reach when the builder is taller than the
+   window. The negative side margins stretch its background across the content padding. */
 .gallery-builder-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 10px;
-  margin-top: 20px;
-  padding-top: 16px;
+  margin: 20px -28px 0;
+  padding: 16px 28px;
   border-top: 1px solid var(--background-modifier-border);
+  background: var(--modal-background, var(--background-primary));
 }
 
 .gallery-builder-cancel-btn {

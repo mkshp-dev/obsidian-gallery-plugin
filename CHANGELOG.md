@@ -3,6 +3,12 @@
 ## In-progress
 
 - **Use-case notes**: **Create showcase notes** now also writes `GalleryDemo/Use cases/`: notes that show what galleries are for (a travel journal, the same folder in all five layouts, a mood board, a recipe, a paged reference library, a highlights carousel and an Immich family album), each with its gallery block in a collapsed section under the gallery. Their real photos are an optional download (39 photos, about 10 MB, from `docs.mkshp.dev`); the dialog before the notes are created now has a **Download sample photos** toggle, and the notes are still created if the download fails. If you already have `GalleryDemo/`, run the new **Create use-case notes** command to add just these notes. The dialog's **Notes only** button is now **Skip connections**.
+- **No tooltip over hover captions**: In the thumbnail, masonry, justified and embed views, Obsidian's tooltip with the file name appeared on top of the gallery's own hover caption after a moment. Screen readers still announce each image by name.
+- **Focus ring only for keyboard users**: Clicking a tile or a carousel arrow (or closing the image viewer) no longer leaves an accent outline around it; the outline still shows when you move through the gallery with the keyboard.
+- **Hover captions no longer clipped**: In the carousel and embed views, the caption over the image cut off the bottom of letters like "j" and "g".
+- **Smoother wheel zoom**: Scrolling over the image viewer zooms about 1.25x per mouse-wheel notch, and touchpads zoom in small steps instead of jumping from fitted to close-up.
+- **Insert button stays in view**: When **Insert gallery** is taller than the window, its **Cancel** and **Insert gallery block** buttons now stay at the bottom of the dialog instead of scrolling out of reach.
+- **Use-case note wording**: The thumbnail section of "Iceland — five layouts" now reads "Every photo whole, in an even grid of matching cards." instead of describing square tiles.
 
 ## 2.6.2 - 2026-10-26
 

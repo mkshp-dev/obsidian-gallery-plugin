@@ -1,5 +1,6 @@
 import { MasonryView } from '../../src/views/MasonryView';
 import { ImageSource } from '../../src/models/ImageSource';
+import { wheelZoomFactor } from '../../src/views/GalleryView';
 
 /** Image stand-in that loads (asynchronously) whenever it is given a non-empty src */
 class FakeImage {
@@ -100,5 +101,23 @@ describe('image viewer', () => {
         const removed = remove.mock.calls.map(call => call[0]);
         expect(removed).toEqual(expect.arrayContaining(['mousemove', 'mouseup']));
         remove.mockRestore();
+    });
+});
+
+describe('wheel zoom', () => {
+    test('one mouse-wheel notch zooms by 1.25x', () => {
+        expect(wheelZoomFactor(-100)).toBeCloseTo(1.25);
+        expect(wheelZoomFactor(100)).toBeCloseTo(1 / 1.25);
+    });
+
+    test('small touchpad deltas zoom a little', () => {
+        expect(wheelZoomFactor(-4)).toBeGreaterThan(1);
+        expect(wheelZoomFactor(-4)).toBeLessThan(1.01);
+    });
+
+    test('line and page deltas never zoom more than one notch', () => {
+        expect(wheelZoomFactor(-3, 1)).toBeCloseTo(1.25);
+        expect(wheelZoomFactor(-1, 2)).toBeCloseTo(1.25);
+        expect(wheelZoomFactor(-1000)).toBeCloseTo(1.25);
     });
 });

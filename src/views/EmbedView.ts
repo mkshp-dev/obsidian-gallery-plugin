@@ -49,7 +49,6 @@ export class EmbedView extends GalleryView {
         attr: {
           'data-image-path': img.path,
           'role': 'button',
-          'aria-label': img.displayName || 'Gallery image',
           'tabindex': '0'
         }
       });

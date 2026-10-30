@@ -106,9 +106,9 @@ export class ThumbnailView extends GalleryView {
             }
         });
 
-        // Accessibility: expose as button and provide an accessible name
+        // Accessibility: expose as button. Its name comes from the image's alt text; an aria-label
+        // would also show as an Obsidian tooltip on top of the hover caption.
         itemEl.setAttribute('role', 'button');
-        itemEl.setAttribute('aria-label', image.displayName || 'Gallery image');
 
         // Add click handler for image expansion
         itemEl.addEventListener('click', (e: MouseEvent) => {
@@ -145,7 +145,7 @@ export class ThumbnailView extends GalleryView {
         const imgEl = itemEl.createEl('img', {
             cls: 'gallery-thumbnail-image',
             attr: {
-                'alt': image.displayName,
+                'alt': image.displayName || 'Gallery image',
                 'loading': 'lazy'
             }
         });

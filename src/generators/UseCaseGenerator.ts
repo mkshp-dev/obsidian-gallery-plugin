@@ -267,7 +267,7 @@ ${setupCallout(yaml, [
         const sections: Array<[string, string, string]> = [
             ['Masonry', USE_CASE_BLOCKS.icelandMasonry, 'Columns of uncropped photos, like a pinboard.'],
             ['Justified', USE_CASE_BLOCKS.icelandJustified, 'Rows of equal height that fill the width.'],
-            ['Thumbnail', USE_CASE_BLOCKS.icelandThumbnail, 'An even grid of square tiles.'],
+            ['Thumbnail', USE_CASE_BLOCKS.icelandThumbnail, 'Every photo whole, in an even grid of matching cards.'],
             ['Carousel', USE_CASE_BLOCKS.icelandCarousel, 'One photo at a time, on a stage of fixed height.'],
             ['Embed', USE_CASE_BLOCKS.icelandEmbed, 'Photos at full width, one under the other, like images pasted into the note.']
         ];

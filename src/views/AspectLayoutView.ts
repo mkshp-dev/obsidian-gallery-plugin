@@ -115,7 +115,6 @@ export abstract class AspectLayoutView extends GalleryView {
       attr: {
         'data-image-path': image.path,
         'role': 'button',
-        'aria-label': image.displayName || 'Gallery image',
         'tabindex': '0'
       }
     });

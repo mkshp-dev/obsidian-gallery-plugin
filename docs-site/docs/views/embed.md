@@ -4,6 +4,8 @@ sidebar_position: 5
 
 # Embed view
 
+![Embed view screenshot](Embed.png)
+
 A continuous, borderless vertical stack. Images render at their natural size (scaled down only if wider than the note) with no card background, border, or shadow — so the gallery reads as part of the note itself, similar to a native `![[image]]` embed, rather than a distinct widget.
 
 ````markdown

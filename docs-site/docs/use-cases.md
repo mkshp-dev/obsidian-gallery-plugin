@@ -10,7 +10,7 @@ Every local example uses a path relative to the note (`./_photos/…`), so the g
 
 ## Travel journal
 
-<!-- screenshot: A -->
+![A justified travel gallery opening a photo in the viewer](/img/readme/hero.gif)
 
 A trip write-up with the photos in tidy rows of equal height, each one uncropped. Captions show on hover, so the rows stay clean.
 
@@ -28,13 +28,13 @@ view:
 
 Click a photo to open the full-screen viewer.
 
-<!-- screenshot: C -->
+![The full-screen viewer with the details panel open](views/Viewer.png)
 
 <!-- screenshot: G -->
 
 ## One folder, five layouts
 
-<!-- screenshot: B -->
+![The same photos in five layouts](/img/readme/five-layouts.png)
 
 The same folder as `masonry`, `justified`, `thumbnail`, `carousel` (`height: 480`) and `embed` (with `limit: 3` on the source). Only `view: type` changes.
 
@@ -54,7 +54,7 @@ view:
 
 ## Mood board
 
-<!-- screenshot: F -->
+![A frameless masonry mood board in a note](/img/use-cases/moodboard.png)
 
 A borderless masonry board that sits straight in the note.
 
@@ -127,7 +127,7 @@ view:
 
 ## Family album from Immich
 
-<!-- screenshot: E -->
+![An Immich album shown in a note](/img/use-cases/immich.png)
 
 Photos straight from an Immich server, without copying them into the vault: here, the trip's photos picked out by tag and date. This one uses the [demo server](demo-servers.md).
 

@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **New screenshots**: The README now opens with a GIF of a gallery and the viewer, and shows the five layouts, the viewer and the **Insert gallery** builder; images use absolute URLs so they also load in Obsidian's plugin browser. The docs pages for every view, the viewer, the builder, the Providers tab and the use cases have current screenshots, the docs site has a social card, and the five community-store images are real captures (in `docs-site/static/img/store/`). The plugin description no longer mentions the old grid view.
+
 - **Use-case notes**: **Create showcase notes** now also writes `GalleryDemo/Use cases/`: notes that show what galleries are for (a travel journal, the same folder in all five layouts, a mood board, a recipe, a paged reference library, a highlights carousel and an Immich family album), each with its gallery block in a collapsed section under the gallery. Their real photos are an optional download (39 photos, about 10 MB, from `docs.mkshp.dev`); the dialog before the notes are created now has a **Download sample photos** toggle, and the notes are still created if the download fails. If you already have `GalleryDemo/`, run the new **Create use-case notes** command to add just these notes. The dialog's **Notes only** button is now **Skip connections**.
 
 ## 2.6.2 - 2026-10-26

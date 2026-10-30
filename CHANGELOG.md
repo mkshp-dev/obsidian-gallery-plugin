@@ -2,6 +2,8 @@
 
 ## In-progress
 
+## 2.6.3 - 2026-10-30
+
 - **New screenshots**: The README now opens with a GIF of a gallery and the viewer, and shows the five layouts, the viewer and the **Insert gallery** builder; images use absolute URLs so they also load in Obsidian's plugin browser. The docs pages for every view, the viewer, the builder, the Providers tab and the use cases have current screenshots, the docs site has a social card, and the five community-store images are real captures (in `docs-site/static/img/store/`). The plugin description no longer mentions the old grid view.
 
 - **Use-case notes**: **Create showcase notes** now also writes `GalleryDemo/Use cases/`: notes that show what galleries are for (a travel journal, the same folder in all five layouts, a mood board, a recipe, a paged reference library, a highlights carousel and an Immich family album), each with its gallery block in a collapsed section under the gallery. Their real photos are an optional download (39 photos, about 10 MB, from `docs.mkshp.dev`); the dialog before the notes are created now has a **Download sample photos** toggle, and the notes are still created if the download fails. If you already have `GalleryDemo/`, run the new **Create use-case notes** command to add just these notes. The dialog's **Notes only** button is now **Skip connections**.
@@ -11,6 +13,7 @@
 - **Smoother wheel zoom**: Scrolling over the image viewer zooms about 1.25x per mouse-wheel notch, and touchpads zoom in small steps instead of jumping from fitted to close-up.
 - **Insert button stays in view**: When **Insert gallery** is taller than the window, its **Cancel** and **Insert gallery block** buttons now stay at the bottom of the dialog instead of scrolling out of reach.
 - **Use-case note wording**: The thumbnail section of "Iceland — five layouts" now reads "Every photo whole, in an even grid of matching cards." instead of describing square tiles.
+
 
 ## 2.6.2 - 2026-10-26
 

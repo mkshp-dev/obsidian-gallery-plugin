@@ -32,6 +32,8 @@ The General tab controls core plugin behavior and remote image handling.
 
 ## Providers tab
 
+![The Providers tab with Immich and Nextcloud connections](Providers.png)
+
 The Providers tab manages authenticated connections to your **Immich** and **Nextcloud** servers. These connections are used by the `immich` and `nextcloud` source types to access your personal libraries and folders.
 
 > [!NOTE]

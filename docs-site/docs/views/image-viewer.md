@@ -4,6 +4,8 @@ sidebar_position: 6
 
 # Image viewer
 
+![The image viewer with the details panel open](Viewer.png)
+
 Click an image in any view (or focus it and press **Enter** or **Space**) to open it full size in the image viewer. The viewer steps through every image in the gallery, including those on other pages when pagination is on, and wraps around at the ends.
 
 The viewer fills the screen with the photo on a dark background. The top bar shows where you are (for example **3 / 24**) and the file name, and the image's caption, if it has one, appears under the photo. The bar and arrows fade away after a few seconds without moving the mouse, and come back as soon as you move it or press a key.

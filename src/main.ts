@@ -6,8 +6,9 @@ import { ViewFactory } from './views/ViewFactory';
 import { GalleryProcessor, RefreshSources } from './processors/GalleryProcessor';
 import { VaultWatcher } from './utils/VaultWatcher';
 import { LazyLoader } from './utils/LazyLoader';
-import { ShowcaseGenerator } from './generators/ShowcaseGenerator';
-import { addDemoConnections, DemoConnectionConflict } from './generators/DemoServers';
+import { ShowcaseGenerator, ShowcaseOptions } from './generators/ShowcaseGenerator';
+import { UseCaseGenerator } from './generators/UseCaseGenerator';
+import { addDemoConnections, DemoConnectionConflict, hasDemoImmichConnection } from './generators/DemoServers';
 import { DemoConnectionsModal } from './ui/DemoConnectionsModal';
 import { GallerySettingsTab } from './ui/GallerySettingsTab';
 import { GalleryPluginSettings, DEFAULT_SETTINGS } from './models/settings';
@@ -73,6 +74,14 @@ export default class GalleryPlugin extends Plugin {
             name: 'Create showcase notes',
             callback: async () => {
                 await this.createShowcase();
+            }
+        });
+
+        this.addCommand({
+            id: 'create-use-case-notes',
+            name: 'Create use-case notes',
+            callback: async () => {
+                await this.createUseCases();
             }
         });
 
@@ -227,8 +236,43 @@ export default class GalleryPlugin extends Plugin {
             return;
         }
 
-        const choice = await new DemoConnectionsModal(this.app).ask();
-        if (choice === 'cancel') return;
+        const options = await this.askForDemoSetup();
+        if (options) await generator.generateShowcase(options);
+    }
+
+    /**
+     * Create only the use-case notes, for vaults that already have the showcase. Does nothing if
+     * the use-case folder exists.
+     */
+    private async createUseCases(): Promise<void> {
+        const generator = new UseCaseGenerator(this.app);
+        if (generator.exists()) {
+            new Notice(`${UseCaseGenerator.folder} already exists. Delete or rename it if you want to create the use-case notes again.`);
+            return;
+        }
+
+        const options = await this.askForDemoSetup();
+        if (!options) return;
+        // Skipping the connections here doesn't mean they are missing: an earlier showcase may have added them
+        if (options.demoConnections === 'declined' && hasDemoImmichConnection(this.settings)) {
+            options.demoConnections = 'added';
+        }
+        try {
+            await generator.generate(options);
+            new Notice(`Use-case notes created in ${UseCaseGenerator.folder}`);
+        } catch (error) {
+            console.error('Failed to create the use-case notes:', error);
+            new Notice('Failed to create the use-case notes. Check console for details.');
+        }
+    }
+
+    /**
+     * Ask about the demo connections and sample photos, and add the connections if the user agrees.
+     * Returns null when the user cancels.
+     */
+    private async askForDemoSetup(): Promise<ShowcaseOptions | null> {
+        const { choice, downloadPhotos } = await new DemoConnectionsModal(this.app).ask();
+        if (choice === 'cancel') return null;
 
         let conflicts: DemoConnectionConflict[] = [];
         if (choice === 'add') {
@@ -243,7 +287,7 @@ export default class GalleryPlugin extends Plugin {
             }
         }
 
-        await generator.generateShowcase({ demoConnections: choice === 'add' ? 'added' : 'declined', conflicts });
+        return { demoConnections: choice === 'add' ? 'added' : 'declined', conflicts, downloadPhotos };
     }
 
     /**

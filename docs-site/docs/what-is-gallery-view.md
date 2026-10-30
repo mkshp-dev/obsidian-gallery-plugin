@@ -6,6 +6,8 @@ sidebar_position: 1
 
 **Gallery View** is an Obsidian plugin that lets you create interactive image galleries directly in your vault notes using `obs-gallery` code blocks.
 
+![A justified gallery in a note, opening a photo in the full-screen viewer](/img/readme/hero.gif)
+
 ## Features
 
 - Display images in thumbnail grids, carousels, masonry columns, or justified rows

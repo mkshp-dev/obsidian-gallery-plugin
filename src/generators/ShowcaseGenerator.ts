@@ -3,6 +3,7 @@ import { DUMMY_ASSETS } from './DemoAssets';
 import { ANIMATED_GIF_BASE64, DemoImageSpec, renderDemoImage } from './DemoImageFactory';
 import { Logger } from '../utils/Logger';
 import { DEMO, DemoConnectionConflict } from './DemoServers';
+import { UseCaseGenerator } from './UseCaseGenerator';
 
 /** Mixed shapes, formats, and awkward file names for the local test lab */
 const TEST_LAB_IMAGES: DemoImageSpec[] = [
@@ -28,6 +29,8 @@ export interface ShowcaseOptions {
     demoConnections: 'added' | 'declined';
     /** Demo keys already used by connections to other servers, which were left unchanged */
     conflicts?: DemoConnectionConflict[];
+    /** Whether the user agreed to download the sample photos for the use-case notes */
+    downloadPhotos?: boolean;
 }
 
 export class ShowcaseGenerator {
@@ -85,6 +88,7 @@ export class ShowcaseGenerator {
             await this.createNextcloudSharedLinkNote();
             await this.createErrorStatesNote();
             await this.createLocalTestLabNote();
+            await new UseCaseGenerator(this.app).generate(options);
 
             new Notice('Gallery view showcase generated successfully in gallerydemo');
         } catch (error) {
@@ -165,6 +169,10 @@ You are safe to edit, move, or delete any of these files!
 
 ## What is this?
 These notes contain examples of how to configure image galleries inside your vault.
+
+### 📸 Use cases
+Real notes with real photos (a travel journal, a mood board, a recipe) that show what galleries are for:
+- [[Use cases/Start here|Use cases]] — Start with the index in \`Use cases/\`.
 
 ### 🖼 Local & External Demos
 These notes render images immediately:

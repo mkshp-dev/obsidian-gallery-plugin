@@ -1,6 +1,6 @@
 {
   "name": "obsidian-gallery-plugin",
-  "version": "2.6.2",
+  "version": "2.6.3",
   "description": "Interactive image galleries for Obsidian notes using code blocks",
   "main": "main.js",
   "scripts": {
@@ -34,6 +34,7 @@
     "jest-environment-jsdom": "^30.4.1",
     "jiti": "^2.7.0",
     "obsidian": "^1.13.1",
+    "sharp": "^0.35.5",
     "ts-jest": "^29.4.11",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.61.1",

@@ -3,6 +3,7 @@ import { ShowcaseGenerator, ShowcaseOptions } from '../../src/generators/Showcas
 import { DEMO } from '../../src/generators/DemoServers';
 import { ParameterParser } from '../../src/processors/ParameterParser';
 import { readViewOptions } from '../../src/models/viewOptions';
+import { parseDocument } from 'yaml';
 
 // jsdom has no canvas implementation, so stub the image renderer
 jest.mock('../../src/generators/DemoImageFactory', () => {
@@ -52,6 +53,18 @@ describe('showcase notes', () => {
             }
         }
         expect(checked).toBeGreaterThan(40);
+    });
+
+    test('no gallery block repeats a key (YAML would silently keep only one)', async () => {
+        const notes = await generateNotes();
+        let checked = 0;
+        for (const content of notes.values()) {
+            for (const block of galleryBlocks(content)) {
+                expect(parseDocument(block).errors.map(e => e.message)).toEqual([]);
+                checked++;
+            }
+        }
+        expect(checked).toBeGreaterThan(50);
     });
 
     test('remote examples point at the demo servers, not placeholders', async () => {

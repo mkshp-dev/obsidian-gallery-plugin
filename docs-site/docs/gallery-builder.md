@@ -12,6 +12,8 @@ From the Obsidian command palette (**Ctrl+P** / **Cmd+P**), run:
 
 > **Gallery View: Insert gallery**
 
+![The gallery builder with a local folder source and the generated block](Builder.png)
+
 The builder opens as a modal. When you click **Insert gallery** at the bottom, the generated YAML is inserted at your cursor position in the editor.
 
 ---

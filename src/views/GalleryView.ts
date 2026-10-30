@@ -5,6 +5,17 @@ import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import type { ViewType } from '../models/viewTypes';
 
 /**
+ * Zoom factor for one wheel event in the image viewer: 1.25x per 100px of scroll (one mouse-wheel
+ * notch), less for the small deltas touchpads send. Line and page deltas are converted to pixels,
+ * and one event never zooms more than a notch.
+ */
+export function wheelZoomFactor(deltaY: number, deltaMode: number = 0): number {
+    const px = deltaMode === 1 ? deltaY * 33 : deltaMode === 2 ? deltaY * 800 : deltaY;
+    const clamped = Math.max(-100, Math.min(100, px));
+    return Math.pow(1.25, -clamped / 100);
+}
+
+/**
  * Abstract base class for gallery view renderers
  * Provides common functionality for all view types
  */
@@ -245,6 +256,8 @@ export abstract class GalleryView implements IGalleryView {
             text: captionText
         });
         captionEl.style.setProperty('--gallery-caption-max-lines', String(this.captionMaxLines));
+        // The image's alt text already names the tile; don't have screen readers say it twice
+        if (captionText === image.displayName) captionEl.setAttribute('aria-hidden', 'true');
         return captionEl;
     }
 
@@ -824,14 +837,12 @@ export abstract class GalleryView implements IGalleryView {
             if (currentScale > 1) resetZoom(); else zoom(2.5);
         });
 
-        // Zoom wheel handler
+        // Zoom wheel handler: zoom in proportion to the scroll distance, about 1.25x per mouse-wheel
+        // notch (100px). Touchpads and smooth-scrolling mice send many small events per gesture, so a
+        // fixed step per event made the zoom jump.
         img.addEventListener('wheel', (e: WheelEvent) => {
             e.preventDefault();
-            if (e.deltaY < 0) {
-                zoom(1.1);
-            } else {
-                zoom(1 / 1.1);
-            }
+            zoom(wheelZoomFactor(e.deltaY, e.deltaMode));
         }, { passive: false });
 
         // Pan/Drag handlers. The move/up listeners are on the document so a drag can leave the

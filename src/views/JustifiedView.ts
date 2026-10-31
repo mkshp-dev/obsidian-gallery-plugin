@@ -22,6 +22,11 @@ export class JustifiedView extends AspectLayoutView {
 
   private static readonly ROW_HEIGHT = 220;
   private static readonly GAP = 4;
+  /**
+   * Largest target row height as a fraction of the width. A row height chosen for a wide pane
+   * (say 240px) would put one photo per row on a phone, so narrow galleries scale it down.
+   */
+  private static readonly MAX_ROW_HEIGHT_FRACTION = 0.4;
 
   private rows: HTMLElement[] = [];
 
@@ -38,7 +43,8 @@ export class JustifiedView extends AspectLayoutView {
     // Rows need a width to fill; until the gallery is visible the tiles stay unplaced
     if (width <= 0) return;
 
-    const targetHeight = this.readCssNumber('--gallery-justified-row-height', JustifiedView.ROW_HEIGHT);
+    const targetHeight = JustifiedView.targetRowHeight(
+      this.readCssNumber('--gallery-justified-row-height', JustifiedView.ROW_HEIGHT), width);
     const gap = this.readCssNumber('--gallery-justified-gap', JustifiedView.GAP);
     const rows = JustifiedView.buildRows(this.tiles, width, targetHeight, gap);
 
@@ -54,6 +60,11 @@ export class JustifiedView extends AspectLayoutView {
       }
       this.syncChildren(rowEl, row.tiles);
     });
+  }
+
+  /** The configured row height, capped on narrow galleries so a row still holds a few images */
+  static targetRowHeight(rowHeight: number, width: number): number {
+    return Math.min(rowHeight, width * JustifiedView.MAX_ROW_HEIGHT_FRACTION);
   }
 
   /**

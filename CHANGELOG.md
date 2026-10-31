@@ -2,10 +2,13 @@
 
 ## In-progress
 
+## 2.6.4 - 2026-10-31
+
 - **Justified rows on phones**: A justified gallery with a large row height (like `rowHeight: 240` in the "Iceland road trip" use-case note) showed one photo per row on a phone. The target row height is now capped at 40% of the gallery's width, so narrow galleries keep two or three photos per row; wide ones are unchanged.
 - **Image viewer on phones**: The viewer's top bar no longer sits under the phone's status bar (clock, battery and signal icons), and the caption clears the home indicator. On narrow screens the **Zoom in** and **Zoom out** buttons are hidden so the file name has room.
 - **Pinch to zoom in the viewer**: On touch screens you can now pinch to zoom the image and drag with one finger to move around it. Swiping to the next image still works when the image isn't zoomed.
 - **More use-case screenshots**: The use cases page in the docs now shows the layout being switched, the paged reference library, the highlights carousel and the Immich album on a phone.
+
 
 ## 2.6.3 - 2026-10-30
 

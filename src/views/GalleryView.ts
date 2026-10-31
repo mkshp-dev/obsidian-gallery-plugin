@@ -874,15 +874,44 @@ export abstract class GalleryView implements IGalleryView {
             doc.removeEventListener('mouseup', onDragEnd);
         });
 
-        // Swipe left/right on touch screens to change image (not while zoomed in)
+        // Touch: pinch with two fingers to zoom, drag with one to pan while zoomed in, and swipe
+        // left/right to change image (not while zoomed in or after a pinch)
         let touchStartX = 0;
         let touchStartY = 0;
+        let pinchStartDistance = 0;
+        let pinchStartScale = 1;
+        let wasPinched = false;
+        const touchDistance = (touches: TouchList) =>
+            Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
         imgContainer.addEventListener('touchstart', (e: TouchEvent) => {
+            if (e.touches.length === 2) {
+                wasPinched = true;
+                pinchStartDistance = touchDistance(e.touches);
+                pinchStartScale = currentScale;
+                return;
+            }
+            if (e.touches.length !== 1) return;
+            wasPinched = false;
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
+            startX = touchStartX - translateX;
+            startY = touchStartY - translateY;
         }, { passive: true });
+        imgContainer.addEventListener('touchmove', (e: TouchEvent) => {
+            if (e.touches.length === 2 && pinchStartDistance > 0) {
+                e.preventDefault();
+                currentScale = Math.max(1, Math.min(8, pinchStartScale * touchDistance(e.touches) / pinchStartDistance));
+                updateZoomTransform();
+            } else if (e.touches.length === 1 && currentScale > 1 && !wasPinched) {
+                e.preventDefault();
+                translateX = e.touches[0].clientX - startX;
+                translateY = e.touches[0].clientY - startY;
+                updateZoomTransform();
+            }
+        }, { passive: false });
         imgContainer.addEventListener('touchend', (e: TouchEvent) => {
-            if (currentScale > 1 || !hasSeveral) return;
+            if (e.touches.length < 2) pinchStartDistance = 0;
+            if (wasPinched || currentScale > 1 || !hasSeveral) return;
             const dx = e.changedTouches[0].clientX - touchStartX;
             const dy = e.changedTouches[0].clientY - touchStartY;
             if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) navigate(dx < 0 ? 1 : -1);

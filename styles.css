@@ -1118,7 +1118,12 @@ button.gallery-carousel-indicator:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px 28px;
+  /* Clear the phone's status bar and notch (Obsidian mobile sets --safe-area-inset-*) */
+  padding:
+    calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    calc(14px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px)))
+    28px
+    calc(14px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
   background: linear-gradient(rgba(0, 0, 0, 0.6), transparent);
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -1219,6 +1224,8 @@ button.gallery-modal-close-btn {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  /* The viewer handles pinch, pan and swipe itself */
+  touch-action: none;
 }
 
 .gallery-modal-image-container img {
@@ -1238,7 +1245,7 @@ button.gallery-modal-close-btn {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 28px 80px 18px;
+  padding: 28px 80px calc(18px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   text-align: center;
   font-size: var(--font-ui-medium);
   color: rgba(255, 255, 255, 0.92);
@@ -1400,7 +1407,15 @@ button.gallery-modal-nav:focus-visible {
     max-height: calc(100% - 120px);
   }
   .gallery-modal-caption {
-    padding: 24px 16px 14px;
+    padding: 24px 16px calc(14px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+  /* Pinch zooms on a phone; dropping these buttons leaves room for the file name */
+  button.gallery-modal-tool-btn.zoom-in-btn,
+  button.gallery-modal-tool-btn.zoom-out-btn {
+    display: none;
+  }
+  .gallery-modal-toolbar {
+    gap: 8px;
   }
   .gallery-modal-info-panel.visible {
     width: 100%;

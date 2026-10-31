@@ -138,6 +138,16 @@ describe('JustifiedView', () => {
         expect(rows[0]).toMatchObject({ justified: false, height: 220 });
     });
 
+    test('scales the target row height down on narrow galleries', () => {
+        expect(JustifiedView.targetRowHeight(240, 1000)).toBe(240);
+        expect(JustifiedView.targetRowHeight(240, 330)).toBeCloseTo(132);
+
+        // A 330px phone-width gallery of 3:2 photos at rowHeight 240 packs two per row, not one
+        const tiles = Array.from({ length: 6 }, (_, i) => tile(1.5, String(i)));
+        const rows = JustifiedView.buildRows(tiles, 330, JustifiedView.targetRowHeight(240, 330), 4);
+        expect(rows.every(r => r.tiles.length >= 2)).toBe(true);
+    });
+
     test('renders rows and relays out once an image turns out to have another ratio', () => {
         layoutWidth = 1000;
         const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => { cb(0); return 1; });

@@ -30,15 +30,13 @@ Click a photo to open the full-screen viewer.
 
 ![The full-screen viewer with the details panel open](views/Viewer.png)
 
-<!-- screenshot: G -->
-
 ## One folder, five layouts
 
 ![The same photos in five layouts](/img/readme/five-layouts.png)
 
 The same folder as `masonry`, `justified`, `thumbnail`, `carousel` (`height: 480`) and `embed` (with `limit: 3` on the source). Only `view: type` changes.
 
-<!-- screenshot: H -->
+![Changing view type from masonry to justified, then to carousel; the gallery redraws each time](/img/use-cases/change-layout.gif)
 
 To switch layouts, change one word:
 
@@ -91,7 +89,7 @@ view:
 
 ## Reference library
 
-<!-- screenshot: thumbnail recapture -->
+![A paged thumbnail grid of design references, page 1 of 2](/img/use-cases/reference-library.png)
 
 A paged grid for a folder that keeps growing. Only the current page loads.
 
@@ -109,7 +107,7 @@ view:
 
 ## Highlights carousel
 
-<!-- screenshot: carousel recapture -->
+![A carousel of trip highlights on slide 4 of 8](/img/use-cases/carousel.png)
 
 The first eight photos of a folder, one at a time on a fixed-height stage.
 
@@ -130,6 +128,10 @@ view:
 ![An Immich album shown in a note](/img/use-cases/immich.png)
 
 Photos straight from an Immich server, without copying them into the vault: here, the trip's photos picked out by tag and date. This one uses the [demo server](demo-servers.md).
+
+On a phone, justified rows rewrap to the screen width:
+
+<img src={require('@site/static/img/use-cases/mobile.png').default} alt="The same Immich album on a phone" width="320" />
 
 ````markdown
 ```obs-gallery

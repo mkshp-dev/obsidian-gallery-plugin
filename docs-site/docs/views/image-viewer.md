@@ -17,12 +17,12 @@ For Immich and Nextcloud galleries, the viewer first shows the small image the g
 | Control | Action |
 |---|---|
 | The arrows on the sides, **←** / **→**, or a swipe on a touch screen | Previous / next image |
-| **Play** / **Pause** | Start or pause a slideshow (4 seconds per image). Moving to another image by hand pauses it. |
+| **Play** / **Pause** | Start or pause a slideshow (4 seconds per image; change it with **Slideshow interval** in [Settings](../settings.md)). Moving to another image by hand pauses it. |
 | **Zoom out** / **Zoom in**, the mouse wheel over the image, or a pinch on a touch screen | Zoom out / in. On narrow screens the two buttons are hidden; pinch to zoom instead. |
 | Double-click the image | Zoom in, or back to the whole image |
 | Drag the image (one finger on a touch screen) | Move around a zoomed image |
 | **Reset zoom** | Back to the whole image |
-| **Details** (ⓘ) | Show or hide the details panel: name, path, source type, caption, and size when known |
+| **Details** (ⓘ) | Show or hide the details panel: name, path, source type, caption, and size when known. For photos it also shows when the photo was taken, the camera and the lens, from the photo's EXIF data (local files) or from Immich. Details a photo doesn't have are left out. |
 | **Open or save image** | Open the image in a new tab, or save it, at the size the viewer shows |
 | **Close** (✕), **Esc**, or a click on the dark area around the photo | Close the viewer |
 

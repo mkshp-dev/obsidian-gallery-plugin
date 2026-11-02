@@ -144,6 +144,16 @@ export interface IGalleryConfig {
   sort?: string;
 }
 
+/** Photo details for the image viewer's Details panel; any field may be missing */
+export interface IImageMetadata {
+  /** When the photo was taken, as the camera's local time */
+  takenAt?: Date;
+  /** Camera maker and model, e.g. "Canon EOS R5" */
+  camera?: string;
+  /** Lens model */
+  lens?: string;
+}
+
 export interface IImageSource {
   /** Vault-relative path to image file */
   path: string;
@@ -211,6 +221,15 @@ export interface IImageSource {
    */
   resolveLargeUrl?(): Promise<string>;
 
+  /** Photo details already known for the image (remote sources that send them with the listing) */
+  metadata?: IImageMetadata;
+
+  /**
+   * Get the photo details, reading them on first use (local files read their EXIF data).
+   * Resolves to undefined when there are none; never rejects.
+   */
+  resolveMetadata?(): Promise<IImageMetadata | undefined>;
+
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;
 
@@ -224,6 +243,8 @@ export interface ViewRuntimeOptions {
   allowRemoteImages?: boolean;
   showCaptions?: boolean;
   captionMaxLines?: number;
+  /** Image viewer: seconds between images when the slideshow plays */
+  slideshowInterval?: number;
   pagination?: boolean;
   itemsPerPage?: number;
   /** Draw the gallery's frame: border, background, shadow and padding */

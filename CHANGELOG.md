@@ -2,6 +2,9 @@
 
 ## In-progress
 
+- **Photo details in the viewer**: The image viewer's **Details** panel now also shows when a photo was taken, the camera and the lens. For local images they are read from the photo's EXIF data (JPEG, PNG and WebP), only when you open the panel; Immich photos use the EXIF data Immich already sends. Details a photo doesn't have are left out, and a photo whose EXIF can't be read shows the panel as before.
+- **Slideshow interval**: New **Slideshow interval (seconds)** setting (Settings → Image viewer) sets how long the slideshow shows each image, from 1 to 60 seconds. It is still 4 seconds by default.
+
 ## 2.6.4 - 2026-10-31
 
 - **Justified rows on phones**: A justified gallery with a large row height (like `rowHeight: 240` in the "Iceland road trip" use-case note) showed one photo per row on a phone. The target row height is now capped at 40% of the gallery's width, so narrow galleries keep two or three photos per row; wide ones are unchanged.

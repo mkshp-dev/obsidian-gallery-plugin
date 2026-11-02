@@ -2,7 +2,7 @@ import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { IImageSource, IImmichShareSourceConfig } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImageSource } from '../models/ImageSource';
-import { extractImmichCaption, extractImmichDimensions } from './ImmichSourceResolver';
+import { extractImmichCaption, extractImmichDimensions, extractImmichMetadata } from './ImmichSourceResolver';
 import { ImmichAsset, ImmichAlbum, ImmichShareResponse } from '../models/immich/ImmichTypes';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 import { usesThumbnailImages } from '../models/viewTypes';
@@ -219,6 +219,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
                 const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(assetId);
                 let description = extractImmichCaption(asset);
+                let metadata = extractImmichMetadata(asset);
 
                 // An asset that includes exifInfo but no caption has none; only look up assets without exifInfo
                 if (!description && asset.exifInfo === undefined) {
@@ -230,6 +231,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                         });
                         if (detailRes.status === 200) {
                             description = extractImmichCaption(detailRes.json as ImmichAsset);
+                            metadata = extractImmichMetadata(detailRes.json as ImmichAsset) ?? metadata;
                         }
                     } catch {
                         // ignore detail fetch fallback error
@@ -257,6 +259,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                 // Tile views load small thumbnails; the image viewer uses the preview size instead
                 if (representation === 'thumbnail') image.setLargeLoader(loaderFor('preview'));
                 image.dimensions = extractImmichDimensions(asset);
+                image.metadata = metadata;
                 return image;
             }));
 

@@ -136,6 +136,17 @@ export class GallerySettingsTab extends PluginSettingTab {
             },
             {
                 type: 'group',
+                heading: 'Image viewer',
+                items: [
+                    {
+                        name: 'Slideshow interval (seconds)',
+                        desc: 'How long the slideshow shows each image before moving on to the next one.',
+                        control: { type: 'number', key: 'slideshowInterval', defaultValue: DEFAULT_SETTINGS.slideshowInterval, min: 1, max: 60 }
+                    }
+                ]
+            },
+            {
+                type: 'group',
                 heading: 'Captions',
                 items: [
                     {

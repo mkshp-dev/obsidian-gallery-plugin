@@ -18,6 +18,8 @@ export interface GalleryPluginSettings {
     // Draw the border, background and padding around each gallery (overridable per gallery with frame:)
     showFrame: boolean;
     captionMaxLines: number;
+    // Seconds the image viewer's slideshow shows each image
+    slideshowInterval: number;
     // Pagination defaults (can be overridden per-gallery via the view: config)
     defaultPagination: boolean;
     defaultItemsPerPage: number;
@@ -35,6 +37,7 @@ export const DEFAULT_SETTINGS: GalleryPluginSettings = {
     showCaptions: true,
     showFrame: true,
     captionMaxLines: 1,
+    slideshowInterval: 4,
     defaultPagination: false,
     defaultItemsPerPage: 24,
     immichConnections: [],

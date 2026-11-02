@@ -1,4 +1,4 @@
-import { IImageSource, SourceType } from './interfaces';
+import { IImageMetadata, IImageSource, SourceType } from './interfaces';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 
 /**
@@ -6,6 +6,9 @@ import { ObjectUrlManager } from '../utils/ObjectUrlManager';
  * ObjectUrlManager. The ImageSource that runs it owns that reference and releases it on destroy.
  */
 export type ImageUrlLoader = () => Promise<string>;
+
+/** Reads an image's photo details (EXIF) on demand */
+export type ImageMetadataLoader = () => Promise<IImageMetadata | undefined>;
 
 /**
  * Represents an individual image source within a gallery
@@ -19,6 +22,8 @@ export class ImageSource implements IImageSource {
     public size?: number;
     public mtime?: number;
     public dimensions?: { width: number; height: number };
+    /** Photo details, once known (set directly by sources that list them, or read by the metadata loader) */
+    public metadata?: IImageMetadata;
     public loadState: 'pending' | 'loading' | 'loaded' | 'error';
     public errorMessage?: string;
     public loadStartTime?: number;
@@ -33,6 +38,8 @@ export class ImageSource implements IImageSource {
     private largeLoader?: ImageUrlLoader;
     private largeUrl?: string;
     private pendingLarge: Promise<string> | null = null;
+    private metadataLoader?: ImageMetadataLoader;
+    private pendingMetadata: Promise<IImageMetadata | undefined> | null = null;
 
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
@@ -292,6 +299,37 @@ export class ImageSource implements IImageSource {
                 });
         }
         return this.pendingLarge;
+    }
+
+    /** Give the image a way to read its photo details when the viewer first asks for them */
+    setMetadataLoader(loader: ImageMetadataLoader): void {
+        this.metadataLoader = loader;
+    }
+
+    /** True when the image can read its photo details on demand */
+    hasMetadataLoader(): boolean {
+        return !!this.metadataLoader;
+    }
+
+    /**
+     * Get the photo details, running the metadata loader on first use. Never rejects: a failed
+     * read resolves to undefined and the next call tries again.
+     */
+    async resolveMetadata(): Promise<IImageMetadata | undefined> {
+        if (this.metadata || !this.metadataLoader || this.destroyed) return this.metadata;
+        if (!this.pendingMetadata) {
+            this.pendingMetadata = this.metadataLoader()
+                .then(metadata => {
+                    // An empty result is kept too, so a photo without EXIF isn't read again
+                    if (metadata) this.metadata = metadata;
+                    return this.metadata;
+                })
+                .catch(() => undefined)
+                .finally(() => {
+                    this.pendingMetadata = null;
+                });
+        }
+        return this.pendingMetadata;
     }
 
     /**

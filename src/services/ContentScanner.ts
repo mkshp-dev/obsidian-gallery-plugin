@@ -3,6 +3,7 @@ import { Vault, TFile, TFolder } from 'obsidian';
 import { IContentScanner, IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
 import { FolderScanner } from './FolderScanner';
+import { readExifMetadata } from '../utils/ExifReader';
 
 /**
  * Content scanner service for discovering images in vault
@@ -91,6 +92,8 @@ export class ContentScanner implements IContentScanner {
                 images = await this.folderScanner.scanFolder(abstractFile.path, recursive);
             }
 
+            this.attachMetadataLoaders(images);
+
             // Cache results
             this.cache.set(cacheKey, {
                 images: [...images],
@@ -103,6 +106,22 @@ export class ContentScanner implements IContentScanner {
             Logger.error('Error scanning path:', path, error);
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to scan path "${path}": ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Let local images read their EXIF data (date taken, camera, lens) from the vault when the
+     * image viewer's Details panel first asks for it. Nothing is read while scanning.
+     */
+    private attachMetadataLoaders(images: IImageSource[]): void {
+        for (const image of images) {
+            if (image.type !== 'local' || !(image instanceof ImageSource) || image.hasMetadataLoader()) continue;
+            const path = image.path;
+            image.setMetadataLoader(async () => {
+                const file = this.vault.getAbstractFileByPath(path);
+                if (!(file instanceof TFile)) return undefined;
+                return readExifMetadata(await this.vault.readBinary(file));
+            });
         }
     }
 

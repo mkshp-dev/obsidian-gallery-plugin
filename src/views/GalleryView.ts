@@ -1,5 +1,5 @@
 import { Logger } from "../utils/Logger";
-import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions, ViewRuntimeOptions } from '../models/interfaces';
+import { IGalleryView, IImageSource, IImageMetadata, ObsidianDOMExtensions, CreateElementOptions, ViewRuntimeOptions } from '../models/interfaces';
 import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import type { ViewType } from '../models/viewTypes';
@@ -13,6 +13,23 @@ export function wheelZoomFactor(deltaY: number, deltaMode: number = 0): number {
     const px = deltaMode === 1 ? deltaY * 33 : deltaMode === 2 ? deltaY * 800 : deltaY;
     const clamped = Math.max(-100, Math.min(100, px));
     return Math.pow(1.25, -clamped / 100);
+}
+
+/** Slideshow seconds per image from the setting: 1-60, the default (4) when it isn't a number */
+export function slideshowSeconds(value: unknown): number {
+    const seconds = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(seconds) || seconds <= 0) return 4;
+    return Math.min(60, Math.max(1, seconds));
+}
+
+/** "14 Jul 2024, 18:32" in the reader's locale; undefined for a missing or invalid date */
+export function formatTakenAt(date: Date | undefined): string | undefined {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return undefined;
+    try {
+        return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch {
+        return date.toLocaleString();
+    }
 }
 
 /**
@@ -40,8 +57,10 @@ export abstract class GalleryView implements IGalleryView {
 
     protected lastFocusedElement: HTMLElement | null = null;
     protected activeModal: HTMLElement | null = null;
-    protected slideshowInterval: number | null = null;
+    protected slideshowTimer: number | null = null;
     protected slideshowPlaying: boolean = false;
+    /** Seconds the slideshow shows each image */
+    public slideshowIntervalSeconds: number = 4;
 
     constructor(type: ViewType, container: HTMLElement) {
         this._type = type;
@@ -136,6 +155,7 @@ export abstract class GalleryView implements IGalleryView {
         if (typeof options.allowRemoteImages === 'boolean') this.allowRemoteImages = options.allowRemoteImages;
         if (typeof options.showCaptions === 'boolean') this.showCaptions = options.showCaptions;
         if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
+        if (typeof options.slideshowInterval === 'number') this.slideshowIntervalSeconds = slideshowSeconds(options.slideshowInterval);
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
         // Passed together for each gallery, so a key that is present but undefined clears an earlier value
@@ -607,9 +627,9 @@ export abstract class GalleryView implements IGalleryView {
 
         this.activeModal = modal;
         this.slideshowPlaying = false;
-        if (this.slideshowInterval) {
-            window.clearInterval(this.slideshowInterval);
-            this.slideshowInterval = null;
+        if (this.slideshowTimer) {
+            window.clearInterval(this.slideshowTimer);
+            this.slideshowTimer = null;
         }
 
         // Add class for open animation styling
@@ -657,9 +677,9 @@ export abstract class GalleryView implements IGalleryView {
                 modal.removeEventListener('keydown', closeOnEscape);
                 doc.removeEventListener('focus', keepFocus, true);
                 modal.removeEventListener('keydown', modalKeyHandler);
-                if (this.slideshowInterval) {
-                    window.clearInterval(this.slideshowInterval);
-                    this.slideshowInterval = null;
+                if (this.slideshowTimer) {
+                    window.clearInterval(this.slideshowTimer);
+                    this.slideshowTimer = null;
                 }
             } catch (error) { Logger.debug('Ignored error:', error); }
         };
@@ -771,6 +791,27 @@ export abstract class GalleryView implements IGalleryView {
             if (srcImage.size) {
                 addRow('File Size', this.formatFileSize(srcImage.size));
             }
+
+            // Photo details (EXIF): shown when known, read on demand while the panel is open.
+            // Missing fields are left out and a failed read just leaves the rows above.
+            const addPhotoRows = (metadata: IImageMetadata | undefined) => {
+                if (!metadata) return;
+                const taken = formatTakenAt(metadata.takenAt);
+                if (taken) addRow('Taken', taken);
+                if (metadata.camera) addRow('Camera', metadata.camera);
+                if (metadata.lens) addRow('Lens', metadata.lens);
+            };
+            if (srcImage.metadata || !srcImage.resolveMetadata || !infoVisible) {
+                addPhotoRows(srcImage.metadata);
+                return;
+            }
+            const token = modalLoadToken;
+            srcImage.resolveMetadata()
+                .then(metadata => {
+                    // Still the same image, and the panel hasn't been rebuilt since
+                    if (token === modalLoadToken && currentImage === srcImage && grid.isConnected) addPhotoRows(metadata);
+                })
+                .catch((error: unknown) => Logger.debug('Could not read photo details:', error));
         };
 
         // Toolbar text and caption for the image on screen
@@ -923,6 +964,8 @@ export abstract class GalleryView implements IGalleryView {
             infoVisible = !infoVisible;
             infoBtn.classList.toggle('active', infoVisible);
             infoPanel.classList.toggle('visible', infoVisible);
+            // Photo details are read only while the panel is open
+            if (infoVisible) updateInfoPanel(currentImage);
             const label = infoVisible ? 'Hide details' : 'Show details';
             infoBtn.setAttribute('aria-label', label);
             infoBtn.setAttribute('title', label);
@@ -1026,13 +1069,13 @@ export abstract class GalleryView implements IGalleryView {
             playBtn.setAttribute('aria-label', playTitle);
 
             if (this.slideshowPlaying) {
-                this.slideshowInterval = window.setInterval(() => {
+                this.slideshowTimer = window.setInterval(() => {
                     navigate(1, true);
-                }, 4000);
+                }, slideshowSeconds(this.slideshowIntervalSeconds) * 1000);
             } else {
-                if (this.slideshowInterval) {
-                    window.clearInterval(this.slideshowInterval);
-                    this.slideshowInterval = null;
+                if (this.slideshowTimer) {
+                    window.clearInterval(this.slideshowTimer);
+                    this.slideshowTimer = null;
                 }
             }
         };

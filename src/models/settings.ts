@@ -20,7 +20,7 @@ export interface GalleryPluginSettings {
     captionMaxLines: number;
     // Seconds the image viewer's slideshow shows each image
     slideshowInterval: number;
-    // Largest Immich video (MB) the image viewer downloads to play; 0 = no limit
+    // Largest remote (Immich, Nextcloud) video (MB) the image viewer downloads to play; 0 = no limit
     maxRemoteVideoMb: number;
     // Pagination defaults (can be overridden per-gallery via the view: config)
     defaultPagination: boolean;

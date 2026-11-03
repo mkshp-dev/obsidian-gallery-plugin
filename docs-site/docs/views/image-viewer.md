@@ -32,12 +32,12 @@ Galleries with a single image have no arrows or slideshow button.
 
 Videos play in the viewer with the usual player controls (play, seek, volume, full screen), starting on their own. While the video downloads or opens, its still frame shows. Zoom doesn't apply to videos, so the zoom buttons are hidden. **←** / **→** change video unless the player has focus (then they seek), and swipes on the player itself don't change video. During a slideshow a video plays to the end before the next item.
 
-Leaving a video stops it. An Immich video is downloaded when you open it and let go of when you move on.
+Leaving a video stops it. An Immich or Nextcloud video is downloaded when you open it and let go of when you move on. Nextcloud doesn't report how long a video is, so its tile shows the length once you have played it.
 
 ### Large videos
 
 - **Vault videos** play straight from disk, at any size.
-- **Immich videos** have to be downloaded in full before they play, so ones larger than **Largest Immich video to play** (200 MB by default, in [Settings](../settings.md)) aren't downloaded. The viewer shows the still frame, the video's size and an **Open in Immich** button, which opens it in your browser. Set the limit to `0` to play every video.
+- **Immich and Nextcloud videos** have to be downloaded in full before they play, so ones larger than **Largest remote video to play** (200 MB by default, in [Settings](../settings.md)) aren't downloaded. The viewer shows the still frame, the video's size and an **Open in Immich** or **Open in Nextcloud** button, which opens it in your browser (for a Nextcloud share link, the share's page). Set the limit to `0` to play every video.
 
 ## Keyboard in the gallery
 

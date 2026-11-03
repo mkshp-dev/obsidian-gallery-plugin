@@ -3,6 +3,7 @@ import { INextcloudConnection } from '../../models/interfaces';
 import { NextcloudFile } from '../../models/nextcloud/NextcloudTypes';
 import { Logger } from '../../utils/Logger';
 import { ObjectUrlManager } from '../../utils/ObjectUrlManager';
+import { allowedMimeTypes } from '../../models/media';
 
 interface CacheEntry<T> {
   promise: Promise<T>;
@@ -127,22 +128,33 @@ export class NextcloudClient {
     }
   }
 
+  /** The file's page in the Nextcloud web app (Files), from its file id */
+  public getFileWebUrl(fileId: string): string {
+    return `${this.baseUrl}/index.php/f/${encodeURIComponent(fileId)}`;
+  }
+
+  /** Download a file's original contents */
+  public downloadFile(path: string): Promise<Blob> {
+    return this.fetchFileBlob(path, 'original');
+  }
+
   /**
    * Fetch a file as a blob URL. 'thumbnail' (256 px) and 'large' (2048 px) use Nextcloud's preview
    * endpoint, keeping the aspect ratio, and fall back to the original file if previews fail.
+   * With `previewOnly` (videos, whose original isn't an image) a failed preview is an error instead.
    */
-  public async getFileBlobUrl(path: string, representation: 'thumbnail' | 'large' | 'original', fileId?: string): Promise<string> {
+  public async getFileBlobUrl(path: string, representation: 'thumbnail' | 'large' | 'original', fileId?: string, previewOnly = false): Promise<string> {
     // Stable key for ObjectUrlManager: connectionKey + representation + path
     const urlKey = `nextcloud:${this.connection.key}:${representation}:${path}`;
     try {
-      return await ObjectUrlManager.getOrCreate(urlKey, () => this.fetchFileBlob(path, representation, fileId));
+      return await ObjectUrlManager.getOrCreate(urlKey, () => this.fetchFileBlob(path, representation, fileId, previewOnly));
     } catch (error) {
       Logger.error(`Failed to get file blob URL for Nextcloud file at path ${path}:`, error);
       throw error;
     }
   }
 
-  private async fetchFileBlob(path: string, representation: 'thumbnail' | 'large' | 'original', fileId?: string): Promise<Blob> {
+  private async fetchFileBlob(path: string, representation: 'thumbnail' | 'large' | 'original', fileId?: string, previewOnly = false): Promise<Blob> {
     // Normalize path
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     const originalUrl = `${this.baseUrl}/remote.php/dav/files/${encodeURIComponent(this.connection.username)}${normalizedPath}`;
@@ -159,11 +171,18 @@ export class NextcloudClient {
         throw: false
       });
 
+      // Videos have previews only when the server makes them (the Movie provider, with ffmpeg)
+      if (response.status !== 200 && previewOnly) {
+        throw new Error(`No preview for '${path}' (HTTP ${response.status})`);
+      }
+
       // Fallback for thumbnail if preview endpoint fails
       if (response.status !== 200) {
         Logger.debug(`Preview (${representation}) failed for ${fileId}, falling back to original`);
         response = await requestUrl({ url: originalUrl, method: 'GET', headers: this.getHeaders() });
       }
+    } else if (previewOnly) {
+      throw new Error(`No preview for '${path}' without a file id`);
     } else {
       response = await requestUrl({ url: originalUrl, method: 'GET', headers: this.getHeaders() });
     }
@@ -186,10 +205,8 @@ export class NextcloudClient {
     const responsesList = responses.length > 0 ? Array.from(responses) : Array.from(xmlDoc.getElementsByTagName('d:response'));
 
     const files: NextcloudFile[] = [];
-    let validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (mimeTypesFilter && mimeTypesFilter.length > 0) {
-        validImageMimeTypes = validImageMimeTypes.filter(mime => mimeTypesFilter.includes(mime));
-    }
+    // Images and videos, narrowed by the source's mimeTypes filter
+    const validImageMimeTypes = allowedMimeTypes(mimeTypesFilter);
 
     for (const response of responsesList) {
       // Extract href

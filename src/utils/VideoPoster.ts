@@ -1,5 +1,6 @@
 import { Logger } from './Logger';
 import { ObjectUrlManager } from './ObjectUrlManager';
+import { Platform } from 'obsidian';
 
 /** What a poster capture found out about a video */
 export interface VideoPosterResult {
@@ -27,6 +28,8 @@ const POSTER_MAX_SIZE = 640;
 const CAPTURE_TIMEOUT_MS = 20000;
 /** Decoding videos is heavy; only this many are opened at once */
 const MAX_CONCURRENT = 2;
+/** Largest remote video downloaded just to take its still frame */
+export const REMOTE_STILL_MAX_BYTES = 50 * 1024 * 1024;
 
 /** Dark 16:9 stand-in when no frame can be read; the tile's play badge sits on top of it */
 export const VIDEO_PLACEHOLDER_URL = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
@@ -62,6 +65,35 @@ export class VideoPoster {
             return { url, ...(this.info.get(key) ?? grabbed) };
         } catch (error) {
             Logger.debug('Could not capture a video frame, using a placeholder:', src, error);
+            return { url: VIDEO_PLACEHOLDER_URL };
+        }
+    }
+
+    /**
+     * Capture a still frame for a remote video the server has no preview for, by downloading it.
+     * Only small videos are downloaded (up to `maxBytes`, and never on phones and tablets, or
+     * when the size is unknown); others, and any failure, give the placeholder. Never rejects.
+     * @param key Stable identifier of the video, for caching the frame
+     */
+    static async captureDownloaded(key: string, download: () => Promise<Blob>, sizeBytes: number | undefined, maxBytes = REMOTE_STILL_MAX_BYTES): Promise<VideoPosterResult> {
+        if (Platform.isMobile || !sizeBytes || sizeBytes > maxBytes) return { url: VIDEO_PLACEHOLDER_URL };
+        const posterKey = `video-poster:${key}`;
+        try {
+            const url = await ObjectUrlManager.getOrCreate(posterKey, async () => {
+                const frame = await this.limit(async () => {
+                    const blobUrl = URL.createObjectURL(await download());
+                    try {
+                        return await this.grabFrame(blobUrl);
+                    } finally {
+                        URL.revokeObjectURL(blobUrl);
+                    }
+                });
+                this.info.set(posterKey, { duration: frame.duration, width: frame.width, height: frame.height });
+                return frame.blob;
+            });
+            return { url, ...(this.info.get(posterKey) ?? {}) };
+        } catch (error) {
+            Logger.debug('Could not capture a frame of the downloaded video, using a placeholder:', key, error);
             return { url: VIDEO_PLACEHOLDER_URL };
         }
     }

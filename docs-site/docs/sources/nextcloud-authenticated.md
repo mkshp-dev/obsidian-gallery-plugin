@@ -52,7 +52,7 @@ view:
 | `path` | string | No | Folder path on your Nextcloud server (e.g., `/Photos`, `/Gallery-Demo`). Defaults to `/`. |
 | `recursive` | boolean | No | When `true`, scans subdirectories recursively. Defaults to `true`. |
 | `filenameFilter` | string | No | Glob pattern for filename matching (e.g. `IMG_*`, `*.png`). |
-| `filters.mimeTypes` | list of strings | No | Filter files by MIME types (e.g. `image/jpeg`, `image/png`, `image/webp`). |
+| `filters.mimeTypes` | list of strings | No | Filter files by MIME types (e.g. `image/jpeg`, `image/png`, `video/mp4`). `image/*` and `video/*` match every image or video type. |
 | `filters.minSizeKb` | number | No | Minimum file size in kilobytes. |
 | `filters.maxSizeKb` | number | No | Maximum file size in kilobytes. |
 | `filters.modifiedAfter` | string (ISO / YYYY-MM-DD) | No | Only return files modified after this date. |
@@ -71,6 +71,22 @@ view:
 - **Automatic Caching**: Results are cached in memory for optimal performance and low server load.
 
 ---
+
+## Videos
+
+Videos in the folder (MP4, M4V, WebM, MOV and OGV) are part of the gallery too. Each tile shows a still frame with a play icon; click it to play the video in the [image viewer](../views/image-viewer.md#videos).
+
+- **Still frames** come from Nextcloud's own preview of the video. Nextcloud makes video previews only when the server has the Movie preview provider and ffmpeg; without them, a video up to 50 MB is downloaded once to take its frame (not on phones or tablets), and larger ones show a dark placeholder.
+- **Playing** downloads the whole video, so videos larger than **Largest remote video to play** in [Settings](../settings.md) (200 MB by default) aren't downloaded; the viewer offers **Open in Nextcloud** instead.
+- **Length**: Nextcloud doesn't report it, so the tile shows it after you have played the video once.
+
+To show only videos, filter by type (`video/*` stands for every video type, `image/*` for every image type):
+
+```yaml
+filters:
+  mimeTypes:
+    - video/*
+```
 
 ## Examples
 

@@ -5,6 +5,9 @@ import { Logger } from '../utils/Logger';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 import { requestUrl } from 'obsidian';
 import { globToRegex } from '../utils/globToRegex';
+import { allowedMimeTypes, isVideoMimeType } from '../models/media';
+import { VideoPoster } from '../utils/VideoPoster';
+import { usesThumbnailImages } from '../models/viewTypes';
 
 interface ShareFile {
     href: string;
@@ -218,11 +221,27 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                                     throw new Error(`Failed to fetch file. Status: ${fileRes.status}`);
                                 }
 
-                                const contentType = typeof fileRes.headers['content-type'] === 'string' ? fileRes.headers['content-type'] : 'image/jpeg';
+                                const contentType = typeof fileRes.headers['content-type'] === 'string' ? fileRes.headers['content-type'] : (file.contentType || 'image/jpeg');
                                 return new Blob([fileRes.arrayBuffer], { type: contentType });
                             });
 
-                            images.push(new ImageSource(logicalPath, 'nextcloud-share', file.name, undefined, undefined, loader));
+                            if (isVideoMimeType(file.contentType)) {
+                                images.push(this.videoSource({
+                                    logicalPath, file, loader, cacheKey,
+                                    // Public previews need no login, so password-protected shares go without
+                                    previewUrl: password ? undefined : this.publicPreviewUrl(baseUrl, token, file.href, usesThumbnailImages(context.viewType) ? 256 : 1024),
+                                    shareUrl: source.url,
+                                    download: async () => {
+                                        const res = await requestUrl({ url: fileUrl, method: 'GET', headers: fileHeaders });
+                                        if (res.status !== 200) throw new Error(`Failed to fetch file. Status: ${res.status}`);
+                                        return new Blob([res.arrayBuffer], { type: file.contentType });
+                                    }
+                                }));
+                                continue;
+                            }
+                            const image = new ImageSource(logicalPath, 'nextcloud-share', file.name, undefined, undefined, loader);
+                            image.size = file.size || undefined;
+                            images.push(image);
                         } catch (e) {
                             Logger.warn(`Failed to resolve file ${file.href} for Nextcloud share: ${e instanceof Error ? e.message : String(e)}`);
                         }
@@ -250,6 +269,58 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
         }
 
         return { images, errors };
+    }
+
+    /**
+     * Nextcloud's public preview of a file in a share, or undefined when the file's path inside
+     * the share can't be told from its WebDAV href (Photos albums)
+     */
+    private publicPreviewUrl(baseUrl: string, token: string, href: string, size: number): string | undefined {
+        const marker = '/public.php/webdav';
+        const at = href.indexOf(marker);
+        if (at === -1) return undefined;
+        const inShare = href.substring(at + marker.length) || '/';
+        return `${baseUrl}/index.php/apps/files_sharing/publicpreview/${token}?file=${encodeURIComponent(inShare)}&x=${size}&y=${size}&a=1`;
+    }
+
+    /**
+     * A video in a share: tiles show the server's public preview, or, when there is none (no video
+     * previews on the server, or a password-protected share), a frame taken from the downloaded
+     * file (small videos only) or a placeholder. The image viewer downloads the file to play it.
+     */
+    private videoSource(opts: {
+        logicalPath: string;
+        file: ShareFile;
+        loader: () => Promise<string>;
+        cacheKey: string;
+        previewUrl?: string;
+        shareUrl: string;
+        download: () => Promise<Blob>;
+    }): ImageSource {
+        const { file, previewUrl } = opts;
+        let image: ImageSource;
+        const stillLoader = async (): Promise<string> => {
+            if (previewUrl) {
+                try {
+                    return await ObjectUrlManager.getOrCreate(`${opts.cacheKey}:preview`, async () => {
+                        const res = await requestUrl({ url: previewUrl, method: 'GET', throw: false });
+                        if (res.status !== 200) throw new Error(`No preview (HTTP ${res.status})`);
+                        const type = typeof res.headers['content-type'] === 'string' ? res.headers['content-type'] : 'image/png';
+                        return new Blob([res.arrayBuffer], { type });
+                    });
+                } catch (error) {
+                    Logger.debug(`No Nextcloud preview for ${file.href}:`, error);
+                }
+            }
+            const poster = await VideoPoster.captureDownloaded(opts.cacheKey, opts.download, file.size);
+            image.durationSeconds = poster.duration;
+            return poster.url;
+        };
+        image = new ImageSource(opts.logicalPath, 'nextcloud-share', file.name, undefined, undefined, stillLoader);
+        image.setMediaType('video', opts.loader);
+        image.size = file.size || undefined;
+        image.openUrl = opts.shareUrl;
+        return image;
     }
 
     /**
@@ -305,10 +376,8 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
         const files: ShareFile[] = [];
         const folders: string[] = [];
 
-        let validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (mimeTypesFilter && mimeTypesFilter.length > 0) {
-            validImageMimeTypes = validImageMimeTypes.filter(mime => mimeTypesFilter.includes(mime));
-        }
+        // Images and videos, narrowed by the source's mimeTypes filter
+        const validImageMimeTypes = allowedMimeTypes(mimeTypesFilter);
 
         for (const response of responsesList) {
             let href = '';

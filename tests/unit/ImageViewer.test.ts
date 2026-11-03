@@ -293,6 +293,31 @@ describe('videos', () => {
         expect(q('.gallery-modal-video-notice').classList.contains('is-hidden')).toBe(true);
     });
 
+    test('a large Nextcloud video links to Nextcloud', async () => {
+        const big = new ImageSource('nextcloud://cloud/Clips/big.mp4', 'nextcloud', 'big', undefined, undefined, () => Promise.resolve('blob:big-still'));
+        big.setMediaType('video', () => Promise.resolve('blob:big-video'));
+        big.size = 900 * 1024 * 1024;
+        big.openUrl = 'https://cloud.example.com/index.php/f/42';
+        openViewer([big, local('a')]);
+        await flush();
+        expect(document.querySelector('.gallery-modal-video-notice button')!.textContent).toBe('Open in Nextcloud');
+    });
+
+    test('a video whose source gave no length learns it from the player, updating the tile', async () => {
+        const container = createContainer();
+        const view = new MasonryView(container);
+        const video = clip('v');
+        view.update([video, local('a')]);
+        (view as any).expandImage(video);
+        await flush();
+
+        const player = document.querySelector('video.gallery-modal-video') as HTMLVideoElement;
+        Object.defineProperty(player, 'duration', { value: 75, configurable: true });
+        player.dispatchEvent(new Event('loadedmetadata'));
+        expect(video.durationSeconds).toBe(75);
+        expect(container.querySelector('.gallery-video-badge-time')!.textContent).toBe('1:15');
+    });
+
     test('videos under the limit, of unknown size, local, or with no limit set are played', async () => {
         const small = clip('small');
         small.size = 50 * 1024 * 1024;

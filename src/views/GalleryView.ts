@@ -1145,7 +1145,8 @@ export abstract class GalleryView implements IGalleryView {
             });
             if (srcImage.openUrl) {
                 const openUrl = srcImage.openUrl;
-                const link = this.createElement(videoNotice, 'button', { cls: 'gallery-modal-video-notice-btn', text: 'Open in Immich' });
+                const service = srcImage.type.startsWith('nextcloud') ? 'Nextcloud' : srcImage.type.startsWith('immich') ? 'Immich' : '';
+                const link = this.createElement(videoNotice, 'button', { cls: 'gallery-modal-video-notice-btn', text: service ? `Open in ${service}` : 'Open' });
                 link.addEventListener('click', (e: MouseEvent) => {
                     e.stopPropagation();
                     window.open(openUrl, '_blank');
@@ -1166,6 +1167,13 @@ export abstract class GalleryView implements IGalleryView {
             // A slideshow moves on after the usual interval
             if (this.slideshowPlaying) scheduleNext();
         };
+        // Sources that don't list a video's length (Nextcloud) learn it once it plays; tile badges update
+        videoEl.addEventListener('loadedmetadata', () => {
+            if (playingVideo && playingVideo.durationSeconds === undefined && Number.isFinite(videoEl.duration)) {
+                playingVideo.durationSeconds = videoEl.duration;
+            }
+        });
+
         // The file opened but the player can't decode it (an unsupported codec, say)
         videoEl.addEventListener('error', () => {
             if (playingVideo && playingVideo === currentImage && videoEl.getAttribute('src')) {

@@ -51,3 +51,24 @@ export function parseClockDuration(value: unknown): number | undefined {
     const seconds = Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
     return Number.isFinite(seconds) ? seconds : undefined;
 }
+
+export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+/** Video types servers report for the extensions above */
+export const VIDEO_MIME_TYPES = ['video/mp4', 'video/x-m4v', 'video/webm', 'video/quicktime', 'video/ogg'];
+
+export function isVideoMimeType(contentType: string | undefined): boolean {
+    return !!contentType && VIDEO_MIME_TYPES.includes(contentType.split(';')[0].trim().toLowerCase());
+}
+
+/**
+ * The image and video types a listing keeps: all of them, or those in the source's
+ * `filters.mimeTypes` (so `mimeTypes: [video/mp4]` lists only MP4 videos). `image/*` and
+ * `video/*` stand for every type of that kind.
+ */
+export function allowedMimeTypes(filter?: string[]): string[] {
+    const all = [...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES];
+    if (!filter || filter.length === 0) return all;
+    const wanted = filter.map(type => type.toLowerCase());
+    return all.filter(type => wanted.includes(type) || wanted.includes(`${type.split('/')[0]}/*`));
+}

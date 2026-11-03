@@ -1,10 +1,13 @@
 import { INextcloudSourceConfig, INextcloudConnection, IImageSource } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { NextcloudClient } from '../services/nextcloud/NextcloudClient';
+import { NextcloudFile } from '../models/nextcloud/NextcloudTypes';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 import { globToRegex } from '../utils/globToRegex';
 import { usesThumbnailImages } from '../models/viewTypes';
+import { isVideoMimeType } from '../models/media';
+import { VideoPoster } from '../utils/VideoPoster';
 
 export class NextcloudSourceResolver implements GallerySourceResolver<INextcloudSourceConfig> {
     readonly type = 'nextcloud';
@@ -112,11 +115,17 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
                 try {
                     const logicalPath = `nextcloud://${connection.key}${file.path.startsWith('/') ? '' : '/'}${file.path}`;
 
+                    if (isVideoMimeType(file.contentType)) {
+                        images.push(this.videoSource(client, connection.key, logicalPath, file, representation));
+                        continue;
+                    }
+
                     // File contents are fetched lazily, when a view first displays the image
                     const image = new ImageSource(logicalPath, 'nextcloud', file.name, undefined, undefined,
                         () => client.getFileBlobUrl(file.path, representation, file.fileId));
                     // Tile views load small previews; the image viewer uses a large one instead
                     if (representation === 'thumbnail') image.setLargeLoader(() => client.getFileBlobUrl(file.path, 'large', file.fileId));
+                    image.size = file.size || undefined;
                     images.push(image);
                 } catch (e) {
                     Logger.warn(`Failed to resolve file ${file.path} for Nextcloud source: ${e instanceof Error ? e.message : String(e)}`);
@@ -127,5 +136,29 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
         }
 
         return { images, errors };
+    }
+
+    /**
+     * A Nextcloud video: tiles show the server's preview of it, or, when the server makes no video
+     * previews, a frame taken from the downloaded file (small videos only) or a placeholder. The
+     * image viewer downloads the file to play it.
+     */
+    private videoSource(client: NextcloudClient, connectionKey: string, logicalPath: string, file: NextcloudFile, representation: 'thumbnail' | 'original'): ImageSource {
+        const still = representation === 'thumbnail' ? 'thumbnail' : 'large';
+        let image: ImageSource;
+        const stillLoader = async (): Promise<string> => {
+            try {
+                return await client.getFileBlobUrl(file.path, still, file.fileId, true);
+            } catch {
+                const poster = await VideoPoster.captureDownloaded(`nextcloud:${connectionKey}:${file.path}`, () => client.downloadFile(file.path), file.size);
+                image.durationSeconds = poster.duration;
+                return poster.url;
+            }
+        };
+        image = new ImageSource(logicalPath, 'nextcloud', file.name, undefined, undefined, stillLoader);
+        image.setMediaType('video', () => client.getFileBlobUrl(file.path, 'original', file.fileId));
+        image.size = file.size || undefined;
+        if (file.fileId) image.openUrl = client.getFileWebUrl(file.fileId);
+        return image;
     }
 }

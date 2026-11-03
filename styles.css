@@ -2524,3 +2524,16 @@ button.gallery-settings-tab-btn.is-active {
 .gallery-frameless .gallery-carousel {
   padding: 0;
 }
+
+/* SVGs are vectors: fill the stage (keeping their shape) instead of showing them at icon size */
+.gallery-modal-image-container img.is-svg {
+  width: calc(100% - 128px);
+  height: calc(100% - 112px);
+}
+
+@media (max-width: 600px) {
+  .gallery-modal-image-container img.is-svg {
+    width: 100%;
+    height: calc(100% - 120px);
+  }
+}

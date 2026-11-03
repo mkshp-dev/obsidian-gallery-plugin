@@ -26,7 +26,7 @@ For Immich and Nextcloud galleries, the viewer first shows the small image the g
 | **Open or save image** | Open the image in a new tab, or save it, at the size the viewer shows |
 | **Close** (✕), **Esc**, or a click on the dark area around the photo | Close the viewer |
 
-Galleries with a single image have no arrows or slideshow button.
+Galleries with a single image have no arrows or slideshow button. SVG images are scaled to fill the screen, since they stay sharp at any size.
 
 ## Videos
 

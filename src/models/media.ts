@@ -5,7 +5,7 @@
 
 export type MediaType = 'image' | 'video';
 
-export const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+export const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg'];
 
 /** Videos the browser engine in Obsidian plays (mov and m4v play when they hold H.264/AAC) */
 export const VIDEO_EXTENSIONS = ['.mp4', '.m4v', '.webm', '.mov', '.ogv'];
@@ -30,6 +30,40 @@ export function isVideoPath(path: string): boolean {
 
 export function isMediaPath(path: string): boolean {
     return MEDIA_EXTENSIONS.includes(extensionOf(path));
+}
+
+export function isSvgPath(path: string): boolean {
+    return extensionOf(path) === '.svg';
+}
+
+/** Largest SVG read to find its size; bigger ones are measured by the browser instead */
+export const SVG_SIZE_READ_MAX_BYTES = 1024 * 1024;
+
+/**
+ * An SVG's size from its root element: width and height in px (plain numbers or px), else the
+ * viewBox. SVGs with only a viewBox have no natural size in an <img>, so layouts use this for
+ * their shape. Percentages and other units fall back to the viewBox; undefined when neither works.
+ */
+export function readSvgSize(text: string): { width: number; height: number } | undefined {
+    const root = /<svg\b[^>]*>/i.exec(text)?.[0];
+    if (!root) return undefined;
+    const attr = (name: string) => new RegExp(`\\s${name}\\s*=\\s*["']([^"']*)["']`, 'i').exec(root)?.[1]?.trim();
+    const px = (value: string | undefined) => {
+        const match = value ? /^(\d+(?:\.\d+)?)(px)?$/i.exec(value) : null;
+        const n = match ? Number(match[1]) : NaN;
+        return n > 0 ? n : undefined;
+    };
+    const width = px(attr('width'));
+    const height = px(attr('height'));
+    if (width && height) return { width, height };
+    const box = attr('viewBox')?.split(/[\s,]+/).map(Number);
+    if (box && box.length === 4 && box[2] > 0 && box[3] > 0) {
+        // One of width/height given: keep it and take the other from the viewBox's shape
+        if (width) return { width, height: width * box[3] / box[2] };
+        if (height) return { width: height * box[2] / box[3], height };
+        return { width: box[2], height: box[3] };
+    }
+    return undefined;
 }
 
 /** "0:12", "4:05", "1:02:03"; undefined for a missing or invalid duration */
@@ -61,7 +95,7 @@ export function parseImmichDuration(value: unknown): number | undefined {
     return seconds !== undefined && Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
 
-export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/svg+xml'];
 
 /** Video types servers report for the extensions above */
 export const VIDEO_MIME_TYPES = ['video/mp4', 'video/x-m4v', 'video/webm', 'video/quicktime', 'video/ogg'];

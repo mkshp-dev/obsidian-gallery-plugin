@@ -2,7 +2,7 @@ import { Logger } from "../utils/Logger";
 import { Vault, TFile, TFolder, Platform } from 'obsidian';
 import { IContentScanner, IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
-import { MEDIA_EXTENSIONS } from '../models/media';
+import { MEDIA_EXTENSIONS, SVG_SIZE_READ_MAX_BYTES, isSvgPath, readSvgSize } from '../models/media';
 import { FolderScanner } from './FolderScanner';
 import { readExifMetadata } from '../utils/ExifReader';
 
@@ -96,6 +96,7 @@ export class ContentScanner implements IContentScanner {
             }
 
             this.attachMetadataLoaders(images);
+            await this.measureSvgs(images);
 
             // Cache results
             this.cache.set(cacheKey, {
@@ -140,6 +141,25 @@ export class ContentScanner implements IContentScanner {
                 return readExifMetadata(await this.vault.readBinary(file));
             });
         }
+    }
+
+    /**
+     * Give local SVGs their size from the file, so layouts know their shape before they load
+     * (an SVG with only a viewBox has no natural size in an <img>). Large or unreadable files
+     * are left for the browser to measure.
+     */
+    private async measureSvgs(images: IImageSource[]): Promise<void> {
+        await Promise.all(images.map(async image => {
+            if (image.type !== 'local' || image.dimensions || !isSvgPath(image.path)) return;
+            try {
+                const file = this.vault.getAbstractFileByPath(image.path);
+                if (!(file instanceof TFile) || (file.stat?.size ?? 0) > SVG_SIZE_READ_MAX_BYTES) return;
+                const size = readSvgSize(await this.vault.cachedRead(file));
+                if (size) image.dimensions = size;
+            } catch (error) {
+                Logger.debug('Could not read SVG size:', image.path, error);
+            }
+        }));
     }
 
     /**
@@ -226,7 +246,7 @@ export class ContentScanner implements IContentScanner {
             }
             
             // Extract attachment references
-            const attachmentRegex = /\[\[([^|\]]+\.(jpg|jpeg|png|gif|webp|mp4|m4v|webm|mov|ogv))(?:\|([^\]]+))?\]\]/gi;
+            const attachmentRegex = /\[\[([^|\]]+\.(jpg|jpeg|png|gif|webp|avif|svg|mp4|m4v|webm|mov|ogv))(?:\|([^\]]+))?\]\]/gi;
             
             while ((match = attachmentRegex.exec(content)) !== null) {
                 const [, attachmentPath, , displayName] = match;

@@ -10,7 +10,7 @@ sidebar_position: 6
 ## Gallery not appearing
 
 - Verify that the path defined in your local source configuration (under `sources`) exists in your vault and that the spelling and casing match exactly.
-- Confirm images are in a supported format: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, or a video: `.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`.
+- Confirm images are in a supported format: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.avif`, `.svg`, or a video: `.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`.
 - Try switching between reading and editing mode to trigger a re-render.
 
 ## Video shows a dark tile or doesn't play

@@ -1,6 +1,6 @@
 import { App, Notice } from 'obsidian';
 import { DUMMY_ASSETS } from './DemoAssets';
-import { ANIMATED_GIF_BASE64, DemoImageSpec, renderDemoImage } from './DemoImageFactory';
+import { ANIMATED_GIF_BASE64, AVIF_SAMPLE_BASE64, SVG_SAMPLES, DemoImageSpec, renderDemoImage } from './DemoImageFactory';
 import { Logger } from '../utils/Logger';
 import { DEMO, DemoConnectionConflict } from './DemoServers';
 import { UseCaseGenerator } from './UseCaseGenerator';
@@ -151,6 +151,13 @@ export class ShowcaseGenerator {
         const gif = Uint8Array.from(window.atob(ANIMATED_GIF_BASE64), c => c.charCodeAt(0));
         await this.app.vault.createBinary(`${this.testLabPath}/animated.gif`, gif.buffer);
 
+        // AVIF (embedded too: canvas cannot encode it) and two SVGs, one with only a viewBox
+        const avif = Uint8Array.from(window.atob(AVIF_SAMPLE_BASE64), c => c.charCodeAt(0));
+        await this.app.vault.createBinary(`${this.testLabPath}/avif-sample.avif`, avif.buffer);
+        for (const sample of SVG_SAMPLES) {
+            await this.app.vault.create(`${this.testLabPath}/${sample.name}`, sample.svg);
+        }
+
         // A file with an image extension but invalid contents, to exercise the error tile
         const broken = Uint8Array.from('This is not an image.', c => c.charCodeAt(0));
         await this.app.vault.createBinary(`${this.testLabPath}/broken-image.jpg`, broken.buffer);
@@ -210,7 +217,7 @@ See every compact error the plugin can show — great for debugging your own gal
 
 ### 🧪 Local Test Lab
 Generated images in many shapes, sizes, and formats for checking layouts by eye:
-- [[16 - Local test lab]] — Aspect ratios, formats (PNG/JPEG/WebP/GIF), long and Unicode file names, a broken file, and 36 extra images for pagination.
+- [[16 - Local test lab]] — Aspect ratios, formats (PNG/JPEG/WebP/GIF/AVIF/SVG), long and Unicode file names, a broken file, and 36 extra images for pagination.
 
 ${demoSetup}
 ## Next Steps
@@ -1526,6 +1533,9 @@ A workbench for checking layouts by eye. The images in \`${this.testLabPath}/\` 
 | \`café – ünïcödé & spaces.webp\` | 640×480 | Unicode and symbols in the name |
 | \`UPPERCASE-EXTENSION.JPG\` | 480×360 | Upper-case extension |
 | \`animated.gif\` | 240×160 | Animated GIF |
+| \`avif-sample.avif\` | 320×240 | AVIF format |
+| \`vector-sized.svg\` | 400×300 | SVG with a width and height; sharp at any size in the viewer |
+| \`vector-viewbox-only.svg\` | 1:2 | SVG with only a viewBox: should keep its tall shape |
 | \`broken-image.jpg\` | — | Not a real image: should show an error tile |
 
 The white corner squares and border show whether an image is being cropped. A further ${TEST_LAB_BULK_COUNT} images live in \`_assets/Bulk/\` for pagination tests.

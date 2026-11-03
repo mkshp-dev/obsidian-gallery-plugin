@@ -1,3 +1,4 @@
+import { isSvgPath } from '../models/media';
 import { Logger } from "../utils/Logger";
 import { GalleryView } from './GalleryView';
 import { IImageSource, ViewRuntimeOptions } from '../models/interfaces';
@@ -171,6 +172,8 @@ export abstract class AspectLayoutView extends GalleryView {
 
   private updateRatioFromImage(tile: LayoutTile, imgEl: HTMLImageElement): void {
     if (!(imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0)) return;
+    // An SVG with only a viewBox reports a default 300×150 natural size; trust its own size instead
+    if (isSvgPath(tile.image.path) && tile.image.dimensions) return;
     const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
     this.measuredRatios.set(tile.image, ratio);
     if (Math.abs(ratio - tile.ratio) / tile.ratio < AspectLayoutView.RATIO_TOLERANCE) return;

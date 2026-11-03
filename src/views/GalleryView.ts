@@ -2,7 +2,7 @@ import { Logger } from "../utils/Logger";
 import { IGalleryView, IImageSource, IImageMetadata, ObsidianDOMExtensions, CreateElementOptions, ViewRuntimeOptions } from '../models/interfaces';
 import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
-import { formatDuration } from '../models/media';
+import { formatDuration, isSvgPath } from '../models/media';
 import type { ViewType } from '../models/viewTypes';
 
 /**
@@ -1084,6 +1084,8 @@ export abstract class GalleryView implements IGalleryView {
             }
 
             imgEl.classList.remove('gallery-external-blocked');
+            // SVGs are vectors: scale them to the stage instead of showing them at their (often icon) size
+            imgEl.classList.toggle('is-svg', isSvgPath(srcImage.path));
             imgEl.setCssStyles({
                 transition: 'opacity 0.2s ease-in-out',
                 opacity: '0'

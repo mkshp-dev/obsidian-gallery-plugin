@@ -43,6 +43,12 @@ view:
 | `sort.order` | `asc` or `desc` | — | Sort order. `desc` = descending. |
 | `limit` | number | — | Maximum number of images to fetch. |
 
+## Supported formats
+
+Images in JPEG, PNG, GIF (including animated), WebP, AVIF and SVG, and videos (see below). Other files in the folder are skipped.
+
+SVGs are drawn as images, so any scripts inside them don't run. An SVG with only a `viewBox` (no width or height) keeps the shape the `viewBox` gives it, and in the [image viewer](../views/image-viewer.md) SVGs are scaled up to fill the screen. Photo details (date taken, camera, lens) are read from JPEG, PNG and WebP files; AVIF files don't show them yet.
+
 ## Videos
 
 Video files in the folder (`.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`) are part of the gallery too. Each tile shows a still frame from about a second into the video, with a play icon and the video's length in the corner. Click it to play the video in the [image viewer](../views/image-viewer.md#videos).

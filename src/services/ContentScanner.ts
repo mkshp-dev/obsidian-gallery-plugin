@@ -1,8 +1,10 @@
 import { Logger } from "../utils/Logger";
-import { Vault, TFile, TFolder } from 'obsidian';
+import { Vault, TFile, TFolder, Platform } from 'obsidian';
 import { IContentScanner, IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
+import { MEDIA_EXTENSIONS, SVG_SIZE_READ_MAX_BYTES, isSvgPath, readSvgSize, unsupportedMediaFormat } from '../models/media';
 import { FolderScanner } from './FolderScanner';
+import { readExifMetadata } from '../utils/ExifReader';
 
 /**
  * Content scanner service for discovering images in vault
@@ -13,7 +15,11 @@ export class ContentScanner implements IContentScanner {
     private folderScanner: FolderScanner;
     private cache: Map<string, { images: IImageSource[], timestamp: number }> = new Map();
     private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-    private readonly SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    /** Same depth limit as the folder scan */
+    private static readonly MAX_SKIPPED_DEPTH = 10;
+    /** Largest video read into memory just to draw its still frame (never on phones and tablets) */
+    private static readonly MAX_POSTER_READ_BYTES = 50 * 1024 * 1024;
+    private readonly SUPPORTED_EXTENSIONS = MEDIA_EXTENSIONS;
 
     constructor(vault: Vault) {
         this.vault = vault;
@@ -91,6 +97,9 @@ export class ContentScanner implements IContentScanner {
                 images = await this.folderScanner.scanFolder(abstractFile.path, recursive);
             }
 
+            this.attachMetadataLoaders(images);
+            await this.measureSvgs(images);
+
             // Cache results
             this.cache.set(cacheKey, {
                 images: [...images],
@@ -104,6 +113,55 @@ export class ContentScanner implements IContentScanner {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to scan path "${path}": ${errorMessage}`);
         }
+    }
+
+    /**
+     * Let local images read their EXIF data (date taken, camera, lens) from the vault when the
+     * image viewer's Details panel first asks for it, and local videos read their file when a
+     * still frame can't be drawn from their URL. Nothing is read while scanning.
+     */
+    private attachMetadataLoaders(images: IImageSource[]): void {
+        for (const image of images) {
+            if (image.type !== 'local' || !(image instanceof ImageSource)) continue;
+            const path = image.path;
+            if (image.mediaType === 'video') {
+                // The still frame is normally drawn from the video's URL; if the canvas can't read
+                // that back, it is drawn from the file instead. Larger files, and any file on a phone
+                // or tablet, keep the placeholder rather than being read into memory.
+                if (Platform.isMobile) continue;
+                image.setVideoFileReader(async () => {
+                    const file = this.vault.getAbstractFileByPath(path);
+                    if (!(file instanceof TFile) || (file.stat?.size ?? 0) > ContentScanner.MAX_POSTER_READ_BYTES) return undefined;
+                    return this.vault.readBinary(file);
+                });
+                continue;
+            }
+            if (image.hasMetadataLoader()) continue;
+            image.setMetadataLoader(async () => {
+                const file = this.vault.getAbstractFileByPath(path);
+                if (!(file instanceof TFile)) return undefined;
+                return readExifMetadata(await this.vault.readBinary(file));
+            });
+        }
+    }
+
+    /**
+     * Give local SVGs their size from the file, so layouts know their shape before they load
+     * (an SVG with only a viewBox has no natural size in an <img>). Large or unreadable files
+     * are left for the browser to measure.
+     */
+    private async measureSvgs(images: IImageSource[]): Promise<void> {
+        await Promise.all(images.map(async image => {
+            if (image.type !== 'local' || image.dimensions || !isSvgPath(image.path)) return;
+            try {
+                const file = this.vault.getAbstractFileByPath(image.path);
+                if (!(file instanceof TFile) || (file.stat?.size ?? 0) > SVG_SIZE_READ_MAX_BYTES) return;
+                const size = readSvgSize(await this.vault.cachedRead(file));
+                if (size) image.dimensions = size;
+            } catch (error) {
+                Logger.debug('Could not read SVG size:', image.path, error);
+            }
+        }));
     }
 
     /**
@@ -132,6 +190,27 @@ export class ContentScanner implements IContentScanner {
      */
     async validateFolderAccess(folderPath: string) {
         return await this.folderScanner.validateFolderAccess(folderPath);
+    }
+
+    /**
+     * Paths of photo and video files under a folder in formats galleries can't show (HEIC, RAW,
+     * ...), for the note under the gallery. Walks the vault's in-memory file tree, so it reads
+     * nothing from disk. A path that isn't a folder has none.
+     */
+    listSkippedFiles(path: string, recursive: boolean = true): string[] {
+        const skipped: string[] = [];
+        const walk = (folder: TFolder, depth: number) => {
+            for (const child of folder.children) {
+                if (child instanceof TFile) {
+                    if (unsupportedMediaFormat(child.path)) skipped.push(child.path);
+                } else if (child instanceof TFolder && recursive && depth < ContentScanner.MAX_SKIPPED_DEPTH) {
+                    walk(child, depth + 1);
+                }
+            }
+        };
+        const folder = this.vault.getAbstractFileByPath(path);
+        if (folder instanceof TFolder) walk(folder, 0);
+        return skipped;
     }
 
     /**
@@ -190,7 +269,7 @@ export class ContentScanner implements IContentScanner {
             }
             
             // Extract attachment references
-            const attachmentRegex = /\[\[([^|\]]+\.(jpg|jpeg|png|gif|webp))(?:\|([^\]]+))?\]\]/gi;
+            const attachmentRegex = /\[\[([^|\]]+\.(jpg|jpeg|png|gif|webp|avif|svg|mp4|m4v|webm|mov|ogv))(?:\|([^\]]+))?\]\]/gi;
             
             while ((match = attachmentRegex.exec(content)) !== null) {
                 const [, attachmentPath, , displayName] = match;

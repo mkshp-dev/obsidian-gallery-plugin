@@ -1,7 +1,8 @@
 import { Logger } from "../utils/Logger";
-import { IGalleryView, IImageSource, ObsidianDOMExtensions, CreateElementOptions, ViewRuntimeOptions } from '../models/interfaces';
+import { IGalleryView, IImageSource, IImageMetadata, ObsidianDOMExtensions, CreateElementOptions, ViewRuntimeOptions } from '../models/interfaces';
 import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
+import { formatDuration, isSvgPath } from '../models/media';
 import type { ViewType } from '../models/viewTypes';
 
 /**
@@ -13,6 +14,23 @@ export function wheelZoomFactor(deltaY: number, deltaMode: number = 0): number {
     const px = deltaMode === 1 ? deltaY * 33 : deltaMode === 2 ? deltaY * 800 : deltaY;
     const clamped = Math.max(-100, Math.min(100, px));
     return Math.pow(1.25, -clamped / 100);
+}
+
+/** Slideshow seconds per image from the setting: 1-60, the default (4) when it isn't a number */
+export function slideshowSeconds(value: unknown): number {
+    const seconds = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(seconds) || seconds <= 0) return 4;
+    return Math.min(60, Math.max(1, seconds));
+}
+
+/** "14 Jul 2024, 18:32" in the reader's locale; undefined for a missing or invalid date */
+export function formatTakenAt(date: Date | undefined): string | undefined {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return undefined;
+    try {
+        return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch {
+        return date.toLocaleString();
+    }
 }
 
 /**
@@ -40,8 +58,12 @@ export abstract class GalleryView implements IGalleryView {
 
     protected lastFocusedElement: HTMLElement | null = null;
     protected activeModal: HTMLElement | null = null;
-    protected slideshowInterval: number | null = null;
+    protected slideshowTimer: number | null = null;
     protected slideshowPlaying: boolean = false;
+    /** Seconds the slideshow shows each image */
+    public slideshowIntervalSeconds: number = 4;
+    /** Largest remote video (MB) the viewer downloads to play; 0 = no limit */
+    public maxRemoteVideoMb: number = 200;
 
     constructor(type: ViewType, container: HTMLElement) {
         this._type = type;
@@ -136,6 +158,8 @@ export abstract class GalleryView implements IGalleryView {
         if (typeof options.allowRemoteImages === 'boolean') this.allowRemoteImages = options.allowRemoteImages;
         if (typeof options.showCaptions === 'boolean') this.showCaptions = options.showCaptions;
         if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
+        if (typeof options.slideshowInterval === 'number') this.slideshowIntervalSeconds = slideshowSeconds(options.slideshowInterval);
+        if (typeof options.maxRemoteVideoMb === 'number' && options.maxRemoteVideoMb >= 0) this.maxRemoteVideoMb = options.maxRemoteVideoMb;
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
         // Passed together for each gallery, so a key that is present but undefined clears an earlier value
@@ -247,6 +271,8 @@ export abstract class GalleryView implements IGalleryView {
      * the image is smaller than `parent`.
      */
     protected renderCaption(parent: HTMLElement, image: IImageSource, overlayParent: HTMLElement = parent): HTMLElement | null {
+        // Every view adds its caption here, so videos get their badge here too
+        if (image.mediaType === 'video') this.renderVideoBadge(overlayParent, image);
         const captionText = image.caption ?? image.displayName;
         if (!captionText) return null;
 
@@ -259,6 +285,27 @@ export abstract class GalleryView implements IGalleryView {
         // The image's alt text already names the tile; don't have screen readers say it twice
         if (captionText === image.displayName) captionEl.setAttribute('aria-hidden', 'true');
         return captionEl;
+    }
+
+    /**
+     * Mark a tile as a video: a play icon and the length, over the still frame
+     */
+    protected renderVideoBadge(parent: HTMLElement, image: IImageSource): HTMLElement {
+        parent.classList.add('is-video');
+        const badge = this.createElement(parent, 'div', {
+            cls: 'gallery-video-badge',
+            attr: { 'role': 'img', 'aria-label': 'Video' }
+        });
+        const icon = this.createElement(badge, 'span', { cls: 'gallery-video-badge-icon' });
+        setIcon(icon, 'play');
+        const time = this.createElement(badge, 'span', { cls: 'gallery-video-badge-time' });
+        image.onDurationKnown?.(seconds => {
+            const text = formatDuration(seconds);
+            if (!text) return;
+            time.textContent = text;
+            badge.setAttribute('aria-label', `Video, ${text}`);
+        });
+        return badge;
     }
 
     /**
@@ -511,6 +558,9 @@ export abstract class GalleryView implements IGalleryView {
      * The timeout covers both fetching the URL and decoding the image.
      */
     protected loadWithTimeout(image: IImageSource, onLoad: (temp: HTMLImageElement) => void, onError: (error: Error) => void): void {
+        // A local or external video's still frame waits its turn to be captured, and the capture
+        // has its own limits (falling back to a placeholder), so the remote timeout doesn't apply
+        const timed = !((image.type === 'local' || image.type === 'external') && image.mediaType === 'video');
         const temp = new Image();
         let settled = false;
         const settle = (fn: () => void) => {
@@ -522,7 +572,9 @@ export abstract class GalleryView implements IGalleryView {
             fn();
         };
 
-        const timeoutHandle = window.setTimeout(() => settle(() => onError(new Error('Image loading timed out'))), this.remoteLoadTimeoutMs ?? 10000);
+        const timeoutHandle = timed
+            ? window.setTimeout(() => settle(() => onError(new Error('Image loading timed out'))), this.remoteLoadTimeoutMs ?? 10000)
+            : undefined;
         temp.onload = () => settle(() => onLoad(temp));
         temp.onerror = () => settle(() => onError(new Error('Failed to load')));
 
@@ -607,9 +659,9 @@ export abstract class GalleryView implements IGalleryView {
 
         this.activeModal = modal;
         this.slideshowPlaying = false;
-        if (this.slideshowInterval) {
-            window.clearInterval(this.slideshowInterval);
-            this.slideshowInterval = null;
+        if (this.slideshowTimer) {
+            window.clearTimeout(this.slideshowTimer);
+            this.slideshowTimer = null;
         }
 
         // Add class for open animation styling
@@ -639,6 +691,8 @@ export abstract class GalleryView implements IGalleryView {
 
         // Keyboard handler for navigation (Left/Right)
         const modalKeyHandler = (e: KeyboardEvent) => {
+            // A focused video uses the arrow keys to seek
+            if (e.target instanceof HTMLVideoElement) return;
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 navigate(-1);
@@ -654,12 +708,13 @@ export abstract class GalleryView implements IGalleryView {
         const cleanup = () => {
             try {
                 disposers.forEach(dispose => dispose());
+                stopVideo();
                 modal.removeEventListener('keydown', closeOnEscape);
                 doc.removeEventListener('focus', keepFocus, true);
                 modal.removeEventListener('keydown', modalKeyHandler);
-                if (this.slideshowInterval) {
-                    window.clearInterval(this.slideshowInterval);
-                    this.slideshowInterval = null;
+                if (this.slideshowTimer) {
+                    window.clearTimeout(this.slideshowTimer);
+                    this.slideshowTimer = null;
                 }
             } catch (error) { Logger.debug('Ignored error:', error); }
         };
@@ -717,7 +772,29 @@ export abstract class GalleryView implements IGalleryView {
         const img = this.createElement(imgContainer, 'img', {
             attr: { 'alt': image.displayName }
         }) as HTMLImageElement;
+        // Videos play here instead of the img; it stays hidden for images
+        const videoEl = this.createElement(imgContainer, 'video', {
+            cls: 'gallery-modal-video is-hidden',
+            attr: { 'controls': '', 'playsinline': '', 'preload': 'metadata' }
+        }) as HTMLVideoElement;
+        // Shown over the still frame when a video won't be played here (too large to download)
+        const videoNotice = this.createElement(imgContainer, 'div', { cls: 'gallery-modal-video-notice is-hidden' });
         const captionEl = this.createElement(imgContainer, 'div', { cls: 'gallery-modal-caption' });
+
+        // The video on screen, so it can be stopped and its download let go when the viewer moves on
+        let playingVideo: IImageSource | null = null;
+        const stopVideo = () => {
+            try {
+                videoEl.pause();
+                videoEl.removeAttribute('src');
+                videoEl.removeAttribute('poster');
+                videoEl.load();
+            } catch (error) { Logger.debug('Ignored error:', error); }
+            playingVideo?.releaseVideo?.();
+            playingVideo = null;
+            videoNotice.classList.add('is-hidden');
+            this.emptyElement(videoNotice);
+        };
 
         // Prev/Next arrows, centred on the stage; hidden for a single image
         const prevBtn = this.createElement(imgContainer, 'button', {
@@ -771,6 +848,32 @@ export abstract class GalleryView implements IGalleryView {
             if (srcImage.size) {
                 addRow('File Size', this.formatFileSize(srcImage.size));
             }
+            const duration = srcImage.mediaType === 'video' ? formatDuration(srcImage.durationSeconds) : undefined;
+            if (duration) addRow('Duration', duration);
+            // When the file was last changed (vault files, Nextcloud); photos also show when they were taken
+            const modified = typeof srcImage.mtime === 'number' ? formatTakenAt(new Date(srcImage.mtime)) : undefined;
+            if (modified) addRow('Modified', modified);
+
+            // Photo details (EXIF): shown when known, read on demand while the panel is open.
+            // Missing fields are left out and a failed read just leaves the rows above.
+            const addPhotoRows = (metadata: IImageMetadata | undefined) => {
+                if (!metadata) return;
+                const taken = formatTakenAt(metadata.takenAt);
+                if (taken) addRow('Taken', taken);
+                if (metadata.camera) addRow('Camera', metadata.camera);
+                if (metadata.lens) addRow('Lens', metadata.lens);
+            };
+            if (srcImage.metadata || !srcImage.resolveMetadata || !infoVisible) {
+                addPhotoRows(srcImage.metadata);
+                return;
+            }
+            const token = modalLoadToken;
+            srcImage.resolveMetadata()
+                .then(metadata => {
+                    // Still the same image, and the panel hasn't been rebuilt since
+                    if (token === modalLoadToken && currentImage === srcImage && grid.isConnected) addPhotoRows(metadata);
+                })
+                .catch((error: unknown) => Logger.debug('Could not read photo details:', error));
         };
 
         // Toolbar text and caption for the image on screen
@@ -816,6 +919,7 @@ export abstract class GalleryView implements IGalleryView {
 
         // Zoom handlers
         const zoom = (factor: number) => {
+            if (currentImage.mediaType === 'video') return;
             currentScale = Math.max(1, Math.min(8, currentScale * factor));
             updateZoomTransform();
         };
@@ -881,9 +985,12 @@ export abstract class GalleryView implements IGalleryView {
         let pinchStartDistance = 0;
         let pinchStartScale = 1;
         let wasPinched = false;
+        let touchOnVideo = false;
         const touchDistance = (touches: TouchList) =>
             Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
         imgContainer.addEventListener('touchstart', (e: TouchEvent) => {
+            touchOnVideo = e.target === videoEl;
+            if (touchOnVideo) return;
             if (e.touches.length === 2) {
                 wasPinched = true;
                 pinchStartDistance = touchDistance(e.touches);
@@ -898,6 +1005,7 @@ export abstract class GalleryView implements IGalleryView {
             startY = touchStartY - translateY;
         }, { passive: true });
         imgContainer.addEventListener('touchmove', (e: TouchEvent) => {
+            if (touchOnVideo) return;
             if (e.touches.length === 2 && pinchStartDistance > 0) {
                 e.preventDefault();
                 currentScale = Math.max(1, Math.min(8, pinchStartScale * touchDistance(e.touches) / pinchStartDistance));
@@ -911,7 +1019,7 @@ export abstract class GalleryView implements IGalleryView {
         }, { passive: false });
         imgContainer.addEventListener('touchend', (e: TouchEvent) => {
             if (e.touches.length < 2) pinchStartDistance = 0;
-            if (wasPinched || currentScale > 1 || !hasSeveral) return;
+            if (touchOnVideo || wasPinched || currentScale > 1 || !hasSeveral) return;
             const dx = e.changedTouches[0].clientX - touchStartX;
             const dy = e.changedTouches[0].clientY - touchStartY;
             if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) navigate(dx < 0 ? 1 : -1);
@@ -923,6 +1031,8 @@ export abstract class GalleryView implements IGalleryView {
             infoVisible = !infoVisible;
             infoBtn.classList.toggle('active', infoVisible);
             infoPanel.classList.toggle('visible', infoVisible);
+            // Photo details are read only while the panel is open
+            if (infoVisible) updateInfoPanel(currentImage);
             const label = infoVisible ? 'Hide details' : 'Show details';
             infoBtn.setAttribute('aria-label', label);
             infoBtn.setAttribute('title', label);
@@ -931,7 +1041,9 @@ export abstract class GalleryView implements IGalleryView {
         // Open/save the image, at the size the viewer shows rather than the gallery's thumbnail
         downloadBtn.addEventListener('click', () => {
             const target = currentImage;
-            const resolveUrl = target.resolveLargeUrl ? target.resolveLargeUrl() : this.resolveImageUrl(target);
+            const resolveUrl = target.mediaType === 'video' && target.resolveVideoUrl
+                ? target.resolveVideoUrl()
+                : target.resolveLargeUrl ? target.resolveLargeUrl() : this.resolveImageUrl(target);
             resolveUrl.then(displayUrl => {
                 if (!displayUrl) return;
                 const a = doc.body.createEl('a', {
@@ -949,17 +1061,31 @@ export abstract class GalleryView implements IGalleryView {
         const loadModalImage = (imgEl: HTMLImageElement, srcImage: IImageSource) => {
             const token = ++modalLoadToken;
             resetZoom();
+            stopVideo();
             updateInfoPanel(srcImage);
             updateHeader(srcImage);
 
-            if (srcImage.type === 'external' && !this.allowRemoteImages) {
-                imgEl.alt = 'External image blocked';
+            // Remote images and videos stay unloaded until they are allowed in settings
+            const blocked = srcImage.type === 'external' && !this.allowRemoteImages;
+            const isVideo = !blocked && srcImage.mediaType === 'video' && !!srcImage.resolveVideoUrl;
+            content.classList.toggle('is-video', isVideo);
+            videoEl.classList.toggle('is-hidden', !isVideo);
+            imgEl.classList.toggle('is-hidden', isVideo);
+            if (isVideo) {
+                loadModalVideo(srcImage, token);
+                return;
+            }
+
+            if (blocked) {
+                imgEl.alt = srcImage.mediaType === 'video' ? 'External video blocked' : 'External image blocked';
                 imgEl.src = '';
                 imgEl.classList.add('gallery-external-blocked');
                 return;
             }
 
             imgEl.classList.remove('gallery-external-blocked');
+            // SVGs are vectors: scale them to the stage instead of showing them at their (often icon) size
+            imgEl.classList.toggle('is-svg', isSvgPath(srcImage.path));
             imgEl.setCssStyles({
                 transition: 'opacity 0.2s ease-in-out',
                 opacity: '0'
@@ -980,6 +1106,93 @@ export abstract class GalleryView implements IGalleryView {
                 imgEl.setCssStyles({ opacity: '1' });
             });
         };
+
+        // Videos: the still frame shows while the video downloads (remote) or opens (local), then
+        // it plays. Each step checks the token, so a slow download can't start after moving on.
+        const loadModalVideo = (srcImage: IImageSource, token: number) => {
+            if (isTooLargeToPlay(srcImage)) {
+                showVideoTooLarge(srcImage, token);
+                return;
+            }
+            this.resolveImageUrl(srcImage)
+                .then(poster => { if (token === modalLoadToken && poster) videoEl.poster = poster; })
+                .catch((error: unknown) => Logger.debug('No still frame for video:', error));
+            srcImage.resolveVideoUrl!()
+                .then(url => {
+                    if (token !== modalLoadToken) {
+                        srcImage.releaseVideo?.();
+                        return;
+                    }
+                    playingVideo = srcImage;
+                    videoEl.src = url;
+                    try {
+                        // Browsers may refuse to start with sound until the user interacts; the controls still work
+                        videoEl.play()?.catch((error: unknown) => Logger.debug('Video did not start on its own:', error));
+                    } catch (error) { Logger.debug('Video did not start on its own:', error); }
+                })
+                .catch((error: unknown) => {
+                    Logger.warn('Could not load video:', srcImage.path, error);
+                    showVideoFailure(srcImage, token, "This video couldn't be loaded.");
+                });
+            videoEl.setAttribute('aria-label', srcImage.displayName || 'Video');
+        };
+
+        // Remote videos download in full before playing, so large ones aren't downloaded at all.
+        // Videos of unknown size are played.
+        const isTooLargeToPlay = (srcImage: IImageSource): boolean => {
+            const limit = this.maxRemoteVideoMb * 1024 * 1024;
+            // Local and external videos stream into the player, so they play at any size
+            return srcImage.type !== 'local' && srcImage.type !== 'external' && limit > 0 && typeof srcImage.size === 'number' && srcImage.size > limit;
+        };
+        const showVideoTooLarge = (srcImage: IImageSource, token: number) => {
+            showVideoFailure(srcImage, token, `This video is too large to play here (${this.formatFileSize(srcImage.size ?? 0)}).`);
+        };
+
+        // A video that won't play here: its still frame (or nothing), with a short message and,
+        // for Immich and Nextcloud, a button that opens it there
+        const showVideoFailure = (srcImage: IImageSource, token: number, message: string) => {
+            if (token !== modalLoadToken) return;
+            videoEl.classList.add('is-hidden');
+            img.classList.remove('is-hidden');
+            img.alt = srcImage.displayName || 'Video';
+            this.resolveImageUrl(srcImage)
+                .then(poster => { if (token === modalLoadToken) { img.src = poster; img.setCssStyles({ opacity: '1' }); } })
+                .catch(() => { img.src = ''; });
+
+            this.emptyElement(videoNotice);
+            this.createElement(videoNotice, 'div', { cls: 'gallery-modal-video-notice-text', text: message });
+            if (srcImage.openUrl) {
+                const openUrl = srcImage.openUrl;
+                const service = srcImage.type.startsWith('nextcloud') ? 'Nextcloud' : srcImage.type.startsWith('immich') ? 'Immich' : '';
+                const link = this.createElement(videoNotice, 'button', { cls: 'gallery-modal-video-notice-btn', text: service ? `Open in ${service}` : 'Open' });
+                link.addEventListener('click', (e: MouseEvent) => {
+                    e.stopPropagation();
+                    window.open(openUrl, '_blank');
+                });
+            }
+            videoNotice.classList.remove('is-hidden');
+            // A slideshow moves on after the usual interval
+            if (this.slideshowPlaying) scheduleNext();
+        };
+        // Sources that don't list a video's length or size (Nextcloud) learn them once it plays;
+        // tile badges update, and layouts use the size the next time they render
+        videoEl.addEventListener('loadedmetadata', () => {
+            if (!playingVideo) return;
+            if (playingVideo.durationSeconds === undefined && Number.isFinite(videoEl.duration)) {
+                playingVideo.durationSeconds = videoEl.duration;
+            }
+            if (!playingVideo.dimensions && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+                playingVideo.dimensions = { width: videoEl.videoWidth, height: videoEl.videoHeight };
+            }
+        });
+
+        // The file opened but the player can't decode it (an unsupported codec, say)
+        videoEl.addEventListener('error', () => {
+            if (playingVideo && playingVideo === currentImage && videoEl.getAttribute('src')) {
+                Logger.warn('Could not play video:', currentImage.path, videoEl.error?.message);
+                showVideoFailure(currentImage, modalLoadToken, "This video can't be played here. Its format may not be supported on this device.");
+            }
+        });
 
         // Galleries of remote thumbnails show the thumbnail first, then swap in the larger
         // version once it has downloaded and decoded, unless the user has moved on.
@@ -1026,17 +1239,26 @@ export abstract class GalleryView implements IGalleryView {
             playBtn.setAttribute('aria-label', playTitle);
 
             if (this.slideshowPlaying) {
-                this.slideshowInterval = window.setInterval(() => {
-                    navigate(1, true);
-                }, 4000);
-            } else {
-                if (this.slideshowInterval) {
-                    window.clearInterval(this.slideshowInterval);
-                    this.slideshowInterval = null;
-                }
+                scheduleNext();
+            } else if (this.slideshowTimer) {
+                window.clearTimeout(this.slideshowTimer);
+                this.slideshowTimer = null;
             }
         };
         playBtn.addEventListener('click', toggleSlideshow);
+
+        // The slideshow shows an image for the set interval; a video plays to the end
+        const scheduleNext = () => {
+            if (this.slideshowTimer) window.clearTimeout(this.slideshowTimer);
+            this.slideshowTimer = null;
+            if (!this.slideshowPlaying) return;
+            // A video moves on when it ends (see 'ended'), unless it already has
+            if (currentImage.mediaType === 'video' && !videoEl.classList.contains('is-hidden') && !videoEl.ended) return;
+            this.slideshowTimer = window.setTimeout(() => navigate(1, true), slideshowSeconds(this.slideshowIntervalSeconds) * 1000);
+        };
+        videoEl.addEventListener('ended', () => {
+            if (this.slideshowPlaying) navigate(1, true);
+        });
 
         // Navigation function
         const navigate = (delta: number, isSlideshow = false) => {
@@ -1060,6 +1282,7 @@ export abstract class GalleryView implements IGalleryView {
             if (nextImage) {
                 currentImage = nextImage;
                 loadModalImage(img, nextImage);
+                if (this.slideshowPlaying) scheduleNext();
             }
         };
 

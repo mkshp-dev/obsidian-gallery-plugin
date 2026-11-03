@@ -13,7 +13,8 @@ export const DEMO = {
     immichAlbums: {
         landscapes: '0fe76d50-18b3-4f74-8f7c-3ede043982de',
         city: '0a33a817-9389-45f5-a99d-6ac12f56dc7f',
-        travel: '882fef37-436a-49c1-af1a-e444d0216ee0'
+        travel: '882fef37-436a-49c1-af1a-e444d0216ee0',
+        videos: '19d45220-6775-457e-b351-50cbc43375ec'
     },
     immichShare: 'https://demo-immich.mkshp.dev/share/7XBAej6IyThZOS7izb78XcEJX7QhYwQBmxtHxaBz7TaaqiP5pxWyZQrN6TIvUGRhI9g',
     immichProtectedShare: 'https://demo-immich.mkshp.dev/share/RAHL6jLQTkqIDaSYjdlHdcbJ4W25u002dyorCdqYVDmoar8xyB7wiE8GARi4QH2eqWw',

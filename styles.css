@@ -181,6 +181,39 @@
   line-height: var(--line-height-normal, 1.5);
 }
 
+/* Videos: a play icon and the length over the still frame, in every view */
+.gallery-video-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.gallery-video-badge-icon {
+  display: inline-flex;
+}
+
+.gallery-video-badge-icon svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+.gallery-video-badge-time:empty {
+  display: none;
+}
+
 /* Enhanced Loading State */
 .gallery-thumbnail-loading {
   position: absolute;
@@ -1239,6 +1272,55 @@ button.gallery-modal-close-btn {
   will-change: transform;
 }
 
+/* Videos play in the stage with the browser's controls */
+.gallery-modal-image-container video {
+  max-width: calc(100% - 128px);
+  max-height: calc(100% - 112px);
+  background: #000;
+  outline: none;
+}
+
+.gallery-modal-image-container > .is-hidden {
+  display: none;
+}
+
+/* Over the still frame of a video that is too large to play here */
+.gallery-modal-video-notice {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, calc(100% - 32px));
+  padding: 16px 20px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  text-align: center;
+  font-size: var(--font-ui-small);
+}
+
+button.gallery-modal-video-notice-btn {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  box-shadow: none;
+}
+
+button.gallery-modal-video-notice-btn:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+/* No zoom for videos */
+.gallery-modal-content.is-video button.gallery-modal-tool-btn.zoom-in-btn,
+.gallery-modal-content.is-video button.gallery-modal-tool-btn.zoom-out-btn,
+.gallery-modal-content.is-video button.gallery-modal-tool-btn.zoom-reset-btn {
+  display: none;
+}
+
 /* Caption under the photo, over a soft gradient */
 .gallery-modal-caption {
   position: absolute;
@@ -1402,7 +1484,8 @@ button.gallery-modal-nav:focus-visible {
 
 /* Mobile responsive layout */
 @media (max-width: 600px) {
-  .gallery-modal-image-container img {
+  .gallery-modal-image-container img,
+  .gallery-modal-image-container video {
     max-width: 100%;
     max-height: calc(100% - 120px);
   }
@@ -2440,4 +2523,17 @@ button.gallery-settings-tab-btn.is-active {
 .gallery-frameless .gallery-justified-layout,
 .gallery-frameless .gallery-carousel {
   padding: 0;
+}
+
+/* SVGs are vectors: fill the stage (keeping their shape) instead of showing them at icon size */
+.gallery-modal-image-container img.is-svg {
+  width: calc(100% - 128px);
+  height: calc(100% - 112px);
+}
+
+@media (max-width: 600px) {
+  .gallery-modal-image-container img.is-svg {
+    width: 100%;
+    height: calc(100% - 120px);
+  }
 }

@@ -1,10 +1,13 @@
 import { INextcloudSourceConfig, INextcloudConnection, IImageSource } from '../models/interfaces';
-import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
+import { GallerySourceResolver, GallerySourceResolveContext, GallerySourceResult } from './GallerySourceResolver';
 import { NextcloudClient } from '../services/nextcloud/NextcloudClient';
+import { NextcloudFile } from '../models/nextcloud/NextcloudTypes';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 import { globToRegex } from '../utils/globToRegex';
 import { usesThumbnailImages } from '../models/viewTypes';
+import { isVideoMimeType, parseHttpDate } from '../models/media';
+import { VideoPoster } from '../utils/VideoPoster';
 
 export class NextcloudSourceResolver implements GallerySourceResolver<INextcloudSourceConfig> {
     readonly type = 'nextcloud';
@@ -14,13 +17,14 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
         this.getConnections = getConnections;
     }
 
-    async resolve(source: INextcloudSourceConfig, context: GallerySourceResolveContext): Promise<{ images: IImageSource[], errors: string[] }> {
+    async resolve(source: INextcloudSourceConfig, context: GallerySourceResolveContext): Promise<GallerySourceResult> {
         const images: IImageSource[] = [];
         const errors: string[] = [];
+        let skipped: string[] = [];
 
         if (!source.connection) {
             errors.push(`Nextcloud source is missing a 'connection' reference.`);
-            return { images, errors };
+            return { images, errors, skipped };
         }
 
         const connections = this.getConnections();
@@ -28,7 +32,7 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
 
         if (!connection) {
             errors.push(`Nextcloud connection with key '${source.connection}' not found in settings.`);
-            return { images, errors };
+            return { images, errors, skipped };
         }
 
         const client = new NextcloudClient(connection);
@@ -36,11 +40,14 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
         try {
             const path = source.path || '/';
             const recursive = source.recursive !== undefined ? source.recursive : true;
-            let files = await client.listFiles(path, recursive, source.filters?.mimeTypes);
+            const listedSkipped: string[] = [];
+            let files = await client.listFiles(path, recursive, source.filters?.mimeTypes, listedSkipped);
+            skipped.push(...listedSkipped);
 
             if (source.filenameFilter) {
                 const regex = globToRegex(source.filenameFilter);
                 files = files.filter(file => regex.test(file.name));
+                skipped = skipped.filter(name => regex.test(name.split('/').pop() || ''));
             }
 
             if (source.filters) {
@@ -100,7 +107,7 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
             }
 
             if (files.length === 0) {
-                return { images, errors };
+                return { images, errors, skipped };
             }
 
             let representation: 'thumbnail' | 'original' = 'original';
@@ -112,11 +119,18 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
                 try {
                     const logicalPath = `nextcloud://${connection.key}${file.path.startsWith('/') ? '' : '/'}${file.path}`;
 
+                    if (isVideoMimeType(file.contentType)) {
+                        images.push(this.videoSource(client, connection.key, logicalPath, file, representation));
+                        continue;
+                    }
+
                     // File contents are fetched lazily, when a view first displays the image
                     const image = new ImageSource(logicalPath, 'nextcloud', file.name, undefined, undefined,
                         () => client.getFileBlobUrl(file.path, representation, file.fileId));
                     // Tile views load small previews; the image viewer uses a large one instead
                     if (representation === 'thumbnail') image.setLargeLoader(() => client.getFileBlobUrl(file.path, 'large', file.fileId));
+                    image.size = file.size || undefined;
+                    image.mtime = parseHttpDate(file.lastModified);
                     images.push(image);
                 } catch (e) {
                     Logger.warn(`Failed to resolve file ${file.path} for Nextcloud source: ${e instanceof Error ? e.message : String(e)}`);
@@ -126,6 +140,31 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
             errors.push(error instanceof Error ? error.message : String(error));
         }
 
-        return { images, errors };
+        return { images, errors, skipped };
+    }
+
+    /**
+     * A Nextcloud video: tiles show the server's preview of it, or, when the server makes no video
+     * previews, a frame taken from the downloaded file (small videos only) or a placeholder. The
+     * image viewer downloads the file to play it.
+     */
+    private videoSource(client: NextcloudClient, connectionKey: string, logicalPath: string, file: NextcloudFile, representation: 'thumbnail' | 'original'): ImageSource {
+        const still = representation === 'thumbnail' ? 'thumbnail' : 'large';
+        let image: ImageSource;
+        const stillLoader = async (): Promise<string> => {
+            try {
+                return await client.getFileBlobUrl(file.path, still, file.fileId, true);
+            } catch {
+                const poster = await VideoPoster.captureDownloaded(`nextcloud:${connectionKey}:${file.path}`, () => client.downloadFile(file.path), file.size);
+                image.durationSeconds = poster.duration;
+                return poster.url;
+            }
+        };
+        image = new ImageSource(logicalPath, 'nextcloud', file.name, undefined, undefined, stillLoader);
+        image.setMediaType('video', () => client.getFileBlobUrl(file.path, 'original', file.fileId));
+        image.size = file.size || undefined;
+        image.mtime = parseHttpDate(file.lastModified);
+        if (file.fileId) image.openUrl = client.getFileWebUrl(file.fileId);
+        return image;
     }
 }

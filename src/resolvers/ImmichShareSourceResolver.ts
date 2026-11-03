@@ -2,7 +2,7 @@ import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { IImageSource, IImmichShareSourceConfig } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImageSource } from '../models/ImageSource';
-import { extractImmichCaption, extractImmichDimensions } from './ImmichSourceResolver';
+import { extractImmichCaption, extractImmichDimensions, extractImmichMetadata, extractImmichDuration, extractImmichFileSize, isImmichVideo } from './ImmichSourceResolver';
 import { ImmichAsset, ImmichAlbum, ImmichShareResponse } from '../models/immich/ImmichTypes';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 import { usesThumbnailImages } from '../models/viewTypes';
@@ -33,7 +33,8 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
             const basePath = shareMatch[1]; // could be empty string
             const shareKey = shareMatch[2];
-            const apiBase = `${urlObj.origin}${basePath}/api`;
+            const webBase = `${urlObj.origin}${basePath}`;
+            const apiBase = `${webBase}/api`;
 
             let activeCookie: string | undefined;
             let activeToken: string | undefined;
@@ -219,6 +220,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
                 const originalFileName = typeof asset.originalFileName === 'string' ? asset.originalFileName : String(assetId);
                 let description = extractImmichCaption(asset);
+                let metadata = extractImmichMetadata(asset);
 
                 // An asset that includes exifInfo but no caption has none; only look up assets without exifInfo
                 if (!description && asset.exifInfo === undefined) {
@@ -230,6 +232,7 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                         });
                         if (detailRes.status === 200) {
                             description = extractImmichCaption(detailRes.json as ImmichAsset);
+                            metadata = extractImmichMetadata(detailRes.json as ImmichAsset) ?? metadata;
                         }
                     } catch {
                         // ignore detail fetch fallback error
@@ -239,24 +242,36 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                 const assetUrls = {
                     thumbnail: `${apiBase}/assets/${assetId}/thumbnail?key=${shareKey}`,
                     preview: `${apiBase}/assets/${assetId}/thumbnail?size=preview&key=${shareKey}`,
-                    original: `${apiBase}/assets/${assetId}/original?key=${shareKey}`
+                    original: `${apiBase}/assets/${assetId}/original?key=${shareKey}`,
+                    video: `${apiBase}/assets/${assetId}/video/playback?key=${shareKey}`
                 };
 
                 // Fetched lazily, when a view first displays the asset. requestUrl bypasses browser CORS
                 // and sends the share session, which a plain <img> URL could not do for password-protected shares.
-                const loaderFor = (rep: 'thumbnail' | 'preview' | 'original') => () =>
+                const loaderFor = (rep: keyof typeof assetUrls) => () =>
                     ObjectUrlManager.getOrCreate(`immich-share:${shareKey}:${assetId}:${rep}`, async () => {
                         const blobRes = await requestUrl({ url: assetUrls[rep], method: 'GET', headers: authHeaders });
                         if (blobRes.status !== 200) {
                             throw new Error(`Failed to fetch Immich share asset '${assetId}': HTTP ${blobRes.status}`);
                         }
-                        return new Blob([blobRes.arrayBuffer]);
+                        const contentType = blobRes.headers?.['content-type'];
+                        return new Blob([blobRes.arrayBuffer], typeof contentType === 'string' ? { type: contentType } : undefined);
                     });
 
-                const image = new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loaderFor(representation));
+                // Videos show a still frame in the gallery and play in the image viewer
+                const isVideo = isImmichVideo(asset);
+                const shown = isVideo && representation === 'original' ? 'preview' : representation;
+                const image = new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loaderFor(shown));
                 // Tile views load small thumbnails; the image viewer uses the preview size instead
-                if (representation === 'thumbnail') image.setLargeLoader(loaderFor('preview'));
+                if (shown === 'thumbnail') image.setLargeLoader(loaderFor('preview'));
+                image.size = extractImmichFileSize(asset);
+                if (isVideo) {
+                    image.setMediaType('video', loaderFor('video'));
+                    image.durationSeconds = extractImmichDuration(asset);
+                    image.openUrl = `${webBase}/share/${shareKey}/photos/${assetId}`;
+                }
                 image.dimensions = extractImmichDimensions(asset);
+                image.metadata = metadata;
                 return image;
             }));
 

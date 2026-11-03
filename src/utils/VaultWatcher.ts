@@ -30,7 +30,7 @@ export class VaultWatcher {
   private eventRefs: EventRef[] = [];
 
   private static readonly DEFAULT_OPTIONS: Required<IVaultWatcherOptions> = {
-    watchExtensions: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'],
+    watchExtensions: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.avif', '.mp4', '.m4v', '.webm', '.mov', '.ogv'],
     debounceMs: 500,
     enableLogging: false
   };

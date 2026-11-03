@@ -1,6 +1,6 @@
 import { App, Notice } from 'obsidian';
 import { DUMMY_ASSETS } from './DemoAssets';
-import { ANIMATED_GIF_BASE64, DemoImageSpec, renderDemoImage } from './DemoImageFactory';
+import { ANIMATED_GIF_BASE64, AVIF_SAMPLE_BASE64, SVG_SAMPLES, DemoImageSpec, renderDemoImage } from './DemoImageFactory';
 import { Logger } from '../utils/Logger';
 import { DEMO, DemoConnectionConflict } from './DemoServers';
 import { UseCaseGenerator } from './UseCaseGenerator';
@@ -151,6 +151,13 @@ export class ShowcaseGenerator {
         const gif = Uint8Array.from(window.atob(ANIMATED_GIF_BASE64), c => c.charCodeAt(0));
         await this.app.vault.createBinary(`${this.testLabPath}/animated.gif`, gif.buffer);
 
+        // AVIF (embedded too: canvas cannot encode it) and two SVGs, one with only a viewBox
+        const avif = Uint8Array.from(window.atob(AVIF_SAMPLE_BASE64), c => c.charCodeAt(0));
+        await this.app.vault.createBinary(`${this.testLabPath}/avif-sample.avif`, avif.buffer);
+        for (const sample of SVG_SAMPLES) {
+            await this.app.vault.create(`${this.testLabPath}/${sample.name}`, sample.svg);
+        }
+
         // A file with an image extension but invalid contents, to exercise the error tile
         const broken = Uint8Array.from('This is not an image.', c => c.charCodeAt(0));
         await this.app.vault.createBinary(`${this.testLabPath}/broken-image.jpg`, broken.buffer);
@@ -188,7 +195,7 @@ These notes render images immediately:
 Use the \`${DEMO.immichKey}\` connection (see **Demo servers** below):
 - [[07 - Immich authenticated]] — People, tags, and date filters.
 - [[08 - Immich favorites and recent]] — Favorites and recent photo feeds.
-- [[09 - Immich albums]] — Album-based galleries, including videos only.
+- [[09 - Immich albums]] — Album-based galleries, a video album, and videos only.
 
 ### 🔗 Immich — Shared Links
 No account required, just a public share URL. These use albums on the demo server:
@@ -210,7 +217,7 @@ See every compact error the plugin can show — great for debugging your own gal
 
 ### 🧪 Local Test Lab
 Generated images in many shapes, sizes, and formats for checking layouts by eye:
-- [[16 - Local test lab]] — Aspect ratios, formats (PNG/JPEG/WebP/GIF), long and Unicode file names, a broken file, and 36 extra images for pagination.
+- [[16 - Local test lab]] — Aspect ratios, formats (PNG/JPEG/WebP/GIF/AVIF/SVG), long and Unicode file names, a broken file, and 36 extra images for pagination.
 
 ${demoSetup}
 ## Next Steps
@@ -867,9 +874,24 @@ view:
   type: thumbnail
 \`\`\`
 
-### Only the videos in an album
+### A video album
 
-\`assetType: video\` keeps just the videos; the gallery shows their preview images.
+The Videos album holds five short clips: MP4, a MOV, a WebM and a portrait (9:16) video. Each tile shows a still frame, a play icon and the length; click one to play it.
+
+\`\`\`obs-gallery
+sources:
+  - type: immich
+    connection: ${DEMO.immichKey}
+    filters:
+      albumIds:
+        - ${DEMO.immichAlbums.videos}
+view:
+  type: justified
+\`\`\`
+
+### Only the videos in some albums
+
+\`assetType: video\` keeps just the videos from the City and Travel albums.
 
 \`\`\`obs-gallery
 sources:
@@ -948,11 +970,11 @@ view:
 
 These galleries use the \`${DEMO.nextcloudKey}\` connection to the public demo server (see [[00 - Welcome]] for the setup). To use your own Nextcloud, add a connection in **Settings → Gallery View → Providers** and change \`connection:\` to its key.
 
-The demo folder \`/Gallery-Demo\` has three sub-folders: \`Landscapes\`, \`City\` and \`Camera\`.
+The demo folder \`/Gallery-Demo\` has four sub-folders: \`Landscapes\`, \`City\`, \`Camera\` and \`Videos\`.
 
 ---
 
-### Every image under \`/Gallery-Demo\`
+### Everything under \`/Gallery-Demo\`
 
 \`\`\`obs-gallery
 sources:
@@ -975,6 +997,21 @@ sources:
     path: /Gallery-Demo/City
 view:
   type: thumbnail
+\`\`\`
+
+---
+
+### Videos (\`/Gallery-Demo/Videos\`)
+
+Five short clips. Tiles use Nextcloud's own video previews; Nextcloud doesn't report a video's length, so each tile shows it once you have played the video.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo/Videos
+view:
+  type: masonry
 \`\`\`
 
 ---
@@ -1496,6 +1533,9 @@ A workbench for checking layouts by eye. The images in \`${this.testLabPath}/\` 
 | \`café – ünïcödé & spaces.webp\` | 640×480 | Unicode and symbols in the name |
 | \`UPPERCASE-EXTENSION.JPG\` | 480×360 | Upper-case extension |
 | \`animated.gif\` | 240×160 | Animated GIF |
+| \`avif-sample.avif\` | 320×240 | AVIF format |
+| \`vector-sized.svg\` | 400×300 | SVG with a width and height; sharp at any size in the viewer |
+| \`vector-viewbox-only.svg\` | 1:2 | SVG with only a viewBox: should keep its tall shape |
 | \`broken-image.jpg\` | — | Not a real image: should show an error tile |
 
 The white corner squares and border show whether an image is being cropped. A further ${TEST_LAB_BULK_COUNT} images live in \`_assets/Bulk/\` for pagination tests.

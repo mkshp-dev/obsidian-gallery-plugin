@@ -40,7 +40,7 @@ view:
 | `password` | string | No | Password if the Nextcloud public share link is password-protected. |
 | `recursive` | boolean | No | When `true`, scans subdirectories inside the share. Defaults to `true`. |
 | `filenameFilter` | string | No | Glob pattern for filename matching (e.g. `IMG_*`, `*.png`). |
-| `filters.mimeTypes` | list of strings | No | Filter files by MIME types. |
+| `filters.mimeTypes` | list of strings | No | Filter files by MIME types (e.g. `image/jpeg`, `video/mp4`). `image/*` and `video/*` match every image or video type. |
 | `filters.minSizeKb` | number | No | Minimum file size in kilobytes. |
 | `filters.maxSizeKb` | number | No | Maximum file size in kilobytes. |
 | `sort.by` | `name`, `size`, or `lastModified` | No | Field to sort files by. |
@@ -58,6 +58,10 @@ Gallery View automatically parses and resolves several Nextcloud public share UR
 - **Photos App Public Album Link**: `https://cloud.example.com/apps/photos/public/TOKEN`
 
 ---
+
+## Videos
+
+Videos in the share play in the [image viewer](../views/image-viewer.md#videos); their tiles show a still frame with a play icon. The still frame is Nextcloud's public preview of the video when the server makes video previews. For password-protected shares, or servers without video previews, a video up to 50 MB is downloaded once to take its frame (not on phones or tablets), and larger ones show a dark placeholder. Playing downloads the whole video, so videos over **Largest remote video to play** in [Settings](../settings.md) offer **Open in Nextcloud** (the share's page) instead.
 
 ## Examples
 

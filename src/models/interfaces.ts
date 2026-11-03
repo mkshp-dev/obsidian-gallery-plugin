@@ -2,6 +2,7 @@
  * Core interfaces for the Gallery Plugin
  * Based on contracts defined in contracts/interfaces.md
  */
+import type { MediaType } from './media';
 
 import type { ViewType, ViewTypeName } from './viewTypes';
 
@@ -25,7 +26,8 @@ export interface ILocalSourceConfig {
 
 export interface IExternalSourceConfig {
   type: 'external';
-  urls: (string | { url: string; caption?: string })[];
+  /** `video: true` marks a video whose URL has no video file extension */
+  urls: (string | { url: string; caption?: string; video?: boolean })[];
 }
 
 export interface IImmichShareSourceConfig {
@@ -144,6 +146,16 @@ export interface IGalleryConfig {
   sort?: string;
 }
 
+/** Photo details for the image viewer's Details panel; any field may be missing */
+export interface IImageMetadata {
+  /** When the photo was taken, as the camera's local time */
+  takenAt?: Date;
+  /** Camera maker and model, e.g. "Canon EOS R5" */
+  camera?: string;
+  /** Lens model */
+  lens?: string;
+}
+
 export interface IImageSource {
   /** Vault-relative path to image file */
   path: string;
@@ -211,6 +223,36 @@ export interface IImageSource {
    */
   resolveLargeUrl?(): Promise<string>;
 
+  /**
+   * 'video' for videos: views show a still frame (from the display URL) with a play badge,
+   * and the image viewer plays the video from resolveVideoUrl. Missing means 'image'.
+   */
+  mediaType?: MediaType;
+
+  /** Video length in seconds, when known */
+  durationSeconds?: number;
+
+  /** Call `listener` with the video's length once it is known (straight away if it already is) */
+  onDurationKnown?(listener: (seconds: number) => void): void;
+
+  /** Web page showing the item at its source (Immich), offered when the viewer won't play it */
+  openUrl?: string;
+
+  /** Get a URL the image viewer can play, fetching the video first for remote sources */
+  resolveVideoUrl?(): Promise<string>;
+
+  /** Let go of a fetched video once the viewer moves on, so large videos don't stay in memory */
+  releaseVideo?(): void;
+
+  /** Photo details already known for the image (remote sources that send them with the listing) */
+  metadata?: IImageMetadata;
+
+  /**
+   * Get the photo details, reading them on first use (local files read their EXIF data).
+   * Resolves to undefined when there are none; never rejects.
+   */
+  resolveMetadata?(): Promise<IImageMetadata | undefined>;
+
   /** Validate file size against maximum limit */
   validateSize(sizeBytes: number): boolean;
 
@@ -224,6 +266,10 @@ export interface ViewRuntimeOptions {
   allowRemoteImages?: boolean;
   showCaptions?: boolean;
   captionMaxLines?: number;
+  /** Image viewer: seconds between images when the slideshow plays */
+  slideshowInterval?: number;
+  /** Image viewer: largest remote video (MB) downloaded to play; 0 = no limit */
+  maxRemoteVideoMb?: number;
   pagination?: boolean;
   itemsPerPage?: number;
   /** Draw the gallery's frame: border, background, shadow and padding */
@@ -292,6 +338,9 @@ export interface IContentScanner {
 
   /** Check if file is supported image format */
   isImageFile(path: string): boolean;
+
+  /** Paths of photo and video files under a folder that galleries can't show (HEIC, RAW, ...) */
+  listSkippedFiles?(path: string, recursive?: boolean): string[];
 
   /** Extract image links from markdown file */
   extractLinksFromFile(file: unknown): Promise<IImageSource[]>; // any for TFile from Obsidian

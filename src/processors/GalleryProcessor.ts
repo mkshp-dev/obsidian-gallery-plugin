@@ -1,3 +1,4 @@
+import { isMediaPath, skippedFilesNote } from '../models/media';
 import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
@@ -28,6 +29,10 @@ export interface IGalleryProcessingOptions {
         // Caption settings
         showCaptions?: boolean;
         captionMaxLines?: number;
+        // Seconds per image in the image viewer's slideshow
+        slideshowInterval?: number;
+        // Largest remote (Immich, Nextcloud) video (MB) the image viewer downloads to play; 0 = no limit
+        maxRemoteVideoMb?: number;
         // Gallery frame (border, background, padding); overridable per-gallery via frame:
         showFrame?: boolean;
         // Pagination defaults (overridable per-gallery via the view: config)
@@ -44,6 +49,8 @@ export interface IGalleryRenderResult {
   errors: string[];
   /** Errors reported by source resolvers (also included in `errors`), shown inline on the gallery */
   sourceErrors?: string[];
+  /** Photos and videos the sources left out for their format (HEIC, RAW, ...), for the note under the gallery */
+  skipped?: string[];
   processingTimeMs: number;
 }
 
@@ -81,6 +88,8 @@ export class GalleryProcessor {
     private activeGalleries: Map<string, GalleryInstance> = new Map();
     /** Images resolved for each gallery, per entry in its config.sources, so a refresh can re-resolve only some sources */
     private sourceImages: Map<string, IImageSource[][]> = new Map();
+    /** Files each source left out for their format, kept per source like sourceImages */
+    private sourceSkipped: Map<string, string[][]> = new Map();
     /** Latest refresh generation per gallery; a refresh that finishes after a newer one started is discarded */
     private refreshGenerations: Map<string, number> = new Map();
     private resolverRegistry: SourceResolverRegistry;
@@ -98,6 +107,8 @@ export class GalleryProcessor {
         ,enableLifecycleLogging: false
         ,showCaptions: true
         ,captionMaxLines: 1
+        ,slideshowInterval: 4
+        ,maxRemoteVideoMb: 200
         ,showFrame: true
         ,pagination: false
         ,itemsPerPage: 24
@@ -202,6 +213,7 @@ export class GalleryProcessor {
                 galleryInstance.id,
                 scanned.perSource.map(list => list.filter(img => !invalidImages.has(img)))
             );
+            this.sourceSkipped.set(galleryInstance.id, scanned.perSourceSkipped);
 
             // Step 5: Render mixed-source inline error if needed
             const sourceErrors = result.sourceErrors ?? [];
@@ -302,7 +314,7 @@ export class GalleryProcessor {
         options: Required<IGalleryProcessingOptions>,
         loadingManager: LoadingManager | null,
         notePath?: string
-    ): Promise<{ images: IImageSource[]; perSource: IImageSource[][] }> {
+    ): Promise<{ images: IImageSource[]; perSource: IImageSource[][]; perSourceSkipped: string[][] }> {
         if (loadingManager) {
             loadingManager.startLoading('scan', { type: 'dots', text: 'Scanning for images...' });
         }
@@ -311,10 +323,12 @@ export class GalleryProcessor {
 
         try {
             const perSource: IImageSource[][] = [];
+            const perSourceSkipped: string[][] = [];
             const resolveContext = { timeoutMs: options.timeoutMs, viewType, notePath };
 
             for (const source of config.sources || []) {
-                const { images: resolvedImages, errors: resolveErrors } = await this.resolverRegistry.resolveSource(source, resolveContext);
+                const { images: resolvedImages, errors: resolveErrors, skipped } = await this.resolverRegistry.resolveSource(source, resolveContext);
+                perSourceSkipped.push(skipped ?? []);
 
                 if (resolveErrors.length > 0) {
                     result.errors.push(...resolveErrors);
@@ -326,12 +340,13 @@ export class GalleryProcessor {
 
             const images = GalleryProcessor.mergeSourceImages(perSource);
             result.imagesFound = images.length;
+            result.skipped = perSourceSkipped.flat();
 
             if (loadingManager && images.length > 0) {
                 loadingManager.updateText('scan', `Found ${images.length} images`);
             }
 
-            return { images, perSource };
+            return { images, perSource, perSourceSkipped };
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -373,10 +388,7 @@ export class GalleryProcessor {
                 // Additional validation logic
                 if (image.type === 'local') {
                     // Validate image format (using simple extension check for local files)
-                    const cleanPath = image.path.split('?')[0].split('#')[0];
-                    const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
-                    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-                    if (!supportedExtensions.includes(extension)) {
+                    if (!isMediaPath(image.path)) {
                         validationErrors.push(`Invalid format: ${image.path}`);
                         continue;
                     }
@@ -406,9 +418,10 @@ export class GalleryProcessor {
                     // Optional content-type validation via HEAD request
                     if (options.validateRemoteContentType) {
                         try {
-                            const isImage = await ImageLoader.validateImageUrl(image.path, Math.min(5000, options.timeoutMs));
+                            const isVideo = image.mediaType === 'video';
+                            const isImage = await ImageLoader.validateImageUrl(image.path, Math.min(5000, options.timeoutMs), isVideo);
                             if (!isImage) {
-                                validationErrors.push(`External URL does not appear to be an image: ${image.path}`);
+                                validationErrors.push(`External URL does not appear to be ${isVideo ? 'a video' : 'an image'}: ${image.path}`);
                                 continue;
                             }
                         } catch {
@@ -496,7 +509,7 @@ export class GalleryProcessor {
                     try {
                         // Preferred: view has a setOptions API
                         if (view.setOptions) {
-                            view.setOptions(GalleryProcessor.viewRuntimeOptions(config, options));
+                            view.setOptions(GalleryProcessor.viewRuntimeOptions(config, options, result.skipped));
                         }
                     } catch (error) { Logger.debug('Ignored error:', error); }
 
@@ -633,14 +646,19 @@ export class GalleryProcessor {
      * (pagination, itemsPerPage, captions, sizes). Ignored view options become warnings shown
      * under the gallery, unless error messages are hidden.
      */
-    private static viewRuntimeOptions(config: IGalleryConfig, settings: Required<IGalleryProcessingOptions>): ViewRuntimeOptions {
-        const { options: block, warnings } = readViewOptions(config.view);
+    private static viewRuntimeOptions(config: IGalleryConfig, settings: Required<IGalleryProcessingOptions>, skipped: string[] = []): ViewRuntimeOptions {
+        const { options: block, warnings: viewWarnings } = readViewOptions(config.view);
+        // Photos and videos left out for their format get one line under the gallery
+        const skippedNote = skippedFilesNote(skipped);
+        const warnings = skippedNote ? [...viewWarnings, skippedNote] : viewWarnings;
         return {
             remoteLoadTimeoutMs: settings.timeoutMs,
             allowRemoteImages: settings.allowRemoteImages,
             showCaptions: block.captions ?? settings.showCaptions,
             frame: block.frame ?? settings.showFrame,
             captionMaxLines: settings.captionMaxLines,
+            slideshowInterval: settings.slideshowInterval,
+            maxRemoteVideoMb: settings.maxRemoteVideoMb,
             pagination: block.pagination ?? settings.pagination,
             itemsPerPage: block.itemsPerPage ?? settings.itemsPerPage,
             rowHeight: block.rowHeight,
@@ -696,6 +714,10 @@ export class GalleryProcessor {
         } else {
             message = config.path ? `No images found in "${config.path}"` : 'No images found';
         }
+
+        // A folder of only HEIC or RAW files says why it looks empty
+        const skippedNote = skippedFilesNote(result.skipped ?? []);
+        if (skippedNote && sourceErrors.length === 0 && !hasPathError) message = `${message}. ${skippedNote}`;
 
         GalleryProcessor.renderCompactError(container, message);
     }
@@ -826,7 +848,7 @@ export class GalleryProcessor {
             const currentOpts = { ...this.DEFAULT_OPTIONS, ...(this.getOptions ? this.getOptions() : {}) };
 
             if (gallery.view.setOptions) {
-                gallery.view.setOptions(GalleryProcessor.viewRuntimeOptions(gallery.config, currentOpts));
+                gallery.view.setOptions(GalleryProcessor.viewRuntimeOptions(gallery.config, currentOpts, this.sourceSkipped.get(galleryId)?.flat()));
             }
 
             if (refreshSources === 'none') {
@@ -842,18 +864,22 @@ export class GalleryProcessor {
                 notePath: gallery.notePath
             };
             const previous = this.sourceImages.get(galleryId);
+            const previousSkipped = this.sourceSkipped.get(galleryId);
             const perSource: IImageSource[][] = [];
+            const perSourceSkipped: string[][] = [];
             const freshlyResolved: IImageSource[] = [];
 
             for (let i = 0; i < sources.length; i++) {
                 const reusable = previous?.[i];
                 if (reusable && !shouldResolve(sources[i])) {
                     perSource.push(reusable);
+                    perSourceSkipped.push(previousSkipped?.[i] ?? []);
                     continue;
                 }
-                const { images: resolvedImages } = await this.resolverRegistry.resolveSource(sources[i], context);
+                const { images: resolvedImages, skipped } = await this.resolverRegistry.resolveSource(sources[i], context);
                 freshlyResolved.push(...resolvedImages);
                 perSource.push(resolvedImages);
+                perSourceSkipped.push(skipped ?? []);
             }
 
             // The gallery was destroyed, or a newer refresh started, while sources were resolving
@@ -864,6 +890,11 @@ export class GalleryProcessor {
 
             const images = GalleryProcessor.mergeSourceImages(perSource);
             this.sourceImages.set(galleryId, perSource);
+            // Files added or removed since the last render change the skipped-files note
+            this.sourceSkipped.set(galleryId, perSourceSkipped);
+            if (gallery.view.setOptions) {
+                gallery.view.setOptions(GalleryProcessor.viewRuntimeOptions(gallery.config, currentOpts, perSourceSkipped.flat()));
+            }
             gallery.update(images);
 
             Logger.debug(`Gallery refreshed: ${galleryId} with ${images.length} images`);
@@ -883,6 +914,7 @@ export class GalleryProcessor {
             gallery.destroy();
             this.activeGalleries.delete(galleryId);
             this.sourceImages.delete(galleryId);
+            this.sourceSkipped.delete(galleryId);
             this.refreshGenerations.delete(galleryId);
             Logger.debug(`Gallery destroyed: ${galleryId}`);
         }

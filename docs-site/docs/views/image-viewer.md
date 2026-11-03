@@ -17,16 +17,29 @@ For Immich and Nextcloud galleries, the viewer first shows the small image the g
 | Control | Action |
 |---|---|
 | The arrows on the sides, **←** / **→**, or a swipe on a touch screen | Previous / next image |
-| **Play** / **Pause** | Start or pause a slideshow (4 seconds per image). Moving to another image by hand pauses it. |
+| **Play** / **Pause** | Start or pause a slideshow (4 seconds per image; change it with **Slideshow interval** in [Settings](../settings.md)). Moving to another image by hand pauses it. |
 | **Zoom out** / **Zoom in**, the mouse wheel over the image, or a pinch on a touch screen | Zoom out / in. On narrow screens the two buttons are hidden; pinch to zoom instead. |
 | Double-click the image | Zoom in, or back to the whole image |
 | Drag the image (one finger on a touch screen) | Move around a zoomed image |
 | **Reset zoom** | Back to the whole image |
-| **Details** (ⓘ) | Show or hide the details panel: name, path, source type, caption, and size when known |
+| **Details** (ⓘ) | Show or hide the details panel: name, path, source type, caption, and size when known. For photos it also shows when the photo was taken, the camera and the lens, from the photo's EXIF data (local files) or from Immich, and when a vault or Nextcloud file was last modified. Videos show their length. Details a photo doesn't have are left out. |
 | **Open or save image** | Open the image in a new tab, or save it, at the size the viewer shows |
 | **Close** (✕), **Esc**, or a click on the dark area around the photo | Close the viewer |
 
-Galleries with a single image have no arrows or slideshow button.
+Galleries with a single image have no arrows or slideshow button. SVG images are scaled to fill the screen, since they stay sharp at any size.
+
+## Videos
+
+Videos play in the viewer with the usual player controls (play, seek, volume, full screen), starting on their own. While the video downloads or opens, its still frame shows. Zoom doesn't apply to videos, so the zoom buttons are hidden. **←** / **→** change video unless the player has focus (then they seek), and swipes on the player itself don't change video. During a slideshow a video plays to the end before the next item.
+
+If the player can't decode a video (a WebM file in an older Safari, or an HEVC `.mov` on some computers), the viewer shows its still frame with a short message, and for Immich and Nextcloud videos an **Open in Immich** / **Open in Nextcloud** button. Immich serves WebM videos as an MP4 copy, so they play everywhere.
+
+Leaving a video stops it. An Immich or Nextcloud video is downloaded when you open it and let go of when you move on. Nextcloud doesn't report how long a video is, so its tile shows the length once you have played it.
+
+### Large videos
+
+- **Vault videos** play straight from disk, at any size.
+- **Immich and Nextcloud videos** have to be downloaded in full before they play, so ones larger than **Largest remote video to play** (200 MB by default, in [Settings](../settings.md)) aren't downloaded. The viewer shows the still frame, the video's size and an **Open in Immich** or **Open in Nextcloud** button, which opens it in your browser (for a Nextcloud share link, the share's page). Set the limit to `0` to play every video.
 
 ## Keyboard in the gallery
 

@@ -11,6 +11,17 @@ export interface GallerySourceResolveContext {
     // Any future context properties can be added here
 }
 
+/** What a resolver found for one source */
+export interface GallerySourceResult {
+    images: IImageSource[];
+    errors: string[];
+    /**
+     * Names of photo and video files the source holds in formats galleries can't show (HEIC,
+     * RAW, ...), for the note under the gallery. Missing when the source can't tell.
+     */
+    skipped?: string[];
+}
+
 /**
  * Base interface for all source resolvers
  */
@@ -24,5 +35,5 @@ export interface GallerySourceResolver<TSourceConfig extends ISourceConfig = ISo
      * @param context Additional context for the resolution process
      * @returns Array of resolved image sources
      */
-    resolve(source: TSourceConfig, context: GallerySourceResolveContext): Promise<{ images: IImageSource[], errors: string[] }>;
+    resolve(source: TSourceConfig, context: GallerySourceResolveContext): Promise<GallerySourceResult>;
 }

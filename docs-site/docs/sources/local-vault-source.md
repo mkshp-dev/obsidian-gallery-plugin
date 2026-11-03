@@ -43,6 +43,29 @@ view:
 | `sort.order` | `asc` or `desc` | — | Sort order. `desc` = descending. |
 | `limit` | number | — | Maximum number of images to fetch. |
 
+## Supported formats
+
+Images in JPEG, PNG, GIF (including animated), WebP, AVIF and SVG, and videos (see below). Other files in the folder are skipped. When some of them are photos or videos in a format galleries can't show (HEIC, TIFF, BMP, camera RAW files, or AVI, MKV and similar videos), a line under the gallery says how many and which formats, for example *2 files weren't shown: HEIC and RAW aren't supported.* Notes, PDFs and other documents are skipped without a mention. Files that `filenameFilter` leaves out aren't counted.
+
+SVGs are drawn as images, so any scripts inside them don't run. An SVG with only a `viewBox` (no width or height) keeps the shape the `viewBox` gives it, and in the [image viewer](../views/image-viewer.md) SVGs are scaled up to fill the screen. Photo details (date taken, camera, lens) are read from JPEG, PNG and WebP files; AVIF files don't show them yet.
+
+## Videos
+
+Video files in the folder (`.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`) are part of the gallery too. Each tile shows a still frame from about a second into the video, with a play icon and the video's length in the corner. Click it to play the video in the [image viewer](../views/image-viewer.md#videos).
+
+To show only videos, or only images, filter by file name:
+
+```yaml
+sources:
+  - type: local
+    path: Clips
+    filenameFilter: "*.mp4"
+```
+
+Large videos are fine: they play straight from disk, and the still frame is taken by jumping to that point rather than reading the whole file. If Obsidian doesn't allow the frame to be taken that way, files up to 50 MB are read to take it; larger ones, and every video on a phone or tablet, show a dark placeholder with the play badge instead.
+
+Videos play in Obsidian's built-in player, so they need a format it can play: MP4 (H.264) and WebM work everywhere. A `.mov` from an iPhone is often HEVC, which some computers can't play; its tile then shows a dark placeholder, and the viewer shows that instead of playing it.
+
 ## Examples
 
 ### Folder gallery

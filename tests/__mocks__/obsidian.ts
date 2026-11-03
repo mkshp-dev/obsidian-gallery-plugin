@@ -215,3 +215,5 @@ export class MarkdownRenderChild {
   onload() {}
   onunload() {}
 }
+
+export const Platform = { isMobile: false, isDesktop: true };

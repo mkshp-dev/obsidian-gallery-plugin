@@ -10,8 +10,17 @@ sidebar_position: 6
 ## Gallery not appearing
 
 - Verify that the path defined in your local source configuration (under `sources`) exists in your vault and that the spelling and casing match exactly.
-- Confirm images are in a supported format: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`.
+- Confirm images are in a supported format: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.avif`, `.svg`, or a video: `.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`.
+- A line such as *3 files weren't shown: HEIC isn't supported* under a gallery (or after **No images found**) names photos and videos in formats galleries can't show. Convert them to JPEG (or MP4 for videos) to include them. iPhones can save photos as JPEG under **Settings → Camera → Formats → Most Compatible**.
 - Try switching between reading and editing mode to trigger a re-render.
+
+## Video shows a dark tile or doesn't play
+
+- The video's format may not be one Obsidian's player supports. MP4 (H.264) and WebM play everywhere; HEVC (often used by iPhone `.mov` files) doesn't play on every computer. Converting the file to H.264 MP4 fixes it.
+- An external video's tile is dark when the website doesn't allow other sites to read its videos (CORS) and the video is over 50 MB or its size isn't reported. It still plays in the viewer. Links to video pages (YouTube, Vimeo) aren't video files and can't be shown.
+- Immich and Nextcloud videos download when you open them in the viewer, so a long video can take a moment to start.
+- An Immich or Nextcloud video that says it is too large to play here is over **Largest remote video to play** in Settings. Use the **Open in Immich** / **Open in Nextcloud** button, or raise the limit (`0` removes it).
+- Nextcloud video tiles show a dark placeholder when the server makes no video previews and the video is over 50 MB (or you're on a phone or tablet). Nextcloud makes video previews only with the Movie preview provider and ffmpeg installed on the server; ask your Nextcloud admin to enable them.
 
 ## Modal not opening
 

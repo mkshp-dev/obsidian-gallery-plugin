@@ -97,3 +97,24 @@ export async function renderDemoImage(spec: DemoImageSpec): Promise<DemoImageFil
 
     return { fileName: `${spec.name}.${ext}`, data: await blob.arrayBuffer() };
 }
+
+/** A 320×240 AVIF for the local test lab (canvas cannot encode AVIF, so it is embedded) */
+export const AVIF_SAMPLE_BASE64 = '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';
+
+/** SVGs for the local test lab: one with a width and height, and one with only a viewBox */
+export const SVG_SAMPLES: Array<{ name: string; svg: string }> = [
+    {
+        name: 'vector-sized.svg',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">' +
+            '<rect width="400" height="300" fill="#2a6f97"/><rect x="6" y="6" width="388" height="288" fill="none" stroke="#fff" stroke-width="6"/>' +
+            '<circle cx="200" cy="130" r="70" fill="#f9c74f"/>' +
+            '<text x="200" y="260" font-family="sans-serif" font-size="26" fill="#fff" text-anchor="middle">SVG 400×300</text></svg>'
+    },
+    {
+        name: 'vector-viewbox-only.svg',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200">' +
+            '<rect width="100" height="200" fill="#6a4c93"/><rect x="2" y="2" width="96" height="196" fill="none" stroke="#fff" stroke-width="2"/>' +
+            '<polygon points="50,30 85,100 15,100" fill="#ffca3a"/>' +
+            '<text x="50" y="150" font-family="sans-serif" font-size="11" fill="#fff" text-anchor="middle">viewBox 1:2</text></svg>'
+    }
+];

@@ -72,6 +72,9 @@ For full details on configuring the plugin, usage examples, and available settin
 - **PNG** (`.png`)
 - **GIF** (`.gif`)
 - **WebP** (`.webp`)
+- **AVIF** (`.avif`)
+- **SVG** (`.svg`): scaled to fill the viewer, since it's a vector
+- **Videos** (`.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`) from your vault, Immich, Nextcloud and external URLs: shown as a still frame with a play badge, and played in the full-screen viewer
 
 ### Showcase Generator
 Gallery View includes a built-in command to generate a set of interactive demo notes inside your vault. This is the fastest way to see what the plugin can do and to learn the configuration syntax.

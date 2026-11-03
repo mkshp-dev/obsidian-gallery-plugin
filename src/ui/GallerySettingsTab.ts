@@ -136,6 +136,22 @@ export class GallerySettingsTab extends PluginSettingTab {
             },
             {
                 type: 'group',
+                heading: 'Image viewer',
+                items: [
+                    {
+                        name: 'Slideshow interval (seconds)',
+                        desc: 'How long the slideshow shows each image before moving on to the next one.',
+                        control: { type: 'number', key: 'slideshowInterval', defaultValue: DEFAULT_SETTINGS.slideshowInterval, min: 1, max: 60 }
+                    },
+                    {
+                        name: 'Largest remote video to play (MB)',
+                        desc: 'Immich and Nextcloud videos are downloaded in full before they play. Larger videos show their still frame and a link to open them in Immich or Nextcloud instead. 0 means no limit.',
+                        control: { type: 'number', key: 'maxRemoteVideoMb', defaultValue: DEFAULT_SETTINGS.maxRemoteVideoMb, min: 0 }
+                    }
+                ]
+            },
+            {
+                type: 'group',
                 heading: 'Captions',
                 items: [
                     {

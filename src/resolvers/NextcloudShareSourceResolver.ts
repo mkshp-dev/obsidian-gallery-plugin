@@ -1,10 +1,13 @@
 import { INextcloudShareSourceConfig, IImageSource } from '../models/interfaces';
-import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
+import { GallerySourceResolver, GallerySourceResolveContext, GallerySourceResult } from './GallerySourceResolver';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 import { requestUrl } from 'obsidian';
 import { globToRegex } from '../utils/globToRegex';
+import { acceptsMimeType, isSkippedListing, isVideoMimeType, parseHttpDate } from '../models/media';
+import { VideoPoster } from '../utils/VideoPoster';
+import { usesThumbnailImages } from '../models/viewTypes';
 
 interface ShareFile {
     href: string;
@@ -20,7 +23,7 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
     /** Upper bound on folders listed for one share, so a huge share cannot run away */
     private static readonly MAX_FOLDERS = 200;
 
-    async resolve(source: INextcloudShareSourceConfig, context: GallerySourceResolveContext): Promise<{ images: IImageSource[], errors: string[] }> {
+    async resolve(source: INextcloudShareSourceConfig, context: GallerySourceResolveContext): Promise<GallerySourceResult> {
         const images: IImageSource[] = [];
         const errors: string[] = [];
 
@@ -158,11 +161,12 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                 if (response.status === 200 || response.status === 207) {
                     const listing = this.parseWebdavResponse(response.text, source.filters?.mimeTypes);
                     let files = listing.files;
+                    let skipped = [...listing.skipped];
 
                     // Folder shares are walked one level at a time (Depth: infinity is often disabled).
                     // Photos albums are flat, so only the files share needs this.
                     if (strat.name === 'webdav' && source.recursive !== false) {
-                        files = files.concat(await this.listSubfolders(listing.folders, urlObj.origin, strat.headers, source.filters?.mimeTypes, propfind));
+                        files = files.concat(await this.listSubfolders(listing.folders, urlObj.origin, strat.headers, source.filters?.mimeTypes, propfind, skipped));
                     }
 
                     const { minSizeKb, maxSizeKb } = source.filters ?? {};
@@ -172,6 +176,7 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                     if (source.filenameFilter) {
                         const regex = globToRegex(source.filenameFilter);
                         files = files.filter(file => regex.test(file.name));
+                        skipped = skipped.filter(name => regex.test(name));
                     }
 
                     if (source.sort) {
@@ -218,17 +223,34 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                                     throw new Error(`Failed to fetch file. Status: ${fileRes.status}`);
                                 }
 
-                                const contentType = typeof fileRes.headers['content-type'] === 'string' ? fileRes.headers['content-type'] : 'image/jpeg';
+                                const contentType = typeof fileRes.headers['content-type'] === 'string' ? fileRes.headers['content-type'] : (file.contentType || 'image/jpeg');
                                 return new Blob([fileRes.arrayBuffer], { type: contentType });
                             });
 
-                            images.push(new ImageSource(logicalPath, 'nextcloud-share', file.name, undefined, undefined, loader));
+                            if (isVideoMimeType(file.contentType)) {
+                                images.push(this.videoSource({
+                                    logicalPath, file, loader, cacheKey,
+                                    // Public previews need no login, so password-protected shares go without
+                                    previewUrl: password ? undefined : this.publicPreviewUrl(baseUrl, token, file.href, usesThumbnailImages(context.viewType) ? 256 : 1024),
+                                    shareUrl: source.url,
+                                    download: async () => {
+                                        const res = await requestUrl({ url: fileUrl, method: 'GET', headers: fileHeaders });
+                                        if (res.status !== 200) throw new Error(`Failed to fetch file. Status: ${res.status}`);
+                                        return new Blob([res.arrayBuffer], { type: file.contentType });
+                                    }
+                                }));
+                                continue;
+                            }
+                            const image = new ImageSource(logicalPath, 'nextcloud-share', file.name, undefined, undefined, loader);
+                            image.size = file.size || undefined;
+                            image.mtime = parseHttpDate(file.lastModified);
+                            images.push(image);
                         } catch (e) {
                             Logger.warn(`Failed to resolve file ${file.href} for Nextcloud share: ${e instanceof Error ? e.message : String(e)}`);
                         }
                     }
 
-                    return { images, errors };
+                    return { images, errors, skipped };
                 }
 
                 if (response.status === 401 && strat.requiresAuth) {
@@ -253,6 +275,59 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
     }
 
     /**
+     * Nextcloud's public preview of a file in a share, or undefined when the file's path inside
+     * the share can't be told from its WebDAV href (Photos albums)
+     */
+    private publicPreviewUrl(baseUrl: string, token: string, href: string, size: number): string | undefined {
+        // Shares are listed under /public.php/webdav (older) or /public.php/dav/files/<token>
+        const match = /\/public\.php\/(?:webdav|dav\/files\/[^/]+)(\/.*)?$/.exec(href);
+        if (!match) return undefined;
+        const inShare = match[1] || '/';
+        return `${baseUrl}/index.php/apps/files_sharing/publicpreview/${token}?file=${encodeURIComponent(inShare)}&x=${size}&y=${size}&a=1`;
+    }
+
+    /**
+     * A video in a share: tiles show the server's public preview, or, when there is none (no video
+     * previews on the server, or a password-protected share), a frame taken from the downloaded
+     * file (small videos only) or a placeholder. The image viewer downloads the file to play it.
+     */
+    private videoSource(opts: {
+        logicalPath: string;
+        file: ShareFile;
+        loader: () => Promise<string>;
+        cacheKey: string;
+        previewUrl?: string;
+        shareUrl: string;
+        download: () => Promise<Blob>;
+    }): ImageSource {
+        const { file, previewUrl } = opts;
+        let image: ImageSource;
+        const stillLoader = async (): Promise<string> => {
+            if (previewUrl) {
+                try {
+                    return await ObjectUrlManager.getOrCreate(`${opts.cacheKey}:preview`, async () => {
+                        const res = await requestUrl({ url: previewUrl, method: 'GET', throw: false });
+                        if (res.status !== 200) throw new Error(`No preview (HTTP ${res.status})`);
+                        const type = typeof res.headers['content-type'] === 'string' ? res.headers['content-type'] : 'image/png';
+                        return new Blob([res.arrayBuffer], { type });
+                    });
+                } catch (error) {
+                    Logger.debug(`No Nextcloud preview for ${file.href}:`, error);
+                }
+            }
+            const poster = await VideoPoster.captureDownloaded(opts.cacheKey, opts.download, file.size);
+            image.durationSeconds = poster.duration;
+            return poster.url;
+        };
+        image = new ImageSource(opts.logicalPath, 'nextcloud-share', file.name, undefined, undefined, stillLoader);
+        image.setMediaType('video', opts.loader);
+        image.size = file.size || undefined;
+        image.mtime = parseHttpDate(file.lastModified);
+        image.openUrl = opts.shareUrl;
+        return image;
+    }
+
+    /**
      * List every folder below `folders` (breadth-first, Depth 1 per request) and return their image files.
      * A sub-folder that fails to list is skipped rather than failing the whole share.
      */
@@ -261,7 +336,8 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
         origin: string,
         headers: Record<string, string>,
         mimeTypes: string[] | undefined,
-        propfind: (url: string, headers: Record<string, string>) => Promise<{ status: number; text: string }>
+        propfind: (url: string, headers: Record<string, string>) => Promise<{ status: number; text: string }>,
+        skipped: string[] = []
     ): Promise<ShareFile[]> {
         const files: ShareFile[] = [];
         const queue = [...folders];
@@ -280,6 +356,7 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                 }
                 const listing = this.parseWebdavResponse(response.text, mimeTypes);
                 files.push(...listing.files);
+                skipped.push(...listing.skipped);
                 queue.push(...listing.folders);
             } catch (error) {
                 Logger.warn(`Skipping Nextcloud share folder ${href}:`, error);
@@ -296,7 +373,7 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
      * Parse a Depth 1 PROPFIND: the image files it lists, and the raw (still URL-encoded) hrefs of
      * its sub-folders. The first response is the listed folder itself and is not a sub-folder.
      */
-    private parseWebdavResponse(xmlText: string, mimeTypesFilter?: string[]): { files: ShareFile[]; folders: string[] } {
+    private parseWebdavResponse(xmlText: string, mimeTypesFilter?: string[]): { files: ShareFile[]; folders: string[]; skipped: string[] } {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
         const responses = xmlDoc.getElementsByTagNameNS('DAV:', 'response');
@@ -304,11 +381,9 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
         const responsesList = responses.length > 0 ? Array.from(responses) : Array.from(xmlDoc.getElementsByTagName('d:response'));
         const files: ShareFile[] = [];
         const folders: string[] = [];
+        // Names of photos and videos left out for their format, for the note under the gallery
+        const skipped: string[] = [];
 
-        let validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (mimeTypesFilter && mimeTypesFilter.length > 0) {
-            validImageMimeTypes = validImageMimeTypes.filter(mime => mimeTypesFilter.includes(mime));
-        }
 
         for (const response of responsesList) {
             let href = '';
@@ -371,14 +446,20 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                 continue;
             }
 
-            if (validImageMimeTypes.includes(contentType)) {
-                let name = displayName;
-                if (!name) {
-                    const parts = decodedHref.replace(/\/$/, '').split('/');
-                    name = parts[parts.length - 1];
-                    if (!name) name = 'shared-image';
-                }
+            let name = displayName;
+            if (!name) {
+                const parts = decodedHref.replace(/\/$/, '').split('/');
+                name = parts[parts.length - 1];
+                if (!name) name = 'shared-image';
+            }
 
+            if (isSkippedListing(contentType, name, mimeTypesFilter)) {
+                skipped.push(name);
+                continue;
+            }
+
+            // Images and videos, narrowed by the source's mimeTypes filter
+            if (acceptsMimeType(contentType, mimeTypesFilter)) {
                 files.push({
                     href: decodedHref.startsWith('/') ? decodedHref : `/${decodedHref}`,
                     name,
@@ -389,6 +470,6 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
             }
         }
 
-        return { files, folders };
+        return { files, folders, skipped };
     }
 }

@@ -71,7 +71,7 @@ describe('NextcloudSourceResolver', () => {
         expect(result.images[0].path).toBe('nextcloud://my-cloud/Photos/image1.jpg');
         expect(result.images[0].displayName).toBe('image1.jpg');
         expect(result.images[1].path).toBe('nextcloud://my-cloud/Photos/image2.png');
-        expect(mockListFiles).toHaveBeenCalledWith('/Photos', true, undefined);
+        expect(mockListFiles).toHaveBeenCalledWith('/Photos', true, undefined, expect.any(Array));
 
         // Nothing is downloaded until a view displays the image
         expect(mockGetFileBlobUrl).not.toHaveBeenCalled();
@@ -136,7 +136,7 @@ describe('NextcloudSourceResolver', () => {
 
         await resolver.resolve(source, context);
 
-        expect(mockListFiles).toHaveBeenCalledWith('/Photos', false, undefined);
+        expect(mockListFiles).toHaveBeenCalledWith('/Photos', false, undefined, expect.any(Array));
     });
 
     it('should filter files by filenameFilter glob pattern', async () => {

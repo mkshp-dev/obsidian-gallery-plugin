@@ -3,12 +3,14 @@
  * Ensures only valid image files are processed in galleries
  */
 export class ImageValidator {
-    private static readonly SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    private static readonly SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg'];
     private static readonly SUPPORTED_MIME_TYPES = [
         'image/jpeg',
         'image/png', 
         'image/gif',
-        'image/webp'
+        'image/webp',
+        'image/avif',
+        'image/svg+xml'
     ];
     
     // Maximum dimensions to prevent memory issues
@@ -179,7 +181,9 @@ export class ImageValidator {
             '.jpeg': 'JPEG',
             '.png': 'PNG', 
             '.gif': 'GIF',
-            '.webp': 'WebP'
+            '.webp': 'WebP',
+            '.avif': 'AVIF',
+            '.svg': 'SVG'
         };
         
         return formatMap[extension.toLowerCase()] || 'Unknown';

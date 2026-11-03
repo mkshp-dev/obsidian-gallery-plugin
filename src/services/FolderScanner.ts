@@ -2,6 +2,7 @@ import { Logger } from "../utils/Logger";
 import { Vault, TFolder, TFile } from 'obsidian';
 import { IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
+import { MEDIA_EXTENSIONS } from '../models/media';
 
 /**
  * Folder scanner for discovering images in vault folders
@@ -17,7 +18,7 @@ export interface IFolderStats {
 
 export class FolderScanner {
     private vault: Vault;
-    private readonly SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    private readonly SUPPORTED_EXTENSIONS = MEDIA_EXTENSIONS;
     private readonly MAX_SCAN_DEPTH = 10; // Prevent infinite recursion
     private scanCache: Map<string, { images: IImageSource[], timestamp: number }> = new Map();
     private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -153,7 +154,8 @@ export class FolderScanner {
         try {
             const stat = await this.vault.adapter.stat(file.path);
             if (stat && stat.size) {
-                if (!imageSource.validateSize(stat.size)) {
+                // The size limit is for images; videos are expected to be large
+                if (!imageSource.validateSize(stat.size) && imageSource.mediaType === 'image') {
                     Logger.warn('Image exceeds size limit:', file.path, 'Size:', stat.size);
                 }
             }

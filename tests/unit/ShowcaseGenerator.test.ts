@@ -86,8 +86,12 @@ describe('ShowcaseGenerator', () => {
         expect(mockApp.vault.adapter.mkdir).toHaveBeenCalledWith('GalleryDemo');
         expect(mockApp.vault.adapter.mkdir).toHaveBeenCalledWith('GalleryDemo/Assets');
 
-        // 2. Verify dummy assets were written (4 bundled + 11 test lab + 36 bulk + GIF + broken file)
-        expect(mockApp.vault.createBinary).toHaveBeenCalledTimes(53);
+        // 2. Verify dummy assets were written (4 bundled + 11 test lab + 36 bulk + GIF + AVIF + broken file)
+        expect(mockApp.vault.createBinary).toHaveBeenCalledTimes(54);
+        expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/_assets/avif-sample.avif', expect.any(ArrayBuffer));
+        // The SVGs are text files
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/_assets/vector-sized.svg', expect.stringContaining('<svg'));
+        expect(mockApp.vault.create).toHaveBeenCalledWith('GalleryDemo/_assets/vector-viewbox-only.svg', expect.stringContaining('viewBox="0 0 100 200"'));
         expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/Assets/demo-1.jpg', expect.any(ArrayBuffer));
         expect(mockApp.vault.createBinary).toHaveBeenCalledWith('GalleryDemo/Assets/demo-4.jpg', expect.any(ArrayBuffer));
         expect(mockApp.vault.adapter.mkdir).toHaveBeenCalledWith('GalleryDemo/_assets/Bulk');

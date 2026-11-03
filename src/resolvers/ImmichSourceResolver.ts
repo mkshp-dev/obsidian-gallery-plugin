@@ -1,10 +1,12 @@
-import { IImmichSourceConfig, IImmichConnection, IImageSource } from '../models/interfaces';
+import { IImmichSourceConfig, IImmichConnection, IImageSource, IImageMetadata } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 import { ImmichAsset } from '../models/immich/ImmichTypes';
 import { usesThumbnailImages } from '../models/viewTypes';
+import { joinMakeModel, parseExifDate } from '../utils/ExifReader';
+import { parseImmichDuration } from '../models/media';
 
 export function extractImmichCaption(asset: ImmichAsset | Record<string, unknown>): string | undefined {
     if (!asset || typeof asset !== 'object') return undefined;
@@ -56,6 +58,52 @@ export function extractImmichDimensions(asset: ImmichAsset | Record<string, unkn
         }
     }
     return undefined;
+}
+
+/**
+ * Photo details of an Immich asset for the viewer's Details panel: when it was taken, the camera
+ * and the lens. Fields Immich doesn't have are left out; undefined when there are none.
+ * The date is Immich's localDateTime (the wall-clock time where the photo was taken), falling
+ * back to the EXIF original date.
+ */
+export function extractImmichMetadata(asset: ImmichAsset | Record<string, unknown> | undefined): IImageMetadata | undefined {
+    if (!asset || typeof asset !== 'object') return undefined;
+    const exif = (asset.exifInfo && typeof asset.exifInfo === 'object' ? asset.exifInfo : {}) as Record<string, unknown>;
+    const text = (value: unknown): string | undefined => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
+
+    const metadata: IImageMetadata = {};
+    let takenAt = parseExifDate(text(asset.localDateTime));
+    if (!takenAt) {
+        const original = text(exif.dateTimeOriginal);
+        const parsed = original ? new Date(original) : undefined;
+        if (parsed && !Number.isNaN(parsed.getTime())) takenAt = parsed;
+    }
+    if (takenAt) metadata.takenAt = takenAt;
+    const camera = joinMakeModel(text(exif.make), text(exif.model));
+    if (camera) metadata.camera = camera;
+    const lens = text(exif.lensModel);
+    if (lens) metadata.lens = lens;
+    return Object.keys(metadata).length > 0 ? metadata : undefined;
+}
+
+/** True for Immich video assets: type "VIDEO", or an original MIME type of video/… */
+export function isImmichVideo(asset: ImmichAsset | Record<string, unknown> | undefined): boolean {
+    if (!asset || typeof asset !== 'object') return false;
+    if (typeof asset.type === 'string' && asset.type.toUpperCase() === 'VIDEO') return true;
+    return typeof asset.originalMimeType === 'string' && asset.originalMimeType.toLowerCase().startsWith('video/');
+}
+
+/** A video asset's length in seconds (Immich 3: milliseconds; older: "h:mm:ss.ffffff") */
+export function extractImmichDuration(asset: ImmichAsset | Record<string, unknown> | undefined): number | undefined {
+    if (!asset || typeof asset !== 'object') return undefined;
+    return parseImmichDuration(asset.duration);
+}
+
+/** The asset's file size in bytes, from its EXIF info; undefined when Immich didn't send it */
+export function extractImmichFileSize(asset: ImmichAsset | Record<string, unknown> | undefined): number | undefined {
+    if (!asset || typeof asset !== 'object' || !asset.exifInfo || typeof asset.exifInfo !== 'object') return undefined;
+    const size = Number((asset.exifInfo as Record<string, unknown>).fileSizeInByte);
+    return Number.isFinite(size) && size > 0 ? size : undefined;
 }
 
 export class ImmichSourceResolver implements GallerySourceResolver<IImmichSourceConfig> {
@@ -173,11 +221,13 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                     // Search results include exifInfo (withExif), so a missing caption there means the
                     // asset has none. Only look the asset up when the server left exifInfo out.
                     let description = extractImmichCaption(asset);
+                    let metadata = extractImmichMetadata(asset);
                     if (!description && asset.exifInfo === undefined) {
                         try {
                             const detailedAsset = await client.getAssetInfo(assetId);
                             if (detailedAsset) {
                                 description = extractImmichCaption(detailedAsset);
+                                metadata = extractImmichMetadata(detailedAsset) ?? metadata;
                             }
                         } catch {
                             // ignore fallback error
@@ -187,11 +237,22 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                     // The path is logical; the loader fetches the blob Object URL used for display
                     const logicalPath = `immich://${connection.key}/search/asset/${assetId}`;
 
+                    // Videos show a still frame in the gallery (never the original file, which is the
+                    // video itself) and play in the image viewer
+                    const isVideo = isImmichVideo(asset);
+                    const shown = isVideo && representation === 'original' ? 'preview' : representation;
                     const image = new ImageSource(logicalPath, 'immich', originalFileName, undefined, description,
-                        () => client.getAssetBlobUrl(assetId, representation));
+                        () => client.getAssetBlobUrl(assetId, shown));
                     // Tile views load small thumbnails; the image viewer uses the preview size instead
-                    if (representation === 'thumbnail') image.setLargeLoader(() => client.getAssetBlobUrl(assetId, 'preview'));
+                    if (shown === 'thumbnail') image.setLargeLoader(() => client.getAssetBlobUrl(assetId, 'preview'));
+                    image.size = extractImmichFileSize(asset);
+                    if (isVideo) {
+                        image.setMediaType('video', () => client.getAssetBlobUrl(assetId, 'video'));
+                        image.durationSeconds = extractImmichDuration(asset);
+                        image.openUrl = client.getAssetWebUrl(assetId);
+                    }
                     image.dimensions = extractImmichDimensions(asset);
+                    image.metadata = metadata;
                     return image;
                 } catch (e) {
                     Logger.warn(`Failed to resolve asset ${assetId} for Immich source: ${e instanceof Error ? e.message : String(e)}`);

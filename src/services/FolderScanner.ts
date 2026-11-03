@@ -154,7 +154,8 @@ export class FolderScanner {
         try {
             const stat = await this.vault.adapter.stat(file.path);
             if (stat && stat.size) {
-                if (!imageSource.validateSize(stat.size)) {
+                // The size limit is for images; videos are expected to be large
+                if (!imageSource.validateSize(stat.size) && imageSource.mediaType === 'image') {
                     Logger.warn('Image exceeds size limit:', file.path, 'Size:', stat.size);
                 }
             }

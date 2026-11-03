@@ -31,6 +31,8 @@ export interface IGalleryProcessingOptions {
         captionMaxLines?: number;
         // Seconds per image in the image viewer's slideshow
         slideshowInterval?: number;
+        // Largest Immich video (MB) the image viewer downloads to play; 0 = no limit
+        maxRemoteVideoMb?: number;
         // Gallery frame (border, background, padding); overridable per-gallery via frame:
         showFrame?: boolean;
         // Pagination defaults (overridable per-gallery via the view: config)
@@ -102,6 +104,7 @@ export class GalleryProcessor {
         ,showCaptions: true
         ,captionMaxLines: 1
         ,slideshowInterval: 4
+        ,maxRemoteVideoMb: 200
         ,showFrame: true
         ,pagination: false
         ,itemsPerPage: 24
@@ -643,6 +646,7 @@ export class GalleryProcessor {
             frame: block.frame ?? settings.showFrame,
             captionMaxLines: settings.captionMaxLines,
             slideshowInterval: settings.slideshowInterval,
+            maxRemoteVideoMb: settings.maxRemoteVideoMb,
             pagination: block.pagination ?? settings.pagination,
             itemsPerPage: block.itemsPerPage ?? settings.itemsPerPage,
             rowHeight: block.rowHeight,

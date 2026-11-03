@@ -234,6 +234,9 @@ export interface IImageSource {
   /** Call `listener` with the video's length once it is known (straight away if it already is) */
   onDurationKnown?(listener: (seconds: number) => void): void;
 
+  /** Web page showing the item at its source (Immich), offered when the viewer won't play it */
+  openUrl?: string;
+
   /** Get a URL the image viewer can play, fetching the video first for remote sources */
   resolveVideoUrl?(): Promise<string>;
 
@@ -264,6 +267,8 @@ export interface ViewRuntimeOptions {
   captionMaxLines?: number;
   /** Image viewer: seconds between images when the slideshow plays */
   slideshowInterval?: number;
+  /** Image viewer: largest remote video (MB) downloaded to play; 0 = no limit */
+  maxRemoteVideoMb?: number;
   pagination?: boolean;
   itemsPerPage?: number;
   /** Draw the gallery's frame: border, background, shadow and padding */

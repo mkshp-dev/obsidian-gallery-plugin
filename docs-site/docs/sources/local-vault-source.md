@@ -56,6 +56,8 @@ sources:
     filenameFilter: "*.mp4"
 ```
 
+Large videos are fine: they play straight from disk, and the still frame is taken by jumping to that point rather than reading the whole file. If Obsidian doesn't allow the frame to be taken that way, files up to 50 MB are read to take it; larger ones, and every video on a phone or tablet, show a dark placeholder with the play badge instead.
+
 Videos play in Obsidian's built-in player, so they need a format it can play: MP4 (H.264) and WebM work everywhere. A `.mov` from an iPhone is often HEVC, which some computers can't play; its tile then shows a dark placeholder, and the viewer shows that instead of playing it.
 
 ## Examples

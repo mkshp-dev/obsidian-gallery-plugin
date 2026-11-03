@@ -2,7 +2,7 @@ import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { IImageSource, IImmichShareSourceConfig } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImageSource } from '../models/ImageSource';
-import { extractImmichCaption, extractImmichDimensions, extractImmichMetadata, extractImmichDuration, isImmichVideo } from './ImmichSourceResolver';
+import { extractImmichCaption, extractImmichDimensions, extractImmichMetadata, extractImmichDuration, extractImmichFileSize, isImmichVideo } from './ImmichSourceResolver';
 import { ImmichAsset, ImmichAlbum, ImmichShareResponse } from '../models/immich/ImmichTypes';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 import { usesThumbnailImages } from '../models/viewTypes';
@@ -33,7 +33,8 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
 
             const basePath = shareMatch[1]; // could be empty string
             const shareKey = shareMatch[2];
-            const apiBase = `${urlObj.origin}${basePath}/api`;
+            const webBase = `${urlObj.origin}${basePath}`;
+            const apiBase = `${webBase}/api`;
 
             let activeCookie: string | undefined;
             let activeToken: string | undefined;
@@ -263,9 +264,11 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                 const image = new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loaderFor(shown));
                 // Tile views load small thumbnails; the image viewer uses the preview size instead
                 if (shown === 'thumbnail') image.setLargeLoader(loaderFor('preview'));
+                image.size = extractImmichFileSize(asset);
                 if (isVideo) {
                     image.setMediaType('video', loaderFor('video'));
                     image.durationSeconds = extractImmichDuration(asset);
+                    image.openUrl = `${webBase}/share/${shareKey}/photos/${assetId}`;
                 }
                 image.dimensions = extractImmichDimensions(asset);
                 image.metadata = metadata;

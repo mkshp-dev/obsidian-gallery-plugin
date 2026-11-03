@@ -265,6 +265,69 @@ describe('videos', () => {
         expect((q('.gallery-modal-image-container img') as HTMLImageElement).getAttribute('src')).toBe('blob:v-still');
     });
 
+    test('a remote video over the size limit is not downloaded; it links to Immich instead', async () => {
+        const big = clip('big');
+        big.size = 900 * 1024 * 1024;
+        big.openUrl = 'https://immich.example.com/photos/big';
+        const resolveVideo = jest.spyOn(big, 'resolveVideoUrl');
+        const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+        const view = new MasonryView(createContainer());
+        view.setOptions({ maxRemoteVideoMb: 200 });
+        view.update([big, local('a')]);
+        (view as any).expandImage(big);
+        await flush();
+        const q = (sel: string) => document.querySelector(sel) as HTMLElement;
+
+        expect(resolveVideo).not.toHaveBeenCalled();
+        expect(q('video.gallery-modal-video').classList.contains('is-hidden')).toBe(true);
+        expect(q('.gallery-modal-image-container img').getAttribute('src')).toBe('blob:big-still');
+        const notice = q('.gallery-modal-video-notice');
+        expect(notice.classList.contains('is-hidden')).toBe(false);
+        expect(notice.textContent).toContain('too large to play here (900.0 MB)');
+        (notice.querySelector('button') as HTMLButtonElement).click();
+        expect(open).toHaveBeenCalledWith('https://immich.example.com/photos/big', '_blank');
+
+        // The notice goes away on the next item
+        (q('.gallery-modal-nav.next') as HTMLButtonElement).click();
+        expect(q('.gallery-modal-video-notice').classList.contains('is-hidden')).toBe(true);
+    });
+
+    test('videos under the limit, of unknown size, local, or with no limit set are played', async () => {
+        const small = clip('small');
+        small.size = 50 * 1024 * 1024;
+        const unknown = clip('unknown');
+        const noLimit = clip('nolimit');
+        noLimit.size = 5 * 1024 * 1024 * 1024;
+        const localBig = new ImageSource('Clips/long.mp4', 'local', 'long', 'app://long.mp4', undefined, () => Promise.resolve('blob:long-still'));
+        localBig.size = 5 * 1024 * 1024 * 1024;
+
+        for (const [item, limit, src] of [[small, 200, 'blob:small-video'], [unknown, 200, 'blob:unknown-video'], [noLimit, 0, 'blob:nolimit-video'], [localBig, 200, 'app://long.mp4']] as const) {
+            document.body.innerHTML = '';
+            const view = new MasonryView(createContainer());
+            view.setOptions({ maxRemoteVideoMb: limit });
+            view.update([item, local('a')]);
+            (view as any).expandImage(item);
+            await flush();
+            expect(document.querySelector('video.gallery-modal-video')!.getAttribute('src')).toBe(src);
+        }
+    });
+
+    test('a local video still frame is not cut off by the remote load timeout', () => {
+        jest.useFakeTimers();
+        try {
+            const view = new MasonryView(createContainer());
+            view.setOptions({ remoteLoadTimeoutMs: 1000 });
+            const slow = new ImageSource('Clips/a.mp4', 'local', 'a', 'app://a.mp4', undefined, () => new Promise<string>(() => {}));
+            const onError = jest.fn();
+            (view as any).loadWithTimeout(slow, jest.fn(), onError);
+            jest.advanceTimersByTime(60000);
+            expect(onError).not.toHaveBeenCalled();
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
     test('the slideshow lets a video play to the end before moving on', async () => {
         jest.useFakeTimers();
         try {

@@ -153,6 +153,13 @@ if (typeof Document !== 'undefined' && !Document.prototype.createEl) {
   };
 }
 
+// jsdom has no media playback; the image viewer's video player calls these
+if (typeof HTMLMediaElement !== 'undefined') {
+  HTMLMediaElement.prototype.play = function () { return Promise.resolve(); };
+  HTMLMediaElement.prototype.pause = function () {};
+  HTMLMediaElement.prototype.load = function () {};
+}
+
 // Mock Obsidian MarkdownRenderChild
 jest.mock('obsidian', () => ({
   EditorSuggest: class MockEditorSuggest { constructor() {} },
@@ -180,6 +187,7 @@ jest.mock('obsidian', () => ({
   PluginSettingTab: class MockPluginSettingTab {},
   Setting: class MockSetting {},
   requestUrl: jest.fn(),
+  Platform: { isMobile: false, isDesktop: true },
   // Records the icon name so tests can check which icon a button got
   setIcon: (el: HTMLElement, icon: string) => el.setAttribute('data-icon', icon),
   parseYaml: jest.fn().mockImplementation((yamlStr: string) => {

@@ -98,6 +98,13 @@ export function extractImmichDuration(asset: ImmichAsset | Record<string, unknow
     return seconds !== undefined && seconds > 0 ? seconds : undefined;
 }
 
+/** The asset's file size in bytes, from its EXIF info; undefined when Immich didn't send it */
+export function extractImmichFileSize(asset: ImmichAsset | Record<string, unknown> | undefined): number | undefined {
+    if (!asset || typeof asset !== 'object' || !asset.exifInfo || typeof asset.exifInfo !== 'object') return undefined;
+    const size = Number((asset.exifInfo as Record<string, unknown>).fileSizeInByte);
+    return Number.isFinite(size) && size > 0 ? size : undefined;
+}
+
 export class ImmichSourceResolver implements GallerySourceResolver<IImmichSourceConfig> {
     readonly type = 'immich';
     private getConnections: () => IImmichConnection[];
@@ -237,9 +244,11 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                         () => client.getAssetBlobUrl(assetId, shown));
                     // Tile views load small thumbnails; the image viewer uses the preview size instead
                     if (shown === 'thumbnail') image.setLargeLoader(() => client.getAssetBlobUrl(assetId, 'preview'));
+                    image.size = extractImmichFileSize(asset);
                     if (isVideo) {
                         image.setMediaType('video', () => client.getAssetBlobUrl(assetId, 'video'));
                         image.durationSeconds = extractImmichDuration(asset);
+                        image.openUrl = client.getAssetWebUrl(assetId);
                     }
                     image.dimensions = extractImmichDimensions(asset);
                     image.metadata = metadata;

@@ -62,6 +62,8 @@ export abstract class GalleryView implements IGalleryView {
     protected slideshowPlaying: boolean = false;
     /** Seconds the slideshow shows each image */
     public slideshowIntervalSeconds: number = 4;
+    /** Largest remote video (MB) the viewer downloads to play; 0 = no limit */
+    public maxRemoteVideoMb: number = 200;
 
     constructor(type: ViewType, container: HTMLElement) {
         this._type = type;
@@ -157,6 +159,7 @@ export abstract class GalleryView implements IGalleryView {
         if (typeof options.showCaptions === 'boolean') this.showCaptions = options.showCaptions;
         if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
         if (typeof options.slideshowInterval === 'number') this.slideshowIntervalSeconds = slideshowSeconds(options.slideshowInterval);
+        if (typeof options.maxRemoteVideoMb === 'number' && options.maxRemoteVideoMb >= 0) this.maxRemoteVideoMb = options.maxRemoteVideoMb;
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
         // Passed together for each gallery, so a key that is present but undefined clears an earlier value
@@ -555,6 +558,9 @@ export abstract class GalleryView implements IGalleryView {
      * The timeout covers both fetching the URL and decoding the image.
      */
     protected loadWithTimeout(image: IImageSource, onLoad: (temp: HTMLImageElement) => void, onError: (error: Error) => void): void {
+        // A local video's still frame waits its turn to be captured, and the capture has its own
+        // time limit (falling back to a placeholder), so the remote timeout doesn't apply
+        const timed = !(image.type === 'local' && image.mediaType === 'video');
         const temp = new Image();
         let settled = false;
         const settle = (fn: () => void) => {
@@ -566,7 +572,9 @@ export abstract class GalleryView implements IGalleryView {
             fn();
         };
 
-        const timeoutHandle = window.setTimeout(() => settle(() => onError(new Error('Image loading timed out'))), this.remoteLoadTimeoutMs ?? 10000);
+        const timeoutHandle = timed
+            ? window.setTimeout(() => settle(() => onError(new Error('Image loading timed out'))), this.remoteLoadTimeoutMs ?? 10000)
+            : undefined;
         temp.onload = () => settle(() => onLoad(temp));
         temp.onerror = () => settle(() => onError(new Error('Failed to load')));
 
@@ -769,6 +777,8 @@ export abstract class GalleryView implements IGalleryView {
             cls: 'gallery-modal-video is-hidden',
             attr: { 'controls': '', 'playsinline': '', 'preload': 'metadata' }
         }) as HTMLVideoElement;
+        // Shown over the still frame when a video won't be played here (too large to download)
+        const videoNotice = this.createElement(imgContainer, 'div', { cls: 'gallery-modal-video-notice is-hidden' });
         const captionEl = this.createElement(imgContainer, 'div', { cls: 'gallery-modal-caption' });
 
         // The video on screen, so it can be stopped and its download let go when the viewer moves on
@@ -782,6 +792,8 @@ export abstract class GalleryView implements IGalleryView {
             } catch (error) { Logger.debug('Ignored error:', error); }
             playingVideo?.releaseVideo?.();
             playingVideo = null;
+            videoNotice.classList.add('is-hidden');
+            this.emptyElement(videoNotice);
         };
 
         // Prev/Next arrows, centred on the stage; hidden for a single image
@@ -1091,6 +1103,10 @@ export abstract class GalleryView implements IGalleryView {
         // Videos: the still frame shows while the video downloads (remote) or opens (local), then
         // it plays. Each step checks the token, so a slow download can't start after moving on.
         const loadModalVideo = (srcImage: IImageSource, token: number) => {
+            if (isTooLargeToPlay(srcImage)) {
+                showVideoTooLarge(srcImage, token);
+                return;
+            }
             this.resolveImageUrl(srcImage)
                 .then(poster => { if (token === modalLoadToken && poster) videoEl.poster = poster; })
                 .catch((error: unknown) => Logger.debug('No still frame for video:', error));
@@ -1112,6 +1128,30 @@ export abstract class GalleryView implements IGalleryView {
                     showVideoFailure(srcImage, token);
                 });
             videoEl.setAttribute('aria-label', srcImage.displayName || 'Video');
+        };
+
+        // Remote videos download in full before playing, so large ones aren't downloaded at all.
+        // Videos of unknown size are played.
+        const isTooLargeToPlay = (srcImage: IImageSource): boolean => {
+            const limit = this.maxRemoteVideoMb * 1024 * 1024;
+            return srcImage.type !== 'local' && limit > 0 && typeof srcImage.size === 'number' && srcImage.size > limit;
+        };
+        const showVideoTooLarge = (srcImage: IImageSource, token: number) => {
+            showVideoFailure(srcImage, token);
+            img.alt = srcImage.displayName || 'Video';
+            this.createElement(videoNotice, 'div', {
+                cls: 'gallery-modal-video-notice-text',
+                text: `This video is too large to play here (${this.formatFileSize(srcImage.size ?? 0)}).`
+            });
+            if (srcImage.openUrl) {
+                const openUrl = srcImage.openUrl;
+                const link = this.createElement(videoNotice, 'button', { cls: 'gallery-modal-video-notice-btn', text: 'Open in Immich' });
+                link.addEventListener('click', (e: MouseEvent) => {
+                    e.stopPropagation();
+                    window.open(openUrl, '_blank');
+                });
+            }
+            videoNotice.classList.remove('is-hidden');
         };
 
         // A video that can't be downloaded or played: show its still frame (or nothing) instead

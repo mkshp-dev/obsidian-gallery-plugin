@@ -4,7 +4,9 @@ import { formatDuration, parseClockDuration, isVideoPath, isMediaPath, extension
 import { ImmichSourceResolver } from '../../src/resolvers/ImmichSourceResolver';
 import { ImmichClient } from '../../src/services/immich/ImmichClient';
 import { ContentScanner } from '../../src/services/ContentScanner';
-import { TFile } from 'obsidian';
+import { TFile, Platform } from 'obsidian';
+import { FolderScanner } from '../../src/services/FolderScanner';
+import { Logger } from '../../src/utils/Logger';
 
 jest.mock('../../src/services/immich/ImmichClient');
 
@@ -82,6 +84,55 @@ describe('local videos', () => {
     });
 });
 
+describe('large local videos', () => {
+    const makeVault = (size: number) => {
+        const file = Object.assign(new TFile('Clips/big.mp4', 'big.mp4'), { stat: { size, mtime: 1 } });
+        const vault: any = {
+            on: jest.fn(),
+            getAbstractFileByPath: jest.fn().mockReturnValue(file),
+            readBinary: jest.fn().mockResolvedValue(new ArrayBuffer(8)),
+            adapter: { getResourcePath: (p: string) => `app://res/${p}`, stat: jest.fn().mockResolvedValue({ size }) }
+        };
+        return { vault, file };
+    };
+    const readerOf = async (vault: any) => {
+        const [video] = await new ContentScanner(vault).scanPath('Clips/big.mp4');
+        let reader: (() => Promise<unknown>) | undefined;
+        jest.spyOn(VideoPoster, 'capture').mockImplementation(async (_src, readFile) => {
+            reader = readFile;
+            return { url: 'blob:poster' };
+        });
+        await video.resolveDisplayUrl!();
+        return reader;
+    };
+
+    test('files over 50 MB are never read whole for a still frame', async () => {
+        const { vault } = makeVault(80 * 1024 * 1024);
+        const reader = await readerOf(vault);
+        await expect(reader!()).resolves.toBeUndefined();
+        expect(vault.readBinary).not.toHaveBeenCalled();
+    });
+
+    test('phones and tablets never read the file for a still frame', async () => {
+        const { vault } = makeVault(1024);
+        (Platform as any).isMobile = true;
+        try {
+            expect(await readerOf(vault)).toBeUndefined();
+        } finally {
+            (Platform as any).isMobile = false;
+        }
+    });
+
+    test('the folder scanner does not warn about large videos', async () => {
+        const warn = jest.spyOn(Logger, 'warn').mockImplementation(() => undefined);
+        const { vault, file } = makeVault(900 * 1024 * 1024);
+        const scanner = new FolderScanner(vault);
+        const image = await (scanner as any).createImageSource(file);
+        expect(image.size).toBe(900 * 1024 * 1024);
+        expect(warn).not.toHaveBeenCalled();
+    });
+});
+
 describe('VideoPoster', () => {
     let n = 0;
     beforeEach(() => {
@@ -118,20 +169,25 @@ describe('Immich videos', () => {
 
     test('show a still frame in every view and play the playback encoding in the viewer', async () => {
         (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue([
-            { id: 'v1', originalFileName: 'clip.mov', type: 'VIDEO', duration: '0:01:05.500000' },
+            { id: 'v1', originalFileName: 'clip.mov', type: 'VIDEO', duration: '0:01:05.500000', exifInfo: { fileSizeInByte: 734003200 } },
             { id: 'p1', originalFileName: 'photo.jpg', type: 'IMAGE', duration: '0:00:00.00000' }
         ]);
         const blob = (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockImplementation(async (id: string, rep: string) => `blob:${id}:${rep}`);
+        (ImmichClient.prototype.getAssetWebUrl as jest.Mock).mockImplementation((id: string) => `https://immich.example.com/photos/${id}`);
         const resolver = new ImmichSourceResolver(() => connections);
 
         // Views that otherwise load originals (embed) get a preview still for videos
         const { images: [video, photo] } = await resolver.resolve(source, {});
         expect(video.mediaType).toBe('video');
         expect(video.durationSeconds).toBeCloseTo(65.5);
+        // The size and Immich page let the viewer skip downloading a large video
+        expect(video.size).toBe(734003200);
+        expect(video.openUrl).toBe('https://immich.example.com/photos/v1');
         await expect(video.resolveDisplayUrl!()).resolves.toBe('blob:v1:preview');
         await expect(video.resolveVideoUrl!()).resolves.toBe('blob:v1:video');
         expect(photo.mediaType).toBe('image');
         expect(photo.durationSeconds).toBeUndefined();
+        expect(photo.openUrl).toBeUndefined();
         await expect(photo.resolveDisplayUrl!()).resolves.toBe('blob:p1:original');
 
         // Tile views keep the small thumbnail

@@ -1,5 +1,5 @@
 import { Logger } from "../utils/Logger";
-import { Vault, TFile, TFolder } from 'obsidian';
+import { Vault, TFile, TFolder, Platform } from 'obsidian';
 import { IContentScanner, IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
 import { MEDIA_EXTENSIONS } from '../models/media';
@@ -15,8 +15,8 @@ export class ContentScanner implements IContentScanner {
     private folderScanner: FolderScanner;
     private cache: Map<string, { images: IImageSource[], timestamp: number }> = new Map();
     private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-    /** Largest video read into memory just to draw its still frame */
-    private static readonly MAX_POSTER_READ_BYTES = 200 * 1024 * 1024;
+    /** Largest video read into memory just to draw its still frame (never on phones and tablets) */
+    private static readonly MAX_POSTER_READ_BYTES = 50 * 1024 * 1024;
     private readonly SUPPORTED_EXTENSIONS = MEDIA_EXTENSIONS;
 
     constructor(vault: Vault) {
@@ -123,7 +123,9 @@ export class ContentScanner implements IContentScanner {
             const path = image.path;
             if (image.mediaType === 'video') {
                 // The still frame is normally drawn from the video's URL; if the canvas can't read
-                // that back, it is drawn from the file instead (skipped for very large files)
+                // that back, it is drawn from the file instead. Larger files, and any file on a phone
+                // or tablet, keep the placeholder rather than being read into memory.
+                if (Platform.isMobile) continue;
                 image.setVideoFileReader(async () => {
                     const file = this.vault.getAbstractFileByPath(path);
                     if (!(file instanceof TFile) || (file.stat?.size ?? 0) > ContentScanner.MAX_POSTER_READ_BYTES) return undefined;

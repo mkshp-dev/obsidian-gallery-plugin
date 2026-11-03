@@ -142,6 +142,11 @@ export class GallerySettingsTab extends PluginSettingTab {
                         name: 'Slideshow interval (seconds)',
                         desc: 'How long the slideshow shows each image before moving on to the next one.',
                         control: { type: 'number', key: 'slideshowInterval', defaultValue: DEFAULT_SETTINGS.slideshowInterval, min: 1, max: 60 }
+                    },
+                    {
+                        name: 'Largest Immich video to play (MB)',
+                        desc: 'Immich videos are downloaded in full before they play. Larger videos show their still frame and a link to open them in Immich instead. 0 means no limit.',
+                        control: { type: 'number', key: 'maxRemoteVideoMb', defaultValue: DEFAULT_SETTINGS.maxRemoteVideoMb, min: 0 }
                     }
                 ]
             },

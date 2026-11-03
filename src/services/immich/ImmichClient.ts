@@ -170,6 +170,11 @@ export class ImmichClient {
         throw new Error(`Failed to fetch Immich assets: HTTP ${response.status}`);
     }
 
+    /** The asset's page in the Immich web app */
+    public getAssetWebUrl(assetId: string): string {
+        return `${this.baseUrl}/photos/${assetId}`;
+    }
+
     public getAssetUrl(assetId: string, representation: ImmichRepresentation = 'original'): string {
         if (representation === 'video') {
             // The playable encoding of a video (Immich transcodes formats browsers can't play)

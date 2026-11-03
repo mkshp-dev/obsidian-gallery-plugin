@@ -22,6 +22,8 @@ export class ImageSource implements IImageSource {
     public readonly displayName: string;
     /** 'video' for videos; local files are typed by extension, remote sources call setMediaType */
     public mediaType: MediaType = 'image';
+    /** Web page showing the item at its source (Immich), offered when the viewer won't play it */
+    public openUrl?: string;
     public caption?: string;
     public size?: number;
     public mtime?: number;

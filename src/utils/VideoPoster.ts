@@ -90,7 +90,8 @@ export class VideoPoster {
             const video = createEl('video');
             video.muted = true;
             video.playsInline = true;
-            video.preload = 'auto';
+            // Only the length and size up front; seeking then reads just the part it needs
+            video.preload = 'metadata';
 
             let done = false;
             const finish = (fn: () => void) => {

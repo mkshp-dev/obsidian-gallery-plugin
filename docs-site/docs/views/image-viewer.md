@@ -34,6 +34,11 @@ Videos play in the viewer with the usual player controls (play, seek, volume, fu
 
 Leaving a video stops it. An Immich video is downloaded when you open it and let go of when you move on.
 
+### Large videos
+
+- **Vault videos** play straight from disk, at any size.
+- **Immich videos** have to be downloaded in full before they play, so ones larger than **Largest Immich video to play** (200 MB by default, in [Settings](../settings.md)) aren't downloaded. The viewer shows the still frame, the video's size and an **Open in Immich** button, which opens it in your browser. Set the limit to `0` to play every video.
+
 ## Keyboard in the gallery
 
 - **Thumbnail view:** **←** / **→** move between tiles; **Enter** or **Space** opens the focused one.

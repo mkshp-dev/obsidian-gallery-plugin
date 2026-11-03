@@ -1284,6 +1284,36 @@ button.gallery-modal-close-btn {
   display: none;
 }
 
+/* Over the still frame of a video that is too large to play here */
+.gallery-modal-video-notice {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, calc(100% - 32px));
+  padding: 16px 20px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  text-align: center;
+  font-size: var(--font-ui-small);
+}
+
+button.gallery-modal-video-notice-btn {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  box-shadow: none;
+}
+
+button.gallery-modal-video-notice-btn:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
 /* No zoom for videos */
 .gallery-modal-content.is-video button.gallery-modal-tool-btn.zoom-in-btn,
 .gallery-modal-content.is-video button.gallery-modal-tool-btn.zoom-out-btn,

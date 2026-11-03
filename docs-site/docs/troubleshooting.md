@@ -17,6 +17,7 @@ sidebar_position: 6
 
 - The video's format may not be one Obsidian's player supports. MP4 (H.264) and WebM play everywhere; HEVC (often used by iPhone `.mov` files) doesn't play on every computer. Converting the file to H.264 MP4 fixes it.
 - Immich videos download when you open them in the viewer, so a long video can take a moment to start.
+- An Immich video that says it is too large to play here is over **Largest Immich video to play** in Settings. Use **Open in Immich**, or raise the limit (`0` removes it).
 
 ## Modal not opening
 

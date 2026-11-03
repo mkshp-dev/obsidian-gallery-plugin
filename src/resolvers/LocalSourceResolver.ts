@@ -1,5 +1,5 @@
 import { ILocalSourceConfig, IImageSource, IContentScanner } from '../models/interfaces';
-import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
+import { GallerySourceResolver, GallerySourceResolveContext, GallerySourceResult } from './GallerySourceResolver';
 import { NotePathResolver } from '../utils/NotePathResolver';
 import { globToRegex } from '../utils/globToRegex';
 
@@ -8,7 +8,7 @@ export class LocalSourceResolver implements GallerySourceResolver<ILocalSourceCo
 
     constructor(private contentScanner: IContentScanner) {}
 
-    async resolve(source: ILocalSourceConfig, context: GallerySourceResolveContext): Promise<{ images: IImageSource[], errors: string[] }> {
+    async resolve(source: ILocalSourceConfig, context: GallerySourceResolveContext): Promise<GallerySourceResult> {
         if (!source.path || source.path.trim() === '') {
             return { images: [], errors: [] };
         }
@@ -30,7 +30,14 @@ export class LocalSourceResolver implements GallerySourceResolver<ILocalSourceCo
 
         images = this.applyFiltersAndSort(images, source);
 
-        return { images, errors: [] };
+        // Photos and videos in formats galleries can't show, unless the filename filter excludes them anyway
+        let skipped = this.contentScanner.listSkippedFiles?.(resolvedPath, source.recursive) ?? [];
+        if (source.filenameFilter) {
+            const regex = globToRegex(source.filenameFilter);
+            skipped = skipped.filter(path => regex.test(path.split('/').pop() || ''));
+        }
+
+        return { images, errors: [], skipped };
     }
 
     private applyFiltersAndSort(images: IImageSource[], source: ILocalSourceConfig): IImageSource[] {

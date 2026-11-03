@@ -130,3 +130,54 @@ export function parseHttpDate(value: string | undefined): number | undefined {
     const ms = Date.parse(value);
     return Number.isNaN(ms) ? undefined : ms;
 }
+
+/**
+ * Photo and video formats galleries can't show, by extension, with the name used in the note
+ * under a gallery that skipped them. Other files (notes, PDFs, ...) are skipped silently: only
+ * files that look like they belong in a gallery are mentioned.
+ */
+const UNSUPPORTED_MEDIA: Record<string, string> = {
+    '.heic': 'HEIC', '.heif': 'HEIC',
+    '.tif': 'TIFF', '.tiff': 'TIFF',
+    '.bmp': 'BMP', '.ico': 'ICO', '.jxl': 'JPEG XL', '.psd': 'PSD',
+    '.dng': 'RAW', '.cr2': 'RAW', '.cr3': 'RAW', '.nef': 'RAW', '.arw': 'RAW', '.orf': 'RAW',
+    '.rw2': 'RAW', '.raf': 'RAW', '.raw': 'RAW', '.srw': 'RAW', '.pef': 'RAW',
+    '.avi': 'AVI', '.mkv': 'MKV', '.wmv': 'WMV', '.flv': 'FLV', '.3gp': '3GP',
+    '.mts': 'MTS', '.m2ts': 'MTS', '.mpg': 'MPEG', '.mpeg': 'MPEG'
+};
+
+/**
+ * Whether a file in a server listing was left out for its format, and so belongs in the
+ * skipped-files note: an image type galleries can't show, or a photo/video extension from the
+ * list above. With a mimeTypes filter, only types the filter asks for count.
+ */
+export function isSkippedListing(contentType: string | undefined, name: string, filter?: string[]): boolean {
+    if (acceptsMimeType(contentType, filter)) return false;
+    const type = (contentType ?? '').split(';')[0].trim().toLowerCase();
+    if (!type.startsWith('image/') && !unsupportedMediaFormat(name)) return false;
+    if (!filter || filter.length === 0) return true;
+    const wanted = filter.map(entry => entry.trim().toLowerCase());
+    return wanted.includes(type) || wanted.includes(`${type.split('/')[0]}/*`);
+}
+
+/** The format name of a photo or video file galleries can't show; undefined for anything else */
+export function unsupportedMediaFormat(name: string): string | undefined {
+    return UNSUPPORTED_MEDIA[extensionOf(name)];
+}
+
+/**
+ * The note shown under a gallery that skipped files, e.g. "3 files weren't shown: HEIC and RAW
+ * aren't supported." Formats are listed most common first. Undefined when nothing was skipped.
+ */
+export function skippedFilesNote(names: string[]): string | undefined {
+    if (names.length === 0) return undefined;
+    const counts = new Map<string, number>();
+    for (const name of names) {
+        const format = unsupportedMediaFormat(name) ?? (extensionOf(name).slice(1).toUpperCase() || 'Unknown');
+        counts.set(format, (counts.get(format) ?? 0) + 1);
+    }
+    const formats = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([format]) => format);
+    const list = formats.length === 1 ? formats[0] : `${formats.slice(0, -1).join(', ')} and ${formats[formats.length - 1]}`;
+    const files = names.length === 1 ? "1 file wasn't shown" : `${names.length} files weren't shown`;
+    return `${files}: ${list} ${formats.length === 1 ? "isn't" : "aren't"} supported.`;
+}

@@ -1,5 +1,5 @@
-import { ISourceConfig, IImageSource, IContentScanner } from '../models/interfaces';
-import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
+import { ISourceConfig, IContentScanner } from '../models/interfaces';
+import { GallerySourceResolver, GallerySourceResolveContext, GallerySourceResult } from './GallerySourceResolver';
 import { LocalSourceResolver } from './LocalSourceResolver';
 import { ExternalSourceResolver } from './ExternalSourceResolver';
 import { ImmichShareSourceResolver } from './ImmichShareSourceResolver';
@@ -32,7 +32,7 @@ export class SourceResolverRegistry {
         return this.resolvers.get(type);
     }
 
-    async resolveSource(source: ISourceConfig, context: GallerySourceResolveContext): Promise<{ images: IImageSource[], errors: string[] }> {
+    async resolveSource(source: ISourceConfig, context: GallerySourceResolveContext): Promise<GallerySourceResult> {
         const resolver = this.getResolver(source.type);
         if (!resolver) {
             return { images: [], errors: [`Unsupported source type: ${source.type}`] };

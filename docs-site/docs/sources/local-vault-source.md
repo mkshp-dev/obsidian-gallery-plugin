@@ -45,7 +45,7 @@ view:
 
 ## Supported formats
 
-Images in JPEG, PNG, GIF (including animated), WebP, AVIF and SVG, and videos (see below). Other files in the folder are skipped.
+Images in JPEG, PNG, GIF (including animated), WebP, AVIF and SVG, and videos (see below). Other files in the folder are skipped. When some of them are photos or videos in a format galleries can't show (HEIC, TIFF, BMP, camera RAW files, or AVI, MKV and similar videos), a line under the gallery says how many and which formats, for example *2 files weren't shown: HEIC and RAW aren't supported.* Notes, PDFs and other documents are skipped without a mention. Files that `filenameFilter` leaves out aren't counted.
 
 SVGs are drawn as images, so any scripts inside them don't run. An SVG with only a `viewBox` (no width or height) keeps the shape the `viewBox` gives it, and in the [image viewer](../views/image-viewer.md) SVGs are scaled up to fill the screen. Photo details (date taken, camera, lens) are read from JPEG, PNG and WebP files; AVIF files don't show them yet.
 

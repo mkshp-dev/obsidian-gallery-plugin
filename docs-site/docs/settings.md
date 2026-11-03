@@ -16,7 +16,7 @@ The General tab controls core plugin behavior and remote image handling.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Error messages | `Show` | When a gallery can't be shown, `Show` puts a one-line message (starting with ⚠️) in its place; `Hide` shows nothing. |
+| Error messages | `Show` | When a gallery can't be shown, `Show` puts a one-line message (starting with ⚠️) in its place; `Hide` shows nothing. `Hide` also drops the notes under galleries, such as ignored view options and files skipped for their format. |
 | Show gallery frame | `On` | Draws a border, background and padding around each gallery. Turn it off to place images directly in the note; thumbnail tiles keep their card look. A gallery can override this with `frame: true` or `frame: false` in its `view:` block. The embed view never has a frame. |
 | Slideshow interval (seconds) | `4` | How long the image viewer's slideshow shows each image before moving on (1 to 60 seconds). |
 | Largest remote video to play (MB) | `200` | Immich and Nextcloud videos are downloaded in full before they play in the image viewer. A larger video shows its still frame, its size and an **Open in Immich** (or **Open in Nextcloud**) button instead. Videos whose size the server doesn't report are played. `0` means no limit. Videos in your vault aren't affected: they play straight from disk at any size. |

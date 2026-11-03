@@ -2,7 +2,7 @@ import { Logger } from "../utils/Logger";
 import { Vault, TFile, TFolder, Platform } from 'obsidian';
 import { IContentScanner, IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
-import { MEDIA_EXTENSIONS, SVG_SIZE_READ_MAX_BYTES, isSvgPath, readSvgSize } from '../models/media';
+import { MEDIA_EXTENSIONS, SVG_SIZE_READ_MAX_BYTES, isSvgPath, readSvgSize, unsupportedMediaFormat } from '../models/media';
 import { FolderScanner } from './FolderScanner';
 import { readExifMetadata } from '../utils/ExifReader';
 
@@ -15,6 +15,8 @@ export class ContentScanner implements IContentScanner {
     private folderScanner: FolderScanner;
     private cache: Map<string, { images: IImageSource[], timestamp: number }> = new Map();
     private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    /** Same depth limit as the folder scan */
+    private static readonly MAX_SKIPPED_DEPTH = 10;
     /** Largest video read into memory just to draw its still frame (never on phones and tablets) */
     private static readonly MAX_POSTER_READ_BYTES = 50 * 1024 * 1024;
     private readonly SUPPORTED_EXTENSIONS = MEDIA_EXTENSIONS;
@@ -188,6 +190,27 @@ export class ContentScanner implements IContentScanner {
      */
     async validateFolderAccess(folderPath: string) {
         return await this.folderScanner.validateFolderAccess(folderPath);
+    }
+
+    /**
+     * Paths of photo and video files under a folder in formats galleries can't show (HEIC, RAW,
+     * ...), for the note under the gallery. Walks the vault's in-memory file tree, so it reads
+     * nothing from disk. A path that isn't a folder has none.
+     */
+    listSkippedFiles(path: string, recursive: boolean = true): string[] {
+        const skipped: string[] = [];
+        const walk = (folder: TFolder, depth: number) => {
+            for (const child of folder.children) {
+                if (child instanceof TFile) {
+                    if (unsupportedMediaFormat(child.path)) skipped.push(child.path);
+                } else if (child instanceof TFolder && recursive && depth < ContentScanner.MAX_SKIPPED_DEPTH) {
+                    walk(child, depth + 1);
+                }
+            }
+        };
+        const folder = this.vault.getAbstractFileByPath(path);
+        if (folder instanceof TFolder) walk(folder, 0);
+        return skipped;
     }
 
     /**

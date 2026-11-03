@@ -3,7 +3,13 @@ import { INextcloudConnection } from '../../models/interfaces';
 import { NextcloudFile } from '../../models/nextcloud/NextcloudTypes';
 import { Logger } from '../../utils/Logger';
 import { ObjectUrlManager } from '../../utils/ObjectUrlManager';
-import { acceptsMimeType } from '../../models/media';
+import { acceptsMimeType, isSkippedListing } from '../../models/media';
+
+/** A folder listing: the files galleries show, and names of photos/videos left out for their format */
+interface NextcloudListing {
+  files: NextcloudFile[];
+  skipped: string[];
+}
 
 interface CacheEntry<T> {
   promise: Promise<T>;
@@ -11,7 +17,7 @@ interface CacheEntry<T> {
 }
 
 export class NextcloudClient {
-  private static cache: Map<string, CacheEntry<NextcloudFile[]>> = new Map();
+  private static cache: Map<string, CacheEntry<NextcloudListing>> = new Map();
   private static readonly CACHE_TTL_MS = 5 * 60 * 1000;
 
   private baseUrl: string;
@@ -70,27 +76,35 @@ export class NextcloudClient {
     }
   }
 
-  public async listFiles(path: string, recursive: boolean = false, mimeTypesFilter?: string[]): Promise<NextcloudFile[]> {
+  /**
+   * List the images and videos in a folder. Paths of photos and videos left out for their format
+   * (HEIC, RAW, ...) are added to `skipped` when it is given, for the note under the gallery.
+   */
+  public async listFiles(path: string, recursive: boolean = false, mimeTypesFilter?: string[], skipped?: string[]): Promise<NextcloudFile[]> {
     const cacheKey = `${this.connection.key}:${path}:${recursive}:${mimeTypesFilter ? mimeTypesFilter.join(',') : ''}`;
     const now = Date.now();
     const cached = NextcloudClient.cache.get(cacheKey);
 
+    let promise: Promise<NextcloudListing>;
     if (cached && (now - cached.timestamp < NextcloudClient.CACHE_TTL_MS)) {
-      return cached.promise;
+      promise = cached.promise;
+    } else {
+      promise = this.performListFiles(path, recursive, mimeTypesFilter);
+      NextcloudClient.cache.set(cacheKey, { promise, timestamp: now });
     }
 
-    const promise = this.performListFiles(path, recursive, mimeTypesFilter);
-    NextcloudClient.cache.set(cacheKey, { promise, timestamp: now });
-
     try {
-      return await promise;
+      const listing = await promise;
+      skipped?.push(...listing.skipped);
+      // A copy, so callers that filter or sort it don't change the cached listing
+      return [...listing.files];
     } catch (error) {
       NextcloudClient.cache.delete(cacheKey);
       throw error;
     }
   }
 
-  private async performListFiles(path: string, recursive: boolean, mimeTypesFilter?: string[]): Promise<NextcloudFile[]> {
+  private async performListFiles(path: string, recursive: boolean, mimeTypesFilter?: string[]): Promise<NextcloudListing> {
     try {
       // Normalize path
       let normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -196,7 +210,7 @@ export class NextcloudClient {
     return new Blob([response.arrayBuffer], { type: contentType });
   }
 
-  private parseWebdavResponse(xmlText: string, basePath: string, mimeTypesFilter?: string[]): NextcloudFile[] {
+  private parseWebdavResponse(xmlText: string, basePath: string, mimeTypesFilter?: string[]): NextcloudListing {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
     const responses = xmlDoc.getElementsByTagNameNS('DAV:', 'response');
@@ -205,6 +219,7 @@ export class NextcloudClient {
     const responsesList = responses.length > 0 ? Array.from(responses) : Array.from(xmlDoc.getElementsByTagName('d:response'));
 
     const files: NextcloudFile[] = [];
+    const skipped: string[] = [];
 
     for (const response of responsesList) {
       // Extract href
@@ -269,20 +284,24 @@ export class NextcloudClient {
         if (ocIdEl) fileId = ocIdEl.textContent || '';
       }
 
-      // Filter by image type
+      // Extract filename from href
+      const parts = decodedHref.replace(/\/$/, '').split('/');
+      const name = parts[parts.length - 1];
+
+      // Path should be relative to the user's root
+      const basePathPrefix = `/remote.php/dav/files/${this.connection.username}`;
+      let path = decodedHref;
+      if (path.startsWith(basePathPrefix)) {
+        path = path.substring(basePathPrefix.length);
+      }
+
+      if (isSkippedListing(contentType, name, mimeTypesFilter)) {
+        skipped.push(path);
+        continue;
+      }
+
       // Images and videos, narrowed by the source's mimeTypes filter
       if (acceptsMimeType(contentType, mimeTypesFilter)) {
-        // Extract filename from href
-        const parts = decodedHref.replace(/\/$/, '').split('/');
-        const name = parts[parts.length - 1];
-
-        // Path should be relative to the user's root
-        const basePathPrefix = `/remote.php/dav/files/${this.connection.username}`;
-        let path = decodedHref;
-        if (path.startsWith(basePathPrefix)) {
-          path = path.substring(basePathPrefix.length);
-        }
-
         files.push({
           path,
           name,
@@ -294,6 +313,6 @@ export class NextcloudClient {
       }
     }
 
-    return files;
+    return { files, skipped };
   }
 }

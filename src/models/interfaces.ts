@@ -339,6 +339,9 @@ export interface IContentScanner {
   /** Check if file is supported image format */
   isImageFile(path: string): boolean;
 
+  /** Paths of photo and video files under a folder that galleries can't show (HEIC, RAW, ...) */
+  listSkippedFiles?(path: string, recursive?: boolean): string[];
+
   /** Extract image links from markdown file */
   extractLinksFromFile(file: unknown): Promise<IImageSource[]>; // any for TFile from Obsidian
 

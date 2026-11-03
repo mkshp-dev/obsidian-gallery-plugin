@@ -72,6 +72,8 @@ view:
 
 ---
 
+Photos in formats galleries can't show (HEIC, TIFF, RAW and other image types) are left out, with a line under the gallery saying how many. With `filters.mimeTypes`, only the types you list are mentioned.
+
 ## Videos
 
 Videos in the folder (MP4, M4V, WebM, MOV and OGV) are part of the gallery too. Each tile shows a still frame with a play icon; click it to play the video in the [image viewer](../views/image-viewer.md#videos).

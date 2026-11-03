@@ -3,7 +3,7 @@ import { INextcloudConnection } from '../../models/interfaces';
 import { NextcloudFile } from '../../models/nextcloud/NextcloudTypes';
 import { Logger } from '../../utils/Logger';
 import { ObjectUrlManager } from '../../utils/ObjectUrlManager';
-import { allowedMimeTypes } from '../../models/media';
+import { acceptsMimeType } from '../../models/media';
 
 interface CacheEntry<T> {
   promise: Promise<T>;
@@ -205,8 +205,6 @@ export class NextcloudClient {
     const responsesList = responses.length > 0 ? Array.from(responses) : Array.from(xmlDoc.getElementsByTagName('d:response'));
 
     const files: NextcloudFile[] = [];
-    // Images and videos, narrowed by the source's mimeTypes filter
-    const validImageMimeTypes = allowedMimeTypes(mimeTypesFilter);
 
     for (const response of responsesList) {
       // Extract href
@@ -272,7 +270,8 @@ export class NextcloudClient {
       }
 
       // Filter by image type
-      if (validImageMimeTypes.includes(contentType)) {
+      // Images and videos, narrowed by the source's mimeTypes filter
+      if (acceptsMimeType(contentType, mimeTypesFilter)) {
         // Extract filename from href
         const parts = decodedHref.replace(/\/$/, '').split('/');
         const name = parts[parts.length - 1];

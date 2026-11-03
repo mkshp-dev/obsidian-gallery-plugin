@@ -5,7 +5,7 @@ import { Logger } from '../utils/Logger';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 import { requestUrl } from 'obsidian';
 import { globToRegex } from '../utils/globToRegex';
-import { allowedMimeTypes, isVideoMimeType } from '../models/media';
+import { acceptsMimeType, isVideoMimeType, parseHttpDate } from '../models/media';
 import { VideoPoster } from '../utils/VideoPoster';
 import { usesThumbnailImages } from '../models/viewTypes';
 
@@ -241,6 +241,7 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                             }
                             const image = new ImageSource(logicalPath, 'nextcloud-share', file.name, undefined, undefined, loader);
                             image.size = file.size || undefined;
+                            image.mtime = parseHttpDate(file.lastModified);
                             images.push(image);
                         } catch (e) {
                             Logger.warn(`Failed to resolve file ${file.href} for Nextcloud share: ${e instanceof Error ? e.message : String(e)}`);
@@ -276,10 +277,10 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
      * the share can't be told from its WebDAV href (Photos albums)
      */
     private publicPreviewUrl(baseUrl: string, token: string, href: string, size: number): string | undefined {
-        const marker = '/public.php/webdav';
-        const at = href.indexOf(marker);
-        if (at === -1) return undefined;
-        const inShare = href.substring(at + marker.length) || '/';
+        // Shares are listed under /public.php/webdav (older) or /public.php/dav/files/<token>
+        const match = /\/public\.php\/(?:webdav|dav\/files\/[^/]+)(\/.*)?$/.exec(href);
+        if (!match) return undefined;
+        const inShare = match[1] || '/';
         return `${baseUrl}/index.php/apps/files_sharing/publicpreview/${token}?file=${encodeURIComponent(inShare)}&x=${size}&y=${size}&a=1`;
     }
 
@@ -319,6 +320,7 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
         image = new ImageSource(opts.logicalPath, 'nextcloud-share', file.name, undefined, undefined, stillLoader);
         image.setMediaType('video', opts.loader);
         image.size = file.size || undefined;
+        image.mtime = parseHttpDate(file.lastModified);
         image.openUrl = opts.shareUrl;
         return image;
     }
@@ -376,8 +378,6 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
         const files: ShareFile[] = [];
         const folders: string[] = [];
 
-        // Images and videos, narrowed by the source's mimeTypes filter
-        const validImageMimeTypes = allowedMimeTypes(mimeTypesFilter);
 
         for (const response of responsesList) {
             let href = '';
@@ -440,7 +440,8 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                 continue;
             }
 
-            if (validImageMimeTypes.includes(contentType)) {
+            // Images and videos, narrowed by the source's mimeTypes filter
+            if (acceptsMimeType(contentType, mimeTypesFilter)) {
                 let name = displayName;
                 if (!name) {
                     const parts = decodedHref.replace(/\/$/, '').split('/');

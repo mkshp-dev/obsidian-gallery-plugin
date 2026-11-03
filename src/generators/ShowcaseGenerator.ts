@@ -188,7 +188,7 @@ These notes render images immediately:
 Use the \`${DEMO.immichKey}\` connection (see **Demo servers** below):
 - [[07 - Immich authenticated]] — People, tags, and date filters.
 - [[08 - Immich favorites and recent]] — Favorites and recent photo feeds.
-- [[09 - Immich albums]] — Album-based galleries, including videos only.
+- [[09 - Immich albums]] — Album-based galleries, a video album, and videos only.
 
 ### 🔗 Immich — Shared Links
 No account required, just a public share URL. These use albums on the demo server:
@@ -867,9 +867,24 @@ view:
   type: thumbnail
 \`\`\`
 
-### Only the videos in an album
+### A video album
 
-\`assetType: video\` keeps just the videos; the gallery shows their preview images.
+The Videos album holds five short clips: MP4, a MOV, a WebM and a portrait (9:16) video. Each tile shows a still frame, a play icon and the length; click one to play it.
+
+\`\`\`obs-gallery
+sources:
+  - type: immich
+    connection: ${DEMO.immichKey}
+    filters:
+      albumIds:
+        - ${DEMO.immichAlbums.videos}
+view:
+  type: justified
+\`\`\`
+
+### Only the videos in some albums
+
+\`assetType: video\` keeps just the videos from the City and Travel albums.
 
 \`\`\`obs-gallery
 sources:
@@ -948,11 +963,11 @@ view:
 
 These galleries use the \`${DEMO.nextcloudKey}\` connection to the public demo server (see [[00 - Welcome]] for the setup). To use your own Nextcloud, add a connection in **Settings → Gallery View → Providers** and change \`connection:\` to its key.
 
-The demo folder \`/Gallery-Demo\` has three sub-folders: \`Landscapes\`, \`City\` and \`Camera\`.
+The demo folder \`/Gallery-Demo\` has four sub-folders: \`Landscapes\`, \`City\`, \`Camera\` and \`Videos\`.
 
 ---
 
-### Every image under \`/Gallery-Demo\`
+### Everything under \`/Gallery-Demo\`
 
 \`\`\`obs-gallery
 sources:
@@ -975,6 +990,21 @@ sources:
     path: /Gallery-Demo/City
 view:
   type: thumbnail
+\`\`\`
+
+---
+
+### Videos (\`/Gallery-Demo/Videos\`)
+
+Five short clips. Tiles use Nextcloud's own video previews; Nextcloud doesn't report a video's length, so each tile shows it once you have played the video.
+
+\`\`\`obs-gallery
+sources:
+  - type: nextcloud
+    connection: ${DEMO.nextcloudKey}
+    path: /Gallery-Demo/Videos
+view:
+  type: masonry
 \`\`\`
 
 ---

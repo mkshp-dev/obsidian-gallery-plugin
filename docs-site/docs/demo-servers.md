@@ -50,11 +50,11 @@ To add them by hand instead, use **Settings → Gallery View → Providers** (se
 | Server URL | `https://demo-immich.mkshp.dev` |
 | API key | `Y8jMqmnnv5ME9wJl78U1D4cIgSGcigtMemcgWMxxE` |
 
-What's on the server: 77 assets (75 photos, 2 videos) taken between January 2024 and October 2026, 10 of them favorites. 20 of the photos are an Iceland road trip dated 24–30 August 2026, used by the use-case note **Family album (Immich)**.
+What's on the server: 82 assets (75 photos, 7 videos) dated between March 2008 and October 2026, 10 of them favorites. 20 of the photos are an Iceland road trip dated 24–30 August 2026, used by the use-case note **Family album (Immich)**.
 
 | Kind | Values |
 |---|---|
-| Albums | Landscapes `0fe76d50-18b3-4f74-8f7c-3ede043982de` (9) · City `0a33a817-9389-45f5-a99d-6ac12f56dc7f` (6, one video) · Travel `882fef37-436a-49c1-af1a-e444d0216ee0` (7, one video) · People `9a714fd1-36f8-4b3a-ba48-2f3101895dee` (25) |
+| Albums | Landscapes `0fe76d50-18b3-4f74-8f7c-3ede043982de` (9) · City `0a33a817-9389-45f5-a99d-6ac12f56dc7f` (6, one video) · Travel `882fef37-436a-49c1-af1a-e444d0216ee0` (7, one video) · People `9a714fd1-36f8-4b3a-ba48-2f3101895dee` (25) · Videos `19d45220-6775-457e-b351-50cbc43375ec` (5 videos: MP4, MOV, WebM and a 9:16 portrait clip) |
 | Tags | `Photography` (30) · `Nature` (9) · `Architecture` (5) · `Portraits` (25) · `Iceland` (20) |
 | People | `Alice` · `Bob` · `Carol` · `Dave` (7 photos each) |
 
@@ -67,7 +67,7 @@ What's on the server: 77 assets (75 photos, 2 videos) taken between January 2024
 | Username | `demo` |
 | App password | `psMXy2P4j2YZSjJuALSukdyzkjhIBAAqgUkQVFavPQPyRqkZfrkAXZhIknna8IIpLHsVgr8M` |
 
-What's on the server: 40 images (JPEG, PNG and WebP, 14 KB to 2.5 MB) in `/Gallery-Demo/Landscapes`, `/Gallery-Demo/City` and `/Gallery-Demo/Camera`. `Camera` uses phone-style names (`IMG_2024…`, `IMG_2025…`) for trying `filenameFilter`, and modified dates range from 2024 to 2026 for trying `modifiedAfter` / `modifiedBefore`.
+What's on the server: 40 images (JPEG, PNG and WebP, 14 KB to 2.5 MB) in `/Gallery-Demo/Landscapes`, `/Gallery-Demo/City` and `/Gallery-Demo/Camera`, and 5 videos (MP4, MOV, WebM and a 9:16 portrait clip, 0.5 to 11 MB) in `/Gallery-Demo/Videos`. The folder share link includes the videos too, under `/Videos`. `Camera` uses phone-style names (`IMG_2024…`, `IMG_2025…`) for trying `filenameFilter`, and modified dates range from 2024 to 2026 for trying `modifiedAfter` / `modifiedBefore`.
 
 ````markdown
 ```obs-gallery
@@ -83,15 +83,16 @@ view:
 
 ## Photo credits
 
-Every photo and video on the demo servers is free to use. Thanks to the photographers below.
+Every photo and video on the demo servers is free to use. Thanks to the photographers and film-makers below.
 
 - **CC0 1.0** ([deed](https://creativecommons.org/publicdomain/zero/1.0/)): 51 photos from [StockSnap](https://stocksnap.io) and 2 videos from [Wikimedia Commons](https://commons.wikimedia.org). The videos were converted to MP4 without audio, and some Nextcloud copies were resized or converted to PNG/WebP.
+- **CC BY 3.0** ([deed](https://creativecommons.org/licenses/by/3.0/)): 5 video clips from the Blender Foundation open movies *Sintel* and *Big Buck Bunny* (© Blender Foundation, [blender.org](https://www.blender.org)), on both demo servers. They are trailers and short excerpts, some re-encoded (WebM, MOV) or cropped to 9:16 for the format examples.
 - **[Unsplash License](https://unsplash.com/license)**: 44 photos from [Unsplash](https://unsplash.com), served by [Lorem Picsum](https://picsum.photos), and 20 Iceland photos on the Immich demo, downloaded from Unsplash. The Iceland photos' dates and captions were set for the demo's made-up road trip; they are not when each photo was taken, and the horse close-up is cropped to a square. The `IMG_…` names in the Nextcloud `Camera` folder are made up for the `filenameFilter` examples; the dates in them are not when the photos were taken.
 
 The names `Alice`, `Bob`, `Carol` and `Dave` in the Immich demo are invented labels for the face-recognition examples, not the names of the people photographed.
 
 <details>
-<summary>Immich demo (77 assets)</summary>
+<summary>Immich demo (82 assets)</summary>
 
 | File | Author | Source | Licence |
 |---|---|---|---|
@@ -152,6 +153,11 @@ The names `Alice`, `Bob`, `Carol` and `Dave` in the Immich demo are invented lab
 | `stocksnap-25.jpg` | Direct Media | [StockSnap](https://stocksnap.io/photo/business-man-DAAZROYMQN) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `ocean-sommaroy.mp4` | Netha Hussain | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Ocean_in_Sommaroy.webm) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `city-timelapse-albury.mp4` | Thennicke | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Wodonga_Place_timelapse_Albury_NSW.webm) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `sintel-trailer.mp4` | Blender Foundation | *Sintel* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `sintel-portrait-9x16.mp4` | Blender Foundation | *Sintel* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `big-buck-bunny-trailer.mov` | Blender Foundation | *Big Buck Bunny* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `big-buck-bunny-clip-vp9.webm` | Blender Foundation | *Big Buck Bunny* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `big-buck-bunny-short-6s.mp4` | Blender Foundation | *Big Buck Bunny* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
 | `Aurora over Kirkjufell.jpg` | Landon Arnold | [Unsplash](https://unsplash.com/photos/snow-capped-mountain-under-aurora-PMdiRXbAbhY) | [Unsplash License](https://unsplash.com/license) |
 | `Black sand at Reynisfjara.jpg` | With Paul | [Unsplash](https://unsplash.com/photos/a-large-rock-formation-on-a-beach-next-to-the-ocean-IT6MIkeDr3o) | [Unsplash License](https://unsplash.com/license) |
 | `Canyon of Fjaðrárgljúfur.jpg` | Thomas Fatin | [Unsplash](https://unsplash.com/photos/person-in-blue-jacket-and-blue-denim-jeans-walking-on-green-grass-covered-hill-during-daytime-FHpP-fCpIoo) | [Unsplash License](https://unsplash.com/license) |
@@ -176,7 +182,7 @@ The names `Alice`, `Bob`, `Carol` and `Dave` in the Immich demo are invented lab
 </details>
 
 <details>
-<summary>Nextcloud demo, <code>/Gallery-Demo</code> (40 files)</summary>
+<summary>Nextcloud demo, <code>/Gallery-Demo</code> (45 files)</summary>
 
 | File | Author | Source | Licence |
 |---|---|---|---|
@@ -220,5 +226,10 @@ The names `Alice`, `Bob`, `Carol` and `Dave` in the Immich demo are invented lab
 | `Camera/IMG_20250718_333.jpg` | Zwaddi | [Unsplash](https://unsplash.com/photos/YvYBOSiBJE8) | [Unsplash License](https://unsplash.com/license) |
 | `Camera/IMG_20250923_370.jpg` | Kenneth Thewissen | [Unsplash](https://unsplash.com/photos/D76DklsG-5U) | [Unsplash License](https://unsplash.com/license) |
 | `Camera/IMG_20251128_407.jpg` | Gabe Rodriguez | [Unsplash](https://unsplash.com/photos/eLUegVAjN7s) | [Unsplash License](https://unsplash.com/license) |
+| `Videos/sintel-trailer.mp4` | Blender Foundation | *Sintel* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `Videos/sintel-portrait-9x16.mp4` | Blender Foundation | *Sintel* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `Videos/big-buck-bunny-trailer.mov` | Blender Foundation | *Big Buck Bunny* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `Videos/big-buck-bunny-clip-vp9.webm` | Blender Foundation | *Big Buck Bunny* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| `Videos/big-buck-bunny-short-6s.mp4` | Blender Foundation | *Big Buck Bunny* ([blender.org](https://www.blender.org)) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
 
 </details>

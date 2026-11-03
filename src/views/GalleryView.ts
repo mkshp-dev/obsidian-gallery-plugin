@@ -850,6 +850,9 @@ export abstract class GalleryView implements IGalleryView {
             }
             const duration = srcImage.mediaType === 'video' ? formatDuration(srcImage.durationSeconds) : undefined;
             if (duration) addRow('Duration', duration);
+            // When the file was last changed (vault files, Nextcloud); photos also show when they were taken
+            const modified = typeof srcImage.mtime === 'number' ? formatTakenAt(new Date(srcImage.mtime)) : undefined;
+            if (modified) addRow('Modified', modified);
 
             // Photo details (EXIF): shown when known, read on demand while the panel is open.
             // Missing fields are left out and a failed read just leaves the rows above.
@@ -1127,7 +1130,7 @@ export abstract class GalleryView implements IGalleryView {
                 })
                 .catch((error: unknown) => {
                     Logger.warn('Could not load video:', srcImage.path, error);
-                    showVideoFailure(srcImage, token);
+                    showVideoFailure(srcImage, token, "This video couldn't be loaded.");
                 });
             videoEl.setAttribute('aria-label', srcImage.displayName || 'Video');
         };
@@ -1140,12 +1143,22 @@ export abstract class GalleryView implements IGalleryView {
             return srcImage.type !== 'local' && srcImage.type !== 'external' && limit > 0 && typeof srcImage.size === 'number' && srcImage.size > limit;
         };
         const showVideoTooLarge = (srcImage: IImageSource, token: number) => {
-            showVideoFailure(srcImage, token);
+            showVideoFailure(srcImage, token, `This video is too large to play here (${this.formatFileSize(srcImage.size ?? 0)}).`);
+        };
+
+        // A video that won't play here: its still frame (or nothing), with a short message and,
+        // for Immich and Nextcloud, a button that opens it there
+        const showVideoFailure = (srcImage: IImageSource, token: number, message: string) => {
+            if (token !== modalLoadToken) return;
+            videoEl.classList.add('is-hidden');
+            img.classList.remove('is-hidden');
             img.alt = srcImage.displayName || 'Video';
-            this.createElement(videoNotice, 'div', {
-                cls: 'gallery-modal-video-notice-text',
-                text: `This video is too large to play here (${this.formatFileSize(srcImage.size ?? 0)}).`
-            });
+            this.resolveImageUrl(srcImage)
+                .then(poster => { if (token === modalLoadToken) { img.src = poster; img.setCssStyles({ opacity: '1' }); } })
+                .catch(() => { img.src = ''; });
+
+            this.emptyElement(videoNotice);
+            this.createElement(videoNotice, 'div', { cls: 'gallery-modal-video-notice-text', text: message });
             if (srcImage.openUrl) {
                 const openUrl = srcImage.openUrl;
                 const service = srcImage.type.startsWith('nextcloud') ? 'Nextcloud' : srcImage.type.startsWith('immich') ? 'Immich' : '';
@@ -1156,24 +1169,18 @@ export abstract class GalleryView implements IGalleryView {
                 });
             }
             videoNotice.classList.remove('is-hidden');
-        };
-
-        // A video that can't be downloaded or played: show its still frame (or nothing) instead
-        const showVideoFailure = (srcImage: IImageSource, token: number) => {
-            if (token !== modalLoadToken) return;
-            videoEl.classList.add('is-hidden');
-            img.classList.remove('is-hidden');
-            img.alt = 'Failed to load video';
-            this.resolveImageUrl(srcImage)
-                .then(poster => { if (token === modalLoadToken) { img.src = poster; img.setCssStyles({ opacity: '1' }); } })
-                .catch(() => { img.src = ''; });
             // A slideshow moves on after the usual interval
             if (this.slideshowPlaying) scheduleNext();
         };
-        // Sources that don't list a video's length (Nextcloud) learn it once it plays; tile badges update
+        // Sources that don't list a video's length or size (Nextcloud) learn them once it plays;
+        // tile badges update, and layouts use the size the next time they render
         videoEl.addEventListener('loadedmetadata', () => {
-            if (playingVideo && playingVideo.durationSeconds === undefined && Number.isFinite(videoEl.duration)) {
+            if (!playingVideo) return;
+            if (playingVideo.durationSeconds === undefined && Number.isFinite(videoEl.duration)) {
                 playingVideo.durationSeconds = videoEl.duration;
+            }
+            if (!playingVideo.dimensions && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+                playingVideo.dimensions = { width: videoEl.videoWidth, height: videoEl.videoHeight };
             }
         });
 
@@ -1181,7 +1188,7 @@ export abstract class GalleryView implements IGalleryView {
         videoEl.addEventListener('error', () => {
             if (playingVideo && playingVideo === currentImage && videoEl.getAttribute('src')) {
                 Logger.warn('Could not play video:', currentImage.path, videoEl.error?.message);
-                showVideoFailure(currentImage, modalLoadToken);
+                showVideoFailure(currentImage, modalLoadToken, "This video can't be played here. Its format may not be supported on this device.");
             }
         });
 

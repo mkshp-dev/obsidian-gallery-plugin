@@ -253,17 +253,40 @@ describe('videos', () => {
         const img = q('.gallery-modal-image-container img') as HTMLImageElement;
         expect(q('video.gallery-modal-video')!.classList.contains('is-hidden')).toBe(true);
         expect(img.classList.contains('is-hidden')).toBe(false);
-        expect(img.alt).toBe('Failed to load video');
         expect(img.getAttribute('src')).toBe('blob:x-still');
+        expect(q('.gallery-modal-video-notice')!.classList.contains('is-hidden')).toBe(false);
+        expect(q('.gallery-modal-video-notice')!.textContent).toBe("This video couldn't be loaded.");
     });
 
-    test('a video the player cannot decode shows its still frame', async () => {
-        const { q } = openViewer([clip('v'), local('a')]);
+    test('a video the player cannot decode (webm on older Safari, say) shows its still frame and a way out', async () => {
+        const webm = new ImageSource('nextcloud://cloud/Videos/clip.webm', 'nextcloud', 'clip', undefined, undefined, () => Promise.resolve('blob:webm-still'));
+        webm.setMediaType('video', () => Promise.resolve('blob:webm-video'));
+        webm.openUrl = 'https://cloud.example.com/index.php/f/303';
+        const { q } = openViewer([webm, local('a')]);
         await flush();
         q('video.gallery-modal-video')!.dispatchEvent(new Event('error'));
         await flush();
         expect(q('video.gallery-modal-video')!.classList.contains('is-hidden')).toBe(true);
-        expect((q('.gallery-modal-image-container img') as HTMLImageElement).getAttribute('src')).toBe('blob:v-still');
+        expect((q('.gallery-modal-image-container img') as HTMLImageElement).getAttribute('src')).toBe('blob:webm-still');
+        const notice = q('.gallery-modal-video-notice')!;
+        expect(notice.textContent).toContain("This video can't be played here.");
+        expect(notice.querySelector('button')!.textContent).toBe('Open in Nextcloud');
+    });
+
+    test('the player fills in a missing size, and Details shows the modified date', async () => {
+        const video = clip('v');
+        video.mtime = Date.UTC(2026, 1, 21, 12, 15);
+        const { q } = openViewer([video, local('a')]);
+        await flush();
+        const player = q('video.gallery-modal-video') as HTMLVideoElement;
+        Object.defineProperty(player, 'videoWidth', { value: 720, configurable: true });
+        Object.defineProperty(player, 'videoHeight', { value: 1280, configurable: true });
+        player.dispatchEvent(new Event('loadedmetadata'));
+        expect(video.dimensions).toEqual({ width: 720, height: 1280 });
+
+        (q('.info-btn') as HTMLButtonElement).click();
+        const labels = Array.from(document.querySelectorAll('.info-label')).map(l => l.textContent);
+        expect(labels).toContain('Modified');
     });
 
     test('a remote video over the size limit is not downloaded; it links to Immich instead', async () => {

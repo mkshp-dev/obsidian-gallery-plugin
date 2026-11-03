@@ -6,7 +6,7 @@ import { ImageSource } from '../models/ImageSource';
 import { Logger } from '../utils/Logger';
 import { globToRegex } from '../utils/globToRegex';
 import { usesThumbnailImages } from '../models/viewTypes';
-import { isVideoMimeType } from '../models/media';
+import { isVideoMimeType, parseHttpDate } from '../models/media';
 import { VideoPoster } from '../utils/VideoPoster';
 
 export class NextcloudSourceResolver implements GallerySourceResolver<INextcloudSourceConfig> {
@@ -126,6 +126,7 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
                     // Tile views load small previews; the image viewer uses a large one instead
                     if (representation === 'thumbnail') image.setLargeLoader(() => client.getFileBlobUrl(file.path, 'large', file.fileId));
                     image.size = file.size || undefined;
+                    image.mtime = parseHttpDate(file.lastModified);
                     images.push(image);
                 } catch (e) {
                     Logger.warn(`Failed to resolve file ${file.path} for Nextcloud source: ${e instanceof Error ? e.message : String(e)}`);
@@ -158,6 +159,7 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
         image = new ImageSource(logicalPath, 'nextcloud', file.name, undefined, undefined, stillLoader);
         image.setMediaType('video', () => client.getFileBlobUrl(file.path, 'original', file.fileId));
         image.size = file.size || undefined;
+        image.mtime = parseHttpDate(file.lastModified);
         if (file.fileId) image.openUrl = client.getFileWebUrl(file.fileId);
         return image;
     }

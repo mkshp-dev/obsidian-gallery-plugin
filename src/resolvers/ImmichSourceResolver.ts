@@ -6,7 +6,7 @@ import { Logger } from '../utils/Logger';
 import { ImmichAsset } from '../models/immich/ImmichTypes';
 import { usesThumbnailImages } from '../models/viewTypes';
 import { joinMakeModel, parseExifDate } from '../utils/ExifReader';
-import { parseClockDuration } from '../models/media';
+import { parseImmichDuration } from '../models/media';
 
 export function extractImmichCaption(asset: ImmichAsset | Record<string, unknown>): string | undefined {
     if (!asset || typeof asset !== 'object') return undefined;
@@ -86,16 +86,17 @@ export function extractImmichMetadata(asset: ImmichAsset | Record<string, unknow
     return Object.keys(metadata).length > 0 ? metadata : undefined;
 }
 
-/** True for Immich video assets (type "VIDEO") */
+/** True for Immich video assets: type "VIDEO", or an original MIME type of video/… */
 export function isImmichVideo(asset: ImmichAsset | Record<string, unknown> | undefined): boolean {
-    return !!asset && typeof asset === 'object' && typeof asset.type === 'string' && asset.type.toUpperCase() === 'VIDEO';
+    if (!asset || typeof asset !== 'object') return false;
+    if (typeof asset.type === 'string' && asset.type.toUpperCase() === 'VIDEO') return true;
+    return typeof asset.originalMimeType === 'string' && asset.originalMimeType.toLowerCase().startsWith('video/');
 }
 
-/** A video asset's length in seconds, from Immich's "h:mm:ss.ffffff" duration */
+/** A video asset's length in seconds (Immich 3: milliseconds; older: "h:mm:ss.ffffff") */
 export function extractImmichDuration(asset: ImmichAsset | Record<string, unknown> | undefined): number | undefined {
     if (!asset || typeof asset !== 'object') return undefined;
-    const seconds = parseClockDuration(asset.duration);
-    return seconds !== undefined && seconds > 0 ? seconds : undefined;
+    return parseImmichDuration(asset.duration);
 }
 
 /** The asset's file size in bytes, from its EXIF info; undefined when Immich didn't send it */

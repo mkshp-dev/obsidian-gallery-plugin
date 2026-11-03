@@ -1,6 +1,7 @@
 import { ImageSource } from '../../src/models/ImageSource';
 import { VideoPoster, VIDEO_PLACEHOLDER_URL } from '../../src/utils/VideoPoster';
-import { formatDuration, parseClockDuration, isVideoPath, isMediaPath, extensionOf } from '../../src/models/media';
+import { formatDuration, parseClockDuration, parseImmichDuration, isVideoPath, isMediaPath, extensionOf } from '../../src/models/media';
+import { isImmichVideo } from '../../src/resolvers/ImmichSourceResolver';
 import { ImmichSourceResolver } from '../../src/resolvers/ImmichSourceResolver';
 import { ImmichClient } from '../../src/services/immich/ImmichClient';
 import { ContentScanner } from '../../src/services/ContentScanner';
@@ -31,6 +32,21 @@ describe('media helpers', () => {
         expect(parseClockDuration('1:02:03')).toBe(3723);
         expect(parseClockDuration('garbage')).toBeUndefined();
         expect(parseClockDuration(undefined)).toBeUndefined();
+    });
+
+    test('Immich durations: milliseconds (Immich 3) or a clock string (older), none for photos', () => {
+        expect(parseImmichDuration(52208)).toBeCloseTo(52.208);
+        expect(parseImmichDuration('0:00:52.208000')).toBeCloseTo(52.208);
+        expect(parseImmichDuration(null)).toBeUndefined();
+        expect(parseImmichDuration(0)).toBeUndefined();
+        expect(parseImmichDuration('0:00:00.00000')).toBeUndefined();
+    });
+
+    test('Immich videos are recognised by type or by original MIME type', () => {
+        expect(isImmichVideo({ id: 'a', type: 'VIDEO' })).toBe(true);
+        expect(isImmichVideo({ id: 'a', originalMimeType: 'video/quicktime' })).toBe(true);
+        expect(isImmichVideo({ id: 'a', type: 'IMAGE', originalMimeType: 'image/jpeg' })).toBe(false);
+        expect(isImmichVideo(undefined)).toBe(false);
     });
 });
 
@@ -169,8 +185,8 @@ describe('Immich videos', () => {
 
     test('show a still frame in every view and play the playback encoding in the viewer', async () => {
         (ImmichClient.prototype.searchMetadata as jest.Mock).mockResolvedValue([
-            { id: 'v1', originalFileName: 'clip.mov', type: 'VIDEO', duration: '0:01:05.500000', exifInfo: { fileSizeInByte: 734003200 } },
-            { id: 'p1', originalFileName: 'photo.jpg', type: 'IMAGE', duration: '0:00:00.00000' }
+            { id: 'v1', originalFileName: 'clip.mov', type: 'VIDEO', duration: 65500, exifInfo: { fileSizeInByte: 734003200 } },
+            { id: 'p1', originalFileName: 'photo.jpg', type: 'IMAGE', duration: null }
         ]);
         const blob = (ImmichClient.prototype.getAssetBlobUrl as jest.Mock).mockImplementation(async (id: string, rep: string) => `blob:${id}:${rep}`);
         (ImmichClient.prototype.getAssetWebUrl as jest.Mock).mockImplementation((id: string) => `https://immich.example.com/photos/${id}`);

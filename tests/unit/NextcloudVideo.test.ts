@@ -4,7 +4,7 @@ import { NextcloudSourceResolver } from '../../src/resolvers/NextcloudSourceReso
 import { NextcloudShareSourceResolver } from '../../src/resolvers/NextcloudShareSourceResolver';
 import { ObjectUrlManager } from '../../src/utils/ObjectUrlManager';
 import { VideoPoster, VIDEO_PLACEHOLDER_URL } from '../../src/utils/VideoPoster';
-import { allowedMimeTypes, isVideoMimeType } from '../../src/models/media';
+import { acceptsMimeType, isVideoMimeType, parseHttpDate } from '../../src/models/media';
 
 jest.mock('../../src/utils/Logger', () => ({
     Logger: { debug: jest.fn(), warn: jest.fn(), error: jest.fn() }
@@ -14,13 +14,14 @@ const request = requestUrl as jest.Mock;
 const connection = { key: 'cloud', baseUrl: 'https://cloud.example.com', username: 'me', appPassword: 'pw' };
 
 /** A WebDAV listing (real XML, parsed by jsdom's DOMParser) */
-const listing = (entries: Array<{ href: string; type?: string; size?: number; id?: string; folder?: boolean }>) =>
+const listing = (entries: Array<{ href: string; type?: string; size?: number; id?: string; folder?: boolean; modified?: string }>) =>
     `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">` +
     entries.map(e => `<d:response><d:href>${e.href}</d:href><d:propstat><d:prop>` +
         (e.folder ? '<d:resourcetype><d:collection/></d:resourcetype>' : '<d:resourcetype/>') +
         (e.type ? `<d:getcontenttype>${e.type}</d:getcontenttype>` : '') +
         (e.size ? `<d:getcontentlength>${e.size}</d:getcontentlength>` : '') +
         (e.id ? `<oc:fileid>${e.id}</oc:fileid>` : '') +
+        (e.modified ? `<d:getlastmodified>${e.modified}</d:getlastmodified>` : '') +
         `</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`).join('') +
     `</d:multistatus>`;
 
@@ -39,11 +40,24 @@ beforeEach(() => {
 
 describe('MIME types', () => {
     test('listings keep images and videos, narrowed by mimeTypes, with wildcards', () => {
-        expect(allowedMimeTypes()).toEqual(expect.arrayContaining(['image/jpeg', 'video/mp4', 'video/quicktime']));
-        expect(allowedMimeTypes(['video/*'])).toEqual(['video/mp4', 'video/x-m4v', 'video/webm', 'video/quicktime', 'video/ogg']);
-        expect(allowedMimeTypes(['image/png', 'video/mp4'])).toEqual(['image/png', 'video/mp4']);
+        // Supported images, and any video (one the player can't decode gets the viewer's notice)
+        for (const type of ['image/jpeg', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska']) {
+            expect(acceptsMimeType(type)).toBe(true);
+        }
+        expect(acceptsMimeType('image/tiff')).toBe(false);
+        expect(acceptsMimeType('application/pdf')).toBe(false);
+        expect(acceptsMimeType(undefined)).toBe(false);
+
+        expect(acceptsMimeType('video/webm', ['video/*'])).toBe(true);
+        expect(acceptsMimeType('image/png', ['video/*'])).toBe(false);
+        expect(acceptsMimeType('video/mp4; codecs=avc1', ['image/png', 'video/mp4'])).toBe(true);
+        expect(acceptsMimeType('video/quicktime', ['image/png', 'video/mp4'])).toBe(false);
+        expect(acceptsMimeType('IMAGE/PNG', ['image/*'])).toBe(true);
+
         expect(isVideoMimeType('video/mp4; codecs=avc1')).toBe(true);
         expect(isVideoMimeType('image/jpeg')).toBe(false);
+        expect(parseHttpDate('Sat, 21 Feb 2026 12:15:00 GMT')).toBe(Date.UTC(2026, 1, 21, 12, 15));
+        expect(parseHttpDate('not a date')).toBeUndefined();
     });
 });
 
@@ -70,7 +84,7 @@ describe('Nextcloud connection videos', () => {
         request.mockImplementation(async (req: { url: string; method: string }) => {
             if (req.method === 'PROPFIND') return { status: 207, text: listing([
                 { href: '/remote.php/dav/files/me/Clips/', folder: true },
-                { href: '/remote.php/dav/files/me/Clips/trip.mp4', type: 'video/mp4', size, id: '42' }
+                { href: '/remote.php/dav/files/me/Clips/trip.mp4', type: 'video/mp4', size, id: '42', modified: 'Sat, 21 Feb 2026 12:15:00 GMT' }
             ]) };
             if (req.url.includes('/core/preview')) return preview === 'ok' ? ok('image/jpeg') : { status: 404, headers: {}, arrayBuffer: new ArrayBuffer(0) };
             return ok('video/mp4');
@@ -86,6 +100,9 @@ describe('Nextcloud connection videos', () => {
         expect(video.mediaType).toBe('video');
         expect(video.size).toBe(5000);
         expect(video.openUrl).toBe('https://cloud.example.com/index.php/f/42');
+        // Nextcloud sends no date taken, size or length for videos: the modified date stands in
+        expect(video.mtime).toBe(Date.UTC(2026, 1, 21, 12, 15));
+        expect(video.durationSeconds).toBeUndefined();
 
         await video.resolveDisplayUrl!();
         expect(urls()).toContain('https://cloud.example.com/index.php/core/preview?fileId=42&x=256&y=256&a=1');
@@ -170,6 +187,20 @@ describe('Nextcloud share videos', () => {
         await expect(video.resolveDisplayUrl!()).resolves.toBe('blob:frame');
         expect(urls().some(u => u.includes('publicpreview'))).toBe(false);
         expect(capture).toHaveBeenCalledWith(expect.stringContaining('/public.php/webdav/Trip/clip.mov'), expect.any(Function), 7000);
+    });
+
+    test('shares listed under public.php/dav/files/<token> get the public preview too', async () => {
+        request.mockImplementation(async (req: { url: string; method: string }) => {
+            if (req.method === 'PROPFIND') return { status: 207, text: listing([
+                { href: '/public.php/dav/files/TOKEN/', folder: true },
+                { href: '/public.php/dav/files/TOKEN/Videos/sintel-trailer.mp4', type: 'video/mp4', size: 4372373 }
+            ]) };
+            return ok('image/jpeg');
+        });
+        const { images } = await new NextcloudShareSourceResolver().resolve(
+            { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN', recursive: false } as any, { viewType: 'masonry' });
+        await images[0].resolveDisplayUrl!();
+        expect(urls()).toContain('https://cloud.example.com/index.php/apps/files_sharing/publicpreview/TOKEN?file=%2FVideos%2Fsintel-trailer.mp4&x=256&y=256&a=1');
     });
 
     test('a missing public preview falls back to a frame from the file', async () => {

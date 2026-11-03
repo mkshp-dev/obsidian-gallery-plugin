@@ -24,6 +24,8 @@ view:
 
 The [justified view](../views/justified.md) shows the photos in even rows, like Immich's own web page for the share. Use `masonry` for Pinterest-style columns, or any other view.
 
+Videos in the share show a still frame with a play icon and their length, and play in the [image viewer](../views/image-viewer.md#videos).
+
 ### Password-Protected Links
 
 If your Immich shared link is protected by a password, you can specify the password using the optional `password` field. The demo server's Travel album is shared with the password `gallery-demo`:

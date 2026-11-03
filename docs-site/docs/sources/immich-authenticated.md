@@ -227,6 +227,8 @@ view:
 
 You can filter assets by their type using `assetType`. Supported values are `image` and `video`. This can be combined with any other filter.
 
+Videos show Immich's thumbnail with a play icon and their length. Click one to play it in the [image viewer](../views/image-viewer.md#videos); the plugin plays Immich's playback version (which Immich transcodes so any player can show it), downloading it when you open it.
+
 Only videos from a specific album:
 ```yaml
 sources:

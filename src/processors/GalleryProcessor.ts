@@ -1,3 +1,4 @@
+import { isMediaPath } from '../models/media';
 import { SourceResolverRegistry } from '../resolvers/SourceResolverRegistry';
 import { Logger } from "../utils/Logger";
 import { MarkdownPostProcessorContext, MarkdownRenderChild } from 'obsidian';
@@ -376,10 +377,7 @@ export class GalleryProcessor {
                 // Additional validation logic
                 if (image.type === 'local') {
                     // Validate image format (using simple extension check for local files)
-                    const cleanPath = image.path.split('?')[0].split('#')[0];
-                    const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
-                    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-                    if (!supportedExtensions.includes(extension)) {
+                    if (!isMediaPath(image.path)) {
                         validationErrors.push(`Invalid format: ${image.path}`);
                         continue;
                     }

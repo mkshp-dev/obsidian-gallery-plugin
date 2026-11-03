@@ -43,6 +43,21 @@ view:
 | `sort.order` | `asc` or `desc` | — | Sort order. `desc` = descending. |
 | `limit` | number | — | Maximum number of images to fetch. |
 
+## Videos
+
+Video files in the folder (`.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`) are part of the gallery too. Each tile shows a still frame from about a second into the video, with a play icon and the video's length in the corner. Click it to play the video in the [image viewer](../views/image-viewer.md#videos).
+
+To show only videos, or only images, filter by file name:
+
+```yaml
+sources:
+  - type: local
+    path: Clips
+    filenameFilter: "*.mp4"
+```
+
+Videos play in Obsidian's built-in player, so they need a format it can play: MP4 (H.264) and WebM work everywhere. A `.mov` from an iPhone is often HEVC, which some computers can't play; its tile then shows a dark placeholder, and the viewer shows that instead of playing it.
+
 ## Examples
 
 ### Folder gallery

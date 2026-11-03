@@ -6,6 +6,7 @@ import { Logger } from '../utils/Logger';
 import { ImmichAsset } from '../models/immich/ImmichTypes';
 import { usesThumbnailImages } from '../models/viewTypes';
 import { joinMakeModel, parseExifDate } from '../utils/ExifReader';
+import { parseClockDuration } from '../models/media';
 
 export function extractImmichCaption(asset: ImmichAsset | Record<string, unknown>): string | undefined {
     if (!asset || typeof asset !== 'object') return undefined;
@@ -83,6 +84,18 @@ export function extractImmichMetadata(asset: ImmichAsset | Record<string, unknow
     const lens = text(exif.lensModel);
     if (lens) metadata.lens = lens;
     return Object.keys(metadata).length > 0 ? metadata : undefined;
+}
+
+/** True for Immich video assets (type "VIDEO") */
+export function isImmichVideo(asset: ImmichAsset | Record<string, unknown> | undefined): boolean {
+    return !!asset && typeof asset === 'object' && typeof asset.type === 'string' && asset.type.toUpperCase() === 'VIDEO';
+}
+
+/** A video asset's length in seconds, from Immich's "h:mm:ss.ffffff" duration */
+export function extractImmichDuration(asset: ImmichAsset | Record<string, unknown> | undefined): number | undefined {
+    if (!asset || typeof asset !== 'object') return undefined;
+    const seconds = parseClockDuration(asset.duration);
+    return seconds !== undefined && seconds > 0 ? seconds : undefined;
 }
 
 export class ImmichSourceResolver implements GallerySourceResolver<IImmichSourceConfig> {
@@ -216,10 +229,18 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                     // The path is logical; the loader fetches the blob Object URL used for display
                     const logicalPath = `immich://${connection.key}/search/asset/${assetId}`;
 
+                    // Videos show a still frame in the gallery (never the original file, which is the
+                    // video itself) and play in the image viewer
+                    const isVideo = isImmichVideo(asset);
+                    const shown = isVideo && representation === 'original' ? 'preview' : representation;
                     const image = new ImageSource(logicalPath, 'immich', originalFileName, undefined, description,
-                        () => client.getAssetBlobUrl(assetId, representation));
+                        () => client.getAssetBlobUrl(assetId, shown));
                     // Tile views load small thumbnails; the image viewer uses the preview size instead
-                    if (representation === 'thumbnail') image.setLargeLoader(() => client.getAssetBlobUrl(assetId, 'preview'));
+                    if (shown === 'thumbnail') image.setLargeLoader(() => client.getAssetBlobUrl(assetId, 'preview'));
+                    if (isVideo) {
+                        image.setMediaType('video', () => client.getAssetBlobUrl(assetId, 'video'));
+                        image.durationSeconds = extractImmichDuration(asset);
+                    }
                     image.dimensions = extractImmichDimensions(asset);
                     image.metadata = metadata;
                     return image;

@@ -2,6 +2,7 @@ import { Logger } from "../utils/Logger";
 import { Vault, TFile, TFolder } from 'obsidian';
 import { IContentScanner, IImageSource } from '../models/interfaces';
 import { ImageSource } from '../models/ImageSource';
+import { MEDIA_EXTENSIONS } from '../models/media';
 import { FolderScanner } from './FolderScanner';
 import { readExifMetadata } from '../utils/ExifReader';
 
@@ -14,7 +15,9 @@ export class ContentScanner implements IContentScanner {
     private folderScanner: FolderScanner;
     private cache: Map<string, { images: IImageSource[], timestamp: number }> = new Map();
     private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-    private readonly SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    /** Largest video read into memory just to draw its still frame */
+    private static readonly MAX_POSTER_READ_BYTES = 200 * 1024 * 1024;
+    private readonly SUPPORTED_EXTENSIONS = MEDIA_EXTENSIONS;
 
     constructor(vault: Vault) {
         this.vault = vault;
@@ -111,12 +114,24 @@ export class ContentScanner implements IContentScanner {
 
     /**
      * Let local images read their EXIF data (date taken, camera, lens) from the vault when the
-     * image viewer's Details panel first asks for it. Nothing is read while scanning.
+     * image viewer's Details panel first asks for it, and local videos read their file when a
+     * still frame can't be drawn from their URL. Nothing is read while scanning.
      */
     private attachMetadataLoaders(images: IImageSource[]): void {
         for (const image of images) {
-            if (image.type !== 'local' || !(image instanceof ImageSource) || image.hasMetadataLoader()) continue;
+            if (image.type !== 'local' || !(image instanceof ImageSource)) continue;
             const path = image.path;
+            if (image.mediaType === 'video') {
+                // The still frame is normally drawn from the video's URL; if the canvas can't read
+                // that back, it is drawn from the file instead (skipped for very large files)
+                image.setVideoFileReader(async () => {
+                    const file = this.vault.getAbstractFileByPath(path);
+                    if (!(file instanceof TFile) || (file.stat?.size ?? 0) > ContentScanner.MAX_POSTER_READ_BYTES) return undefined;
+                    return this.vault.readBinary(file);
+                });
+                continue;
+            }
+            if (image.hasMetadataLoader()) continue;
             image.setMetadataLoader(async () => {
                 const file = this.vault.getAbstractFileByPath(path);
                 if (!(file instanceof TFile)) return undefined;
@@ -209,7 +224,7 @@ export class ContentScanner implements IContentScanner {
             }
             
             // Extract attachment references
-            const attachmentRegex = /\[\[([^|\]]+\.(jpg|jpeg|png|gif|webp))(?:\|([^\]]+))?\]\]/gi;
+            const attachmentRegex = /\[\[([^|\]]+\.(jpg|jpeg|png|gif|webp|mp4|m4v|webm|mov|ogv))(?:\|([^\]]+))?\]\]/gi;
             
             while ((match = attachmentRegex.exec(content)) !== null) {
                 const [, attachmentPath, , displayName] = match;

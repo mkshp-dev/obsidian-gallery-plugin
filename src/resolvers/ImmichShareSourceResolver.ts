@@ -2,7 +2,7 @@ import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { IImageSource, IImmichShareSourceConfig } from '../models/interfaces';
 import { GallerySourceResolver, GallerySourceResolveContext } from './GallerySourceResolver';
 import { ImageSource } from '../models/ImageSource';
-import { extractImmichCaption, extractImmichDimensions, extractImmichMetadata } from './ImmichSourceResolver';
+import { extractImmichCaption, extractImmichDimensions, extractImmichMetadata, extractImmichDuration, isImmichVideo } from './ImmichSourceResolver';
 import { ImmichAsset, ImmichAlbum, ImmichShareResponse } from '../models/immich/ImmichTypes';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
 import { usesThumbnailImages } from '../models/viewTypes';
@@ -241,23 +241,32 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                 const assetUrls = {
                     thumbnail: `${apiBase}/assets/${assetId}/thumbnail?key=${shareKey}`,
                     preview: `${apiBase}/assets/${assetId}/thumbnail?size=preview&key=${shareKey}`,
-                    original: `${apiBase}/assets/${assetId}/original?key=${shareKey}`
+                    original: `${apiBase}/assets/${assetId}/original?key=${shareKey}`,
+                    video: `${apiBase}/assets/${assetId}/video/playback?key=${shareKey}`
                 };
 
                 // Fetched lazily, when a view first displays the asset. requestUrl bypasses browser CORS
                 // and sends the share session, which a plain <img> URL could not do for password-protected shares.
-                const loaderFor = (rep: 'thumbnail' | 'preview' | 'original') => () =>
+                const loaderFor = (rep: keyof typeof assetUrls) => () =>
                     ObjectUrlManager.getOrCreate(`immich-share:${shareKey}:${assetId}:${rep}`, async () => {
                         const blobRes = await requestUrl({ url: assetUrls[rep], method: 'GET', headers: authHeaders });
                         if (blobRes.status !== 200) {
                             throw new Error(`Failed to fetch Immich share asset '${assetId}': HTTP ${blobRes.status}`);
                         }
-                        return new Blob([blobRes.arrayBuffer]);
+                        const contentType = blobRes.headers?.['content-type'];
+                        return new Blob([blobRes.arrayBuffer], typeof contentType === 'string' ? { type: contentType } : undefined);
                     });
 
-                const image = new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loaderFor(representation));
+                // Videos show a still frame in the gallery and play in the image viewer
+                const isVideo = isImmichVideo(asset);
+                const shown = isVideo && representation === 'original' ? 'preview' : representation;
+                const image = new ImageSource(`immich-share://${shareKey}/${assetId}`, 'immich-share', originalFileName, undefined, description, loaderFor(shown));
                 // Tile views load small thumbnails; the image viewer uses the preview size instead
-                if (representation === 'thumbnail') image.setLargeLoader(loaderFor('preview'));
+                if (shown === 'thumbnail') image.setLargeLoader(loaderFor('preview'));
+                if (isVideo) {
+                    image.setMediaType('video', loaderFor('video'));
+                    image.durationSeconds = extractImmichDuration(asset);
+                }
                 image.dimensions = extractImmichDimensions(asset);
                 image.metadata = metadata;
                 return image;

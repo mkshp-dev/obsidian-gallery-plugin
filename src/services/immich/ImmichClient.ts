@@ -11,6 +11,9 @@ interface CacheEntry<T> {
     timestamp: number;
 }
 
+/** Sizes of an Immich asset: still images, the original file, or a video's playable encoding */
+export type ImmichRepresentation = 'thumbnail' | 'preview' | 'original' | 'video';
+
 export class ImmichClient {
     private static albumCache: Map<string, CacheEntry<ImmichAlbum[]>> = new Map();
     private static tagCache: Map<string, CacheEntry<ImmichTag[]>> = new Map();
@@ -167,7 +170,11 @@ export class ImmichClient {
         throw new Error(`Failed to fetch Immich assets: HTTP ${response.status}`);
     }
 
-    public getAssetUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): string {
+    public getAssetUrl(assetId: string, representation: ImmichRepresentation = 'original'): string {
+        if (representation === 'video') {
+            // The playable encoding of a video (Immich transcodes formats browsers can't play)
+            return `${this.baseUrl}/api/assets/${assetId}/video/playback`;
+        }
         if (representation === 'thumbnail') {
             return `${this.baseUrl}/api/assets/${assetId}/thumbnail`;
         } else if (representation === 'preview') {
@@ -315,12 +322,12 @@ export class ImmichClient {
         }
     }
 
-    public async getAssetBlobUrl(assetId: string, representation: 'thumbnail' | 'preview' | 'original' = 'original'): Promise<string> {
+    public async getAssetBlobUrl(assetId: string, representation: ImmichRepresentation = 'original'): Promise<string> {
         const key = `immich:${this.connection.key}:${assetId}:${representation}`;
         return ObjectUrlManager.getOrCreate(key, () => this.fetchAssetBlob(assetId, representation));
     }
 
-    private async fetchAssetBlob(assetId: string, representation: 'thumbnail' | 'preview' | 'original'): Promise<Blob> {
+    private async fetchAssetBlob(assetId: string, representation: ImmichRepresentation): Promise<Blob> {
         const url = this.getAssetUrl(assetId, representation);
         try {
             const response = await requestUrl({
@@ -330,7 +337,9 @@ export class ImmichClient {
             });
 
             if (response.status === 200) {
-                return new Blob([response.arrayBuffer]);
+                // Keep the type so videos play from the blob URL
+                const contentType = response.headers?.['content-type'];
+                return new Blob([response.arrayBuffer], typeof contentType === 'string' ? { type: contentType } : undefined);
             }
             if (response.status === 401 || response.status === 403) {
                 throw new Error(`Authentication failed for asset '${assetId}' (HTTP ${response.status})`);

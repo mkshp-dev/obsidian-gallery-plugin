@@ -28,6 +28,12 @@ For Immich and Nextcloud galleries, the viewer first shows the small image the g
 
 Galleries with a single image have no arrows or slideshow button.
 
+## Videos
+
+Videos play in the viewer with the usual player controls (play, seek, volume, full screen), starting on their own. While the video downloads or opens, its still frame shows. Zoom doesn't apply to videos, so the zoom buttons are hidden. **←** / **→** change video unless the player has focus (then they seek), and swipes on the player itself don't change video. During a slideshow a video plays to the end before the next item.
+
+Leaving a video stops it. An Immich video is downloaded when you open it and let go of when you move on.
+
 ## Keyboard in the gallery
 
 - **Thumbnail view:** **←** / **→** move between tiles; **Enter** or **Space** opens the focused one.

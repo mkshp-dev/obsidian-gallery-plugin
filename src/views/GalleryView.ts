@@ -2,6 +2,7 @@ import { Logger } from "../utils/Logger";
 import { IGalleryView, IImageSource, IImageMetadata, ObsidianDOMExtensions, CreateElementOptions, ViewRuntimeOptions } from '../models/interfaces';
 import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
+import { formatDuration } from '../models/media';
 import type { ViewType } from '../models/viewTypes';
 
 /**
@@ -267,6 +268,8 @@ export abstract class GalleryView implements IGalleryView {
      * the image is smaller than `parent`.
      */
     protected renderCaption(parent: HTMLElement, image: IImageSource, overlayParent: HTMLElement = parent): HTMLElement | null {
+        // Every view adds its caption here, so videos get their badge here too
+        if (image.mediaType === 'video') this.renderVideoBadge(overlayParent, image);
         const captionText = image.caption ?? image.displayName;
         if (!captionText) return null;
 
@@ -279,6 +282,27 @@ export abstract class GalleryView implements IGalleryView {
         // The image's alt text already names the tile; don't have screen readers say it twice
         if (captionText === image.displayName) captionEl.setAttribute('aria-hidden', 'true');
         return captionEl;
+    }
+
+    /**
+     * Mark a tile as a video: a play icon and the length, over the still frame
+     */
+    protected renderVideoBadge(parent: HTMLElement, image: IImageSource): HTMLElement {
+        parent.classList.add('is-video');
+        const badge = this.createElement(parent, 'div', {
+            cls: 'gallery-video-badge',
+            attr: { 'role': 'img', 'aria-label': 'Video' }
+        });
+        const icon = this.createElement(badge, 'span', { cls: 'gallery-video-badge-icon' });
+        setIcon(icon, 'play');
+        const time = this.createElement(badge, 'span', { cls: 'gallery-video-badge-time' });
+        image.onDurationKnown?.(seconds => {
+            const text = formatDuration(seconds);
+            if (!text) return;
+            time.textContent = text;
+            badge.setAttribute('aria-label', `Video, ${text}`);
+        });
+        return badge;
     }
 
     /**
@@ -628,7 +652,7 @@ export abstract class GalleryView implements IGalleryView {
         this.activeModal = modal;
         this.slideshowPlaying = false;
         if (this.slideshowTimer) {
-            window.clearInterval(this.slideshowTimer);
+            window.clearTimeout(this.slideshowTimer);
             this.slideshowTimer = null;
         }
 
@@ -659,6 +683,8 @@ export abstract class GalleryView implements IGalleryView {
 
         // Keyboard handler for navigation (Left/Right)
         const modalKeyHandler = (e: KeyboardEvent) => {
+            // A focused video uses the arrow keys to seek
+            if (e.target instanceof HTMLVideoElement) return;
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 navigate(-1);
@@ -674,11 +700,12 @@ export abstract class GalleryView implements IGalleryView {
         const cleanup = () => {
             try {
                 disposers.forEach(dispose => dispose());
+                stopVideo();
                 modal.removeEventListener('keydown', closeOnEscape);
                 doc.removeEventListener('focus', keepFocus, true);
                 modal.removeEventListener('keydown', modalKeyHandler);
                 if (this.slideshowTimer) {
-                    window.clearInterval(this.slideshowTimer);
+                    window.clearTimeout(this.slideshowTimer);
                     this.slideshowTimer = null;
                 }
             } catch (error) { Logger.debug('Ignored error:', error); }
@@ -737,7 +764,25 @@ export abstract class GalleryView implements IGalleryView {
         const img = this.createElement(imgContainer, 'img', {
             attr: { 'alt': image.displayName }
         }) as HTMLImageElement;
+        // Videos play here instead of the img; it stays hidden for images
+        const videoEl = this.createElement(imgContainer, 'video', {
+            cls: 'gallery-modal-video is-hidden',
+            attr: { 'controls': '', 'playsinline': '', 'preload': 'metadata' }
+        }) as HTMLVideoElement;
         const captionEl = this.createElement(imgContainer, 'div', { cls: 'gallery-modal-caption' });
+
+        // The video on screen, so it can be stopped and its download let go when the viewer moves on
+        let playingVideo: IImageSource | null = null;
+        const stopVideo = () => {
+            try {
+                videoEl.pause();
+                videoEl.removeAttribute('src');
+                videoEl.removeAttribute('poster');
+                videoEl.load();
+            } catch (error) { Logger.debug('Ignored error:', error); }
+            playingVideo?.releaseVideo?.();
+            playingVideo = null;
+        };
 
         // Prev/Next arrows, centred on the stage; hidden for a single image
         const prevBtn = this.createElement(imgContainer, 'button', {
@@ -791,6 +836,8 @@ export abstract class GalleryView implements IGalleryView {
             if (srcImage.size) {
                 addRow('File Size', this.formatFileSize(srcImage.size));
             }
+            const duration = srcImage.mediaType === 'video' ? formatDuration(srcImage.durationSeconds) : undefined;
+            if (duration) addRow('Duration', duration);
 
             // Photo details (EXIF): shown when known, read on demand while the panel is open.
             // Missing fields are left out and a failed read just leaves the rows above.
@@ -857,6 +904,7 @@ export abstract class GalleryView implements IGalleryView {
 
         // Zoom handlers
         const zoom = (factor: number) => {
+            if (currentImage.mediaType === 'video') return;
             currentScale = Math.max(1, Math.min(8, currentScale * factor));
             updateZoomTransform();
         };
@@ -922,9 +970,12 @@ export abstract class GalleryView implements IGalleryView {
         let pinchStartDistance = 0;
         let pinchStartScale = 1;
         let wasPinched = false;
+        let touchOnVideo = false;
         const touchDistance = (touches: TouchList) =>
             Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
         imgContainer.addEventListener('touchstart', (e: TouchEvent) => {
+            touchOnVideo = e.target === videoEl;
+            if (touchOnVideo) return;
             if (e.touches.length === 2) {
                 wasPinched = true;
                 pinchStartDistance = touchDistance(e.touches);
@@ -939,6 +990,7 @@ export abstract class GalleryView implements IGalleryView {
             startY = touchStartY - translateY;
         }, { passive: true });
         imgContainer.addEventListener('touchmove', (e: TouchEvent) => {
+            if (touchOnVideo) return;
             if (e.touches.length === 2 && pinchStartDistance > 0) {
                 e.preventDefault();
                 currentScale = Math.max(1, Math.min(8, pinchStartScale * touchDistance(e.touches) / pinchStartDistance));
@@ -952,7 +1004,7 @@ export abstract class GalleryView implements IGalleryView {
         }, { passive: false });
         imgContainer.addEventListener('touchend', (e: TouchEvent) => {
             if (e.touches.length < 2) pinchStartDistance = 0;
-            if (wasPinched || currentScale > 1 || !hasSeveral) return;
+            if (touchOnVideo || wasPinched || currentScale > 1 || !hasSeveral) return;
             const dx = e.changedTouches[0].clientX - touchStartX;
             const dy = e.changedTouches[0].clientY - touchStartY;
             if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) navigate(dx < 0 ? 1 : -1);
@@ -974,7 +1026,9 @@ export abstract class GalleryView implements IGalleryView {
         // Open/save the image, at the size the viewer shows rather than the gallery's thumbnail
         downloadBtn.addEventListener('click', () => {
             const target = currentImage;
-            const resolveUrl = target.resolveLargeUrl ? target.resolveLargeUrl() : this.resolveImageUrl(target);
+            const resolveUrl = target.mediaType === 'video' && target.resolveVideoUrl
+                ? target.resolveVideoUrl()
+                : target.resolveLargeUrl ? target.resolveLargeUrl() : this.resolveImageUrl(target);
             resolveUrl.then(displayUrl => {
                 if (!displayUrl) return;
                 const a = doc.body.createEl('a', {
@@ -992,8 +1046,18 @@ export abstract class GalleryView implements IGalleryView {
         const loadModalImage = (imgEl: HTMLImageElement, srcImage: IImageSource) => {
             const token = ++modalLoadToken;
             resetZoom();
+            stopVideo();
             updateInfoPanel(srcImage);
             updateHeader(srcImage);
+
+            const isVideo = srcImage.mediaType === 'video' && !!srcImage.resolveVideoUrl;
+            content.classList.toggle('is-video', isVideo);
+            videoEl.classList.toggle('is-hidden', !isVideo);
+            imgEl.classList.toggle('is-hidden', isVideo);
+            if (isVideo) {
+                loadModalVideo(srcImage, token);
+                return;
+            }
 
             if (srcImage.type === 'external' && !this.allowRemoteImages) {
                 imgEl.alt = 'External image blocked';
@@ -1023,6 +1087,52 @@ export abstract class GalleryView implements IGalleryView {
                 imgEl.setCssStyles({ opacity: '1' });
             });
         };
+
+        // Videos: the still frame shows while the video downloads (remote) or opens (local), then
+        // it plays. Each step checks the token, so a slow download can't start after moving on.
+        const loadModalVideo = (srcImage: IImageSource, token: number) => {
+            this.resolveImageUrl(srcImage)
+                .then(poster => { if (token === modalLoadToken && poster) videoEl.poster = poster; })
+                .catch((error: unknown) => Logger.debug('No still frame for video:', error));
+            srcImage.resolveVideoUrl!()
+                .then(url => {
+                    if (token !== modalLoadToken) {
+                        srcImage.releaseVideo?.();
+                        return;
+                    }
+                    playingVideo = srcImage;
+                    videoEl.src = url;
+                    try {
+                        // Browsers may refuse to start with sound until the user interacts; the controls still work
+                        videoEl.play()?.catch((error: unknown) => Logger.debug('Video did not start on its own:', error));
+                    } catch (error) { Logger.debug('Video did not start on its own:', error); }
+                })
+                .catch((error: unknown) => {
+                    Logger.warn('Could not load video:', srcImage.path, error);
+                    showVideoFailure(srcImage, token);
+                });
+            videoEl.setAttribute('aria-label', srcImage.displayName || 'Video');
+        };
+
+        // A video that can't be downloaded or played: show its still frame (or nothing) instead
+        const showVideoFailure = (srcImage: IImageSource, token: number) => {
+            if (token !== modalLoadToken) return;
+            videoEl.classList.add('is-hidden');
+            img.classList.remove('is-hidden');
+            img.alt = 'Failed to load video';
+            this.resolveImageUrl(srcImage)
+                .then(poster => { if (token === modalLoadToken) { img.src = poster; img.setCssStyles({ opacity: '1' }); } })
+                .catch(() => { img.src = ''; });
+            // A slideshow moves on after the usual interval
+            if (this.slideshowPlaying) scheduleNext();
+        };
+        // The file opened but the player can't decode it (an unsupported codec, say)
+        videoEl.addEventListener('error', () => {
+            if (playingVideo && playingVideo === currentImage && videoEl.getAttribute('src')) {
+                Logger.warn('Could not play video:', currentImage.path, videoEl.error?.message);
+                showVideoFailure(currentImage, modalLoadToken);
+            }
+        });
 
         // Galleries of remote thumbnails show the thumbnail first, then swap in the larger
         // version once it has downloaded and decoded, unless the user has moved on.
@@ -1069,17 +1179,26 @@ export abstract class GalleryView implements IGalleryView {
             playBtn.setAttribute('aria-label', playTitle);
 
             if (this.slideshowPlaying) {
-                this.slideshowTimer = window.setInterval(() => {
-                    navigate(1, true);
-                }, slideshowSeconds(this.slideshowIntervalSeconds) * 1000);
-            } else {
-                if (this.slideshowTimer) {
-                    window.clearInterval(this.slideshowTimer);
-                    this.slideshowTimer = null;
-                }
+                scheduleNext();
+            } else if (this.slideshowTimer) {
+                window.clearTimeout(this.slideshowTimer);
+                this.slideshowTimer = null;
             }
         };
         playBtn.addEventListener('click', toggleSlideshow);
+
+        // The slideshow shows an image for the set interval; a video plays to the end
+        const scheduleNext = () => {
+            if (this.slideshowTimer) window.clearTimeout(this.slideshowTimer);
+            this.slideshowTimer = null;
+            if (!this.slideshowPlaying) return;
+            // A video moves on when it ends (see 'ended'), unless it already has
+            if (currentImage.mediaType === 'video' && !videoEl.classList.contains('is-hidden') && !videoEl.ended) return;
+            this.slideshowTimer = window.setTimeout(() => navigate(1, true), slideshowSeconds(this.slideshowIntervalSeconds) * 1000);
+        };
+        videoEl.addEventListener('ended', () => {
+            if (this.slideshowPlaying) navigate(1, true);
+        });
 
         // Navigation function
         const navigate = (delta: number, isSlideshow = false) => {
@@ -1103,6 +1222,7 @@ export abstract class GalleryView implements IGalleryView {
             if (nextImage) {
                 currentImage = nextImage;
                 loadModalImage(img, nextImage);
+                if (this.slideshowPlaying) scheduleNext();
             }
         };
 

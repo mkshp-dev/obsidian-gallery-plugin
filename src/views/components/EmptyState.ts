@@ -1,3 +1,4 @@
+import { MEDIA_EXTENSIONS } from '../../models/media';
 import { Logger } from "../../utils/Logger";
 /**
  * EmptyState component for displaying empty gallery states
@@ -300,7 +301,7 @@ export class EmptyState {
     return new EmptyState(container, {
       path,
       scanDepth: recursive ? 'recursive' : 'shallow',
-      expectedFormats: ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+      expectedFormats: [...MEDIA_EXTENSIONS]
     }, {
       type: 'no-images',
       size: 'medium',

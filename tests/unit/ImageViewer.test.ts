@@ -181,6 +181,115 @@ describe('slideshow', () => {
     });
 });
 
+describe('videos', () => {
+    /** A remote-style video whose still frame and playable file are fetched on demand */
+    const clip = (name: string, seconds?: number) => {
+        const v = new ImageSource(`immich://home/search/asset/${name}`, 'immich', name, undefined, undefined, () => Promise.resolve(`blob:${name}-still`));
+        v.setMediaType('video', () => Promise.resolve(`blob:${name}-video`));
+        v.durationSeconds = seconds;
+        return v;
+    };
+
+    beforeEach(() => {
+        jest.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() => Promise.resolve());
+        jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+        jest.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    test('tiles get a play badge with the length', () => {
+        const container = createContainer();
+        const view = new MasonryView(container);
+        view.update([clip('v', 65), local('a')]);
+        const badges = container.querySelectorAll('.gallery-video-badge');
+        expect(badges).toHaveLength(1);
+        expect(badges[0].querySelector('.gallery-video-badge-time')!.textContent).toBe('1:05');
+        expect(badges[0].getAttribute('aria-label')).toBe('Video, 1:05');
+    });
+
+    test('the viewer plays a video with controls instead of showing an image', async () => {
+        const video = clip('v', 12);
+        const { q } = openViewer([video, local('a')]);
+        await flush();
+
+        const el = q('video.gallery-modal-video') as HTMLVideoElement;
+        expect(el.classList.contains('is-hidden')).toBe(false);
+        expect(el.hasAttribute('controls')).toBe(true);
+        expect(el.getAttribute('src')).toBe('blob:v-video');
+        expect(el.getAttribute('poster')).toBe('blob:v-still');
+        expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+        expect(q('.gallery-modal-image-container img')!.classList.contains('is-hidden')).toBe(true);
+        // No zoom for videos
+        expect(q('.gallery-modal-content')!.classList.contains('is-video')).toBe(true);
+
+        (q('.info-btn') as HTMLButtonElement).click();
+        const labels = Array.from(document.querySelectorAll('.info-label')).map(l => l.textContent);
+        expect(labels).toContain('Duration');
+    });
+
+    test('moving on stops the video and lets go of its download', async () => {
+        const video = clip('v');
+        const release = jest.spyOn(video, 'releaseVideo');
+        const { q } = openViewer([video, local('a')]);
+        await flush();
+
+        (q('.gallery-modal-nav.next') as HTMLButtonElement).click();
+        await flush();
+        expect(release).toHaveBeenCalled();
+        expect(q('video.gallery-modal-video')!.classList.contains('is-hidden')).toBe(true);
+        expect(q('video.gallery-modal-video')!.hasAttribute('src')).toBe(false);
+        expect(q('.gallery-modal-image-container img')!.classList.contains('is-hidden')).toBe(false);
+        expect(q('.gallery-modal-content')!.classList.contains('is-video')).toBe(false);
+    });
+
+    test('a video that fails to load shows its still frame', async () => {
+        const broken = new ImageSource('immich://home/search/asset/x', 'immich', 'x', undefined, undefined, () => Promise.resolve('blob:x-still'));
+        broken.setMediaType('video', () => Promise.reject(new Error('HTTP 500')));
+        const { q } = openViewer([broken, local('a')]);
+        await flush();
+        await flush();
+
+        const img = q('.gallery-modal-image-container img') as HTMLImageElement;
+        expect(q('video.gallery-modal-video')!.classList.contains('is-hidden')).toBe(true);
+        expect(img.classList.contains('is-hidden')).toBe(false);
+        expect(img.alt).toBe('Failed to load video');
+        expect(img.getAttribute('src')).toBe('blob:x-still');
+    });
+
+    test('a video the player cannot decode shows its still frame', async () => {
+        const { q } = openViewer([clip('v'), local('a')]);
+        await flush();
+        q('video.gallery-modal-video')!.dispatchEvent(new Event('error'));
+        await flush();
+        expect(q('video.gallery-modal-video')!.classList.contains('is-hidden')).toBe(true);
+        expect((q('.gallery-modal-image-container img') as HTMLImageElement).getAttribute('src')).toBe('blob:v-still');
+    });
+
+    test('the slideshow lets a video play to the end before moving on', async () => {
+        jest.useFakeTimers();
+        try {
+            const view = new MasonryView(createContainer());
+            view.setOptions({ slideshowInterval: 2 });
+            const images = [clip('v'), local('a')];
+            view.update(images);
+            (view as any).expandImage(images[0]);
+            await Promise.resolve();
+            const counter = () => document.querySelector('.gallery-modal-counter')!.textContent;
+
+            (document.querySelector('.play-btn') as HTMLButtonElement).click();
+            jest.advanceTimersByTime(10000);
+            expect(counter()).toBe('1 / 2');
+
+            document.querySelector('video.gallery-modal-video')!.dispatchEvent(new Event('ended'));
+            expect(counter()).toBe('2 / 2');
+            jest.advanceTimersByTime(2100);
+            expect(counter()).toBe('1 / 2');
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+});
+
 describe('wheel zoom', () => {
     test('one mouse-wheel notch zooms by 1.25x', () => {
         expect(wheelZoomFactor(-100)).toBeCloseTo(1.25);

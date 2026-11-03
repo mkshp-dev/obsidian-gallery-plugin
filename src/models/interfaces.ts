@@ -2,6 +2,7 @@
  * Core interfaces for the Gallery Plugin
  * Based on contracts defined in contracts/interfaces.md
  */
+import type { MediaType } from './media';
 
 import type { ViewType, ViewTypeName } from './viewTypes';
 
@@ -220,6 +221,24 @@ export interface IImageSource {
    * thumbnails fetch a larger version; others return the display URL.
    */
   resolveLargeUrl?(): Promise<string>;
+
+  /**
+   * 'video' for videos: views show a still frame (from the display URL) with a play badge,
+   * and the image viewer plays the video from resolveVideoUrl. Missing means 'image'.
+   */
+  mediaType?: MediaType;
+
+  /** Video length in seconds, when known */
+  durationSeconds?: number;
+
+  /** Call `listener` with the video's length once it is known (straight away if it already is) */
+  onDurationKnown?(listener: (seconds: number) => void): void;
+
+  /** Get a URL the image viewer can play, fetching the video first for remote sources */
+  resolveVideoUrl?(): Promise<string>;
+
+  /** Let go of a fetched video once the viewer moves on, so large videos don't stay in memory */
+  releaseVideo?(): void;
 
   /** Photo details already known for the image (remote sources that send them with the listing) */
   metadata?: IImageMetadata;

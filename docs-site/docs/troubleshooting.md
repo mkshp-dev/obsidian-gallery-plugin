@@ -10,8 +10,13 @@ sidebar_position: 6
 ## Gallery not appearing
 
 - Verify that the path defined in your local source configuration (under `sources`) exists in your vault and that the spelling and casing match exactly.
-- Confirm images are in a supported format: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`.
+- Confirm images are in a supported format: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, or a video: `.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`.
 - Try switching between reading and editing mode to trigger a re-render.
+
+## Video shows a dark tile or doesn't play
+
+- The video's format may not be one Obsidian's player supports. MP4 (H.264) and WebM play everywhere; HEVC (often used by iPhone `.mov` files) doesn't play on every computer. Converting the file to H.264 MP4 fixes it.
+- Immich videos download when you open them in the viewer, so a long video can take a moment to start.
 
 ## Modal not opening
 

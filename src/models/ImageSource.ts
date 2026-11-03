@@ -1,5 +1,7 @@
 import { IImageMetadata, IImageSource, SourceType } from './interfaces';
 import { ObjectUrlManager } from '../utils/ObjectUrlManager';
+import { VideoPoster, VideoFileReader } from '../utils/VideoPoster';
+import { MEDIA_EXTENSIONS, MediaType, isVideoPath } from './media';
 
 /**
  * Fetches an image on demand and returns a URL for it that was acquired from
@@ -18,6 +20,8 @@ export class ImageSource implements IImageSource {
     public readonly path: string;
     public readonly type: SourceType;
     public readonly displayName: string;
+    /** 'video' for videos; local files are typed by extension, remote sources call setMediaType */
+    public mediaType: MediaType = 'image';
     public caption?: string;
     public size?: number;
     public mtime?: number;
@@ -29,7 +33,7 @@ export class ImageSource implements IImageSource {
     public loadStartTime?: number;
 
     private _resourceUrl?: string;
-    private readonly loader?: ImageUrlLoader;
+    private loader?: ImageUrlLoader;
     private pendingLoad: Promise<string> | null = null;
     /** True once `_resourceUrl` came from `loader`, so destroy() must release it */
     private ownsResourceUrl = false;
@@ -39,10 +43,18 @@ export class ImageSource implements IImageSource {
     private largeUrl?: string;
     private pendingLarge: Promise<string> | null = null;
     private metadataLoader?: ImageMetadataLoader;
+    /** Video: the playable URL (local files), or a loader that fetches it (remote sources) */
+    private videoUrl?: string;
+    private videoLoader?: ImageUrlLoader;
+    private ownsVideoUrl = false;
+    private pendingVideo: Promise<string> | null = null;
+    private videoFileReader?: VideoFileReader;
+    private _durationSeconds?: number;
+    private durationListeners: Array<(seconds: number) => void> = [];
     private pendingMetadata: Promise<IImageMetadata | undefined> | null = null;
 
     private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-    private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    private static readonly SUPPORTED_FORMATS = MEDIA_EXTENSIONS;
 
     /**
      * @param resourceUrl A ready-to-use URL for the image (e.g. a vault resource path)
@@ -60,6 +72,89 @@ export class ImageSource implements IImageSource {
 
         // Validate path format
         this.validatePath();
+
+        // A local video plays from its resource URL; tiles show a still frame captured from it
+        if (type === 'local' && isVideoPath(path)) {
+            this.mediaType = 'video';
+            this.videoUrl = resourceUrl;
+            this._resourceUrl = undefined;
+            if (!this.loader) this.loader = () => this.capturePoster();
+        }
+    }
+
+    /** Video length in seconds, when known */
+    get durationSeconds(): number | undefined {
+        return this._durationSeconds;
+    }
+
+    set durationSeconds(seconds: number | undefined) {
+        if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) return;
+        this._durationSeconds = seconds;
+        const listeners = this.durationListeners;
+        this.durationListeners = [];
+        listeners.forEach(listener => listener(seconds));
+    }
+
+    onDurationKnown(listener: (seconds: number) => void): void {
+        if (this._durationSeconds !== undefined) listener(this._durationSeconds);
+        else this.durationListeners.push(listener);
+    }
+
+    /**
+     * Mark a remote item as a video. `videoLoader` fetches the playable file for the image viewer
+     * (its URL must come from ObjectUrlManager); the display loader keeps supplying the still frame.
+     */
+    setMediaType(mediaType: MediaType, videoLoader?: ImageUrlLoader): void {
+        this.mediaType = mediaType;
+        if (videoLoader) this.videoLoader = videoLoader;
+    }
+
+    /** Lets a local video's still frame be drawn from the file's bytes when its URL can't be read back */
+    setVideoFileReader(reader: VideoFileReader): void {
+        this.videoFileReader = reader;
+    }
+
+    private async capturePoster(): Promise<string> {
+        const poster = await VideoPoster.capture(this.videoUrl ?? this.path, this.videoFileReader);
+        this.durationSeconds = poster.duration;
+        if (!this.dimensions && poster.width && poster.height) {
+            this.dimensions = { width: poster.width, height: poster.height };
+        }
+        return poster.url;
+    }
+
+    /** Get a URL the image viewer can play; remote videos are fetched on first use */
+    async resolveVideoUrl(): Promise<string> {
+        if (this.mediaType !== 'video') throw new Error(`Not a video: ${this.path}`);
+        if (this.videoUrl) return this.videoUrl;
+        if (!this.videoLoader) return this.getDisplayUrl();
+        if (this.destroyed) throw new Error(`Image source was destroyed: ${this.path}`);
+
+        if (!this.pendingVideo) {
+            this.pendingVideo = this.videoLoader()
+                .then(url => {
+                    if (this.destroyed) {
+                        ObjectUrlManager.releaseByUrl(url);
+                        throw new Error(`Image source was destroyed: ${this.path}`);
+                    }
+                    this.videoUrl = url;
+                    this.ownsVideoUrl = true;
+                    return url;
+                })
+                .finally(() => {
+                    this.pendingVideo = null;
+                });
+        }
+        return this.pendingVideo;
+    }
+
+    /** Give back a fetched video, so it is downloaded again only if it is played again */
+    releaseVideo(): void {
+        if (this.ownsVideoUrl && this.videoUrl) {
+            ObjectUrlManager.releaseByUrl(this.videoUrl);
+            this.videoUrl = undefined;
+            this.ownsVideoUrl = false;
+        }
     }
 
     /** URL used to display the image; for loader-backed images, only set once the loader has run */
@@ -346,6 +441,7 @@ export class ImageSource implements IImageSource {
         return {
             path: this.path,
             type: this.type,
+            mediaType: this.mediaType,
             displayName: this.displayName,
             loadState: this.loadState,
             size: this.size,
@@ -373,5 +469,7 @@ export class ImageSource implements IImageSource {
             ObjectUrlManager.releaseByUrl(this.largeUrl);
             this.largeUrl = undefined;
         }
+        this.releaseVideo();
+        this.durationListeners = [];
     }
 }

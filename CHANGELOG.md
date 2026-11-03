@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Videos**: Galleries now include videos: `.mp4`, `.m4v`, `.webm`, `.mov` and `.ogv` files from the vault, and videos from Immich and Immich share links. In every view a video shows a still frame with a play icon and its length; click it to play the video in the image viewer, with the player's controls. The slideshow lets a video play to the end. Immich videos use Immich's playback version and are downloaded only when you open them.
+
 - **Photo details in the viewer**: The image viewer's **Details** panel now also shows when a photo was taken, the camera and the lens. For local images they are read from the photo's EXIF data (JPEG, PNG and WebP), only when you open the panel; Immich photos use the EXIF data Immich already sends. Details a photo doesn't have are left out, and a photo whose EXIF can't be read shows the panel as before.
 - **Slideshow interval**: New **Slideshow interval (seconds)** setting (Settings → Image viewer) sets how long the slideshow shows each image, from 1 to 60 seconds. It is still 4 seconds by default.
 

@@ -16,6 +16,7 @@ export class ExternalSourceResolver implements GallerySourceResolver<IExternalSo
         for (const item of source.urls) {
             let urlStr: string;
             let captionStr: string | undefined = undefined;
+            let markedVideo = false;
 
             if (typeof item === 'string') {
                 urlStr = item;
@@ -24,6 +25,7 @@ export class ExternalSourceResolver implements GallerySourceResolver<IExternalSo
                 if (typeof (item as { caption?: unknown }).caption === 'string' && (item as { caption: string }).caption.trim()) {
                     captionStr = (item as { caption: string }).caption.trim();
                 }
+                markedVideo = (item as { video?: unknown }).video === true;
             } else {
                 errors.push(`Invalid URL entry in external source urls list: ${JSON.stringify(item)}`);
                 continue;
@@ -31,6 +33,7 @@ export class ExternalSourceResolver implements GallerySourceResolver<IExternalSo
 
             try {
                 const external = ImageSource.fromUrl(urlStr, undefined, captionStr);
+                if (markedVideo) external.treatAsVideo();
                 images.push(external);
             } catch {
                 errors.push(`Invalid URL in external source urls list: ${urlStr}`);

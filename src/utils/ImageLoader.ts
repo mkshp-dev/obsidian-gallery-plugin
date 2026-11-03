@@ -147,7 +147,7 @@ export class ImageLoader {
   /**
    * Check if an image URL is loadable (quick validation)
    */
-  static async validateImageUrl(url: string, timeoutMs: number = 5000): Promise<boolean> {
+  static async validateImageUrl(url: string, timeoutMs: number = 5000, allowVideo = false): Promise<boolean> {
     try {
       const response = await Promise.race([
         requestUrl({
@@ -168,7 +168,8 @@ export class ImageLoader {
         key => key.toLowerCase() === 'content-type'
       );
       const contentType = contentTypeKey ? response.headers[contentTypeKey] : null;
-      return contentType ? contentType.startsWith('image/') : false;
+      if (!contentType) return false;
+      return contentType.startsWith('image/') || (allowVideo && contentType.startsWith('video/'));
 
     } catch {
       return false;

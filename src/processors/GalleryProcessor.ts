@@ -410,9 +410,10 @@ export class GalleryProcessor {
                     // Optional content-type validation via HEAD request
                     if (options.validateRemoteContentType) {
                         try {
-                            const isImage = await ImageLoader.validateImageUrl(image.path, Math.min(5000, options.timeoutMs));
+                            const isVideo = image.mediaType === 'video';
+                            const isImage = await ImageLoader.validateImageUrl(image.path, Math.min(5000, options.timeoutMs), isVideo);
                             if (!isImage) {
-                                validationErrors.push(`External URL does not appear to be an image: ${image.path}`);
+                                validationErrors.push(`External URL does not appear to be ${isVideo ? 'a video' : 'an image'}: ${image.path}`);
                                 continue;
                             }
                         } catch {

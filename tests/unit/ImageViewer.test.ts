@@ -1,4 +1,5 @@
 import { MasonryView } from '../../src/views/MasonryView';
+import { VideoPoster } from '../../src/utils/VideoPoster';
 import { ImageSource } from '../../src/models/ImageSource';
 import { wheelZoomFactor, slideshowSeconds } from '../../src/views/GalleryView';
 
@@ -291,6 +292,33 @@ describe('videos', () => {
         // The notice goes away on the next item
         (q('.gallery-modal-nav.next') as HTMLButtonElement).click();
         expect(q('.gallery-modal-video-notice').classList.contains('is-hidden')).toBe(true);
+    });
+
+    test('external videos stream from their URL at any size, once remote content is allowed', async () => {
+        jest.spyOn(VideoPoster, 'captureExternal').mockResolvedValue({ url: 'blob:ext-still' });
+        const ext = ImageSource.fromUrl('https://cdn.example.com/huge.mp4');
+        ext.size = 5 * 1024 * 1024 * 1024;
+
+        const view = new MasonryView(createContainer());
+        view.setOptions({ allowRemoteImages: true, maxRemoteVideoMb: 200 });
+        view.update([ext, local('a')]);
+        (view as any).expandImage(ext);
+        await flush();
+        expect(document.querySelector('video.gallery-modal-video')!.getAttribute('src')).toBe('https://cdn.example.com/huge.mp4');
+        expect(document.querySelector('.gallery-modal-video-notice')!.classList.contains('is-hidden')).toBe(true);
+    });
+
+    test('external videos are not loaded while remote content is off', async () => {
+        const capture = jest.spyOn(VideoPoster, 'captureExternal');
+        const ext = ImageSource.fromUrl('https://cdn.example.com/clip.mp4');
+        const { q } = openViewer([ext, local('a')]);
+        await flush();
+
+        expect(q('video.gallery-modal-video')!.classList.contains('is-hidden')).toBe(true);
+        expect(q('video.gallery-modal-video')!.hasAttribute('src')).toBe(false);
+        const img = q('.gallery-modal-image-container img') as HTMLImageElement;
+        expect(img.alt).toBe('External video blocked');
+        expect(capture).not.toHaveBeenCalled();
     });
 
     test('a large Nextcloud video links to Nextcloud', async () => {

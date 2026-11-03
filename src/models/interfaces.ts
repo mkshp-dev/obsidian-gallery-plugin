@@ -26,7 +26,8 @@ export interface ILocalSourceConfig {
 
 export interface IExternalSourceConfig {
   type: 'external';
-  urls: (string | { url: string; caption?: string })[];
+  /** `video: true` marks a video whose URL has no video file extension */
+  urls: (string | { url: string; caption?: string; video?: boolean })[];
 }
 
 export interface IImmichShareSourceConfig {

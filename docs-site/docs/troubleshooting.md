@@ -16,6 +16,7 @@ sidebar_position: 6
 ## Video shows a dark tile or doesn't play
 
 - The video's format may not be one Obsidian's player supports. MP4 (H.264) and WebM play everywhere; HEVC (often used by iPhone `.mov` files) doesn't play on every computer. Converting the file to H.264 MP4 fixes it.
+- An external video's tile is dark when the website doesn't allow other sites to read its videos (CORS) and the video is over 50 MB or its size isn't reported. It still plays in the viewer. Links to video pages (YouTube, Vimeo) aren't video files and can't be shown.
 - Immich and Nextcloud videos download when you open them in the viewer, so a long video can take a moment to start.
 - An Immich or Nextcloud video that says it is too large to play here is over **Largest remote video to play** in Settings. Use the **Open in Immich** / **Open in Nextcloud** button, or raise the limit (`0` removes it).
 - Nextcloud video tiles show a dark placeholder when the server makes no video previews and the video is over 50 MB (or you're on a phone or tablet). Nextcloud makes video previews only with the Movie preview provider and ffmpeg installed on the server; ask your Nextcloud admin to enable them.

@@ -81,7 +81,28 @@ export class ImageSource implements IImageSource {
             this.videoUrl = resourceUrl;
             this._resourceUrl = undefined;
             if (!this.loader) this.loader = () => this.capturePoster();
+        } else if (type === 'external' && isVideoPath(new URL(path).pathname)) {
+            this.treatAsVideo();
         }
+    }
+
+    /**
+     * Make an external URL a video (done automatically for video file extensions; a source can
+     * ask for it for URLs without one). It plays straight from the URL, streamed by the player;
+     * tiles show a still frame taken from it.
+     */
+    treatAsVideo(): void {
+        if (this.type !== 'external') return;
+        this.mediaType = 'video';
+        this.videoUrl = this.path;
+        this.loader = async () => {
+            const poster = await VideoPoster.captureExternal(this.path);
+            this.durationSeconds = poster.duration;
+            if (!this.dimensions && poster.width && poster.height) {
+                this.dimensions = { width: poster.width, height: poster.height };
+            }
+            return poster.url;
+        };
     }
 
     /** Video length in seconds, when known */

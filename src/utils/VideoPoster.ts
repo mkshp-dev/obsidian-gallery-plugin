@@ -1,6 +1,6 @@
 import { Logger } from './Logger';
 import { ObjectUrlManager } from './ObjectUrlManager';
-import { Platform } from 'obsidian';
+import { Platform, requestUrl } from 'obsidian';
 
 /** What a poster capture found out about a video */
 export interface VideoPosterResult {
@@ -116,11 +116,54 @@ export class VideoPoster {
         }
     }
 
-    /** Open the video, seek a little way in, and draw that frame as a JPEG */
-    static grabFrame(src: string): Promise<FrameGrab> {
+    /**
+     * Capture a still frame for a video on another website. The frame can be read back only when
+     * the site allows it (CORS), so that is tried first; otherwise a video up to `maxBytes`
+     * (whose size the site reports) is downloaded to take it, except on phones and tablets.
+     * Anything else gives the placeholder. Never rejects.
+     */
+    static async captureExternal(url: string, maxBytes = REMOTE_STILL_MAX_BYTES): Promise<VideoPosterResult> {
+        const key = `video-poster:${url}`;
+        try {
+            const posterUrl = await ObjectUrlManager.getOrCreate(key, async () => {
+                const frame = await this.limit(async () => {
+                    try {
+                        return await this.grabFrame(url, true);
+                    } catch (error) {
+                        if (Platform.isMobile) throw error;
+                        const head = await requestUrl({ url, method: 'HEAD', throw: false });
+                        const size = Number(head.headers?.['content-length']);
+                        if (head.status >= 400 || !Number.isFinite(size) || size <= 0 || size > maxBytes) throw error;
+                        const res = await requestUrl({ url, method: 'GET', throw: false });
+                        if (res.status !== 200) throw new Error(`Failed to download the video (HTTP ${res.status})`);
+                        const blobUrl = URL.createObjectURL(new Blob([res.arrayBuffer]));
+                        try {
+                            return await this.grabFrame(blobUrl);
+                        } finally {
+                            URL.revokeObjectURL(blobUrl);
+                        }
+                    }
+                });
+                this.info.set(key, { duration: frame.duration, width: frame.width, height: frame.height });
+                return frame.blob;
+            });
+            return { url: posterUrl, ...(this.info.get(key) ?? {}) };
+        } catch (error) {
+            Logger.debug('Could not capture a frame of the external video, using a placeholder:', url, error);
+            return { url: VIDEO_PLACEHOLDER_URL };
+        }
+    }
+
+    /**
+     * Open the video, seek a little way in, and draw that frame as a JPEG. With `crossOrigin`,
+     * the video is requested with CORS, so a frame from another site can be read back if the
+     * site allows it.
+     */
+    static grabFrame(src: string, crossOrigin = false): Promise<FrameGrab> {
         return new Promise<FrameGrab>((resolve, reject) => {
             const video = createEl('video');
             video.muted = true;
+            if (crossOrigin) video.crossOrigin = 'anonymous';
             video.playsInline = true;
             // Only the length and size up front; seeking then reads just the part it needs
             video.preload = 'metadata';

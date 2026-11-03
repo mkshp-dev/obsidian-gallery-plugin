@@ -558,9 +558,9 @@ export abstract class GalleryView implements IGalleryView {
      * The timeout covers both fetching the URL and decoding the image.
      */
     protected loadWithTimeout(image: IImageSource, onLoad: (temp: HTMLImageElement) => void, onError: (error: Error) => void): void {
-        // A local video's still frame waits its turn to be captured, and the capture has its own
-        // time limit (falling back to a placeholder), so the remote timeout doesn't apply
-        const timed = !(image.type === 'local' && image.mediaType === 'video');
+        // A local or external video's still frame waits its turn to be captured, and the capture
+        // has its own limits (falling back to a placeholder), so the remote timeout doesn't apply
+        const timed = !((image.type === 'local' || image.type === 'external') && image.mediaType === 'video');
         const temp = new Image();
         let settled = false;
         const settle = (fn: () => void) => {
@@ -1062,7 +1062,9 @@ export abstract class GalleryView implements IGalleryView {
             updateInfoPanel(srcImage);
             updateHeader(srcImage);
 
-            const isVideo = srcImage.mediaType === 'video' && !!srcImage.resolveVideoUrl;
+            // Remote images and videos stay unloaded until they are allowed in settings
+            const blocked = srcImage.type === 'external' && !this.allowRemoteImages;
+            const isVideo = !blocked && srcImage.mediaType === 'video' && !!srcImage.resolveVideoUrl;
             content.classList.toggle('is-video', isVideo);
             videoEl.classList.toggle('is-hidden', !isVideo);
             imgEl.classList.toggle('is-hidden', isVideo);
@@ -1071,8 +1073,8 @@ export abstract class GalleryView implements IGalleryView {
                 return;
             }
 
-            if (srcImage.type === 'external' && !this.allowRemoteImages) {
-                imgEl.alt = 'External image blocked';
+            if (blocked) {
+                imgEl.alt = srcImage.mediaType === 'video' ? 'External video blocked' : 'External image blocked';
                 imgEl.src = '';
                 imgEl.classList.add('gallery-external-blocked');
                 return;
@@ -1134,7 +1136,8 @@ export abstract class GalleryView implements IGalleryView {
         // Videos of unknown size are played.
         const isTooLargeToPlay = (srcImage: IImageSource): boolean => {
             const limit = this.maxRemoteVideoMb * 1024 * 1024;
-            return srcImage.type !== 'local' && limit > 0 && typeof srcImage.size === 'number' && srcImage.size > limit;
+            // Local and external videos stream into the player, so they play at any size
+            return srcImage.type !== 'local' && srcImage.type !== 'external' && limit > 0 && typeof srcImage.size === 'number' && srcImage.size > limit;
         };
         const showVideoTooLarge = (srcImage: IImageSource, token: number) => {
             showVideoFailure(srcImage, token);

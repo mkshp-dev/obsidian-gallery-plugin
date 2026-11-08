@@ -38,6 +38,7 @@ export interface IGalleryProcessingOptions {
         // Pagination defaults (overridable per-gallery via the view: config)
         pagination?: boolean;
         itemsPerPage?: number;
+        paginationPosition?: 'top' | 'bottom';
 }
 
 export interface IGalleryRenderResult {
@@ -112,6 +113,7 @@ export class GalleryProcessor {
         ,showFrame: true
         ,pagination: false
         ,itemsPerPage: 24
+        ,paginationPosition: 'bottom'
     };
 
     constructor(
@@ -661,6 +663,7 @@ export class GalleryProcessor {
             maxRemoteVideoMb: settings.maxRemoteVideoMb,
             pagination: block.pagination ?? settings.pagination,
             itemsPerPage: block.itemsPerPage ?? settings.itemsPerPage,
+            paginationPosition: block.paginationPosition ?? settings.paginationPosition,
             rowHeight: block.rowHeight,
             columnWidth: block.columnWidth,
             gap: block.gap,

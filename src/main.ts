@@ -223,7 +223,8 @@ export default class GalleryPlugin extends Plugin {
             maxRemoteVideoMb: this.settings.maxRemoteVideoMb ?? DEFAULT_SETTINGS.maxRemoteVideoMb,
             showFrame: this.settings.showFrame ?? DEFAULT_SETTINGS.showFrame,
             pagination: this.settings.defaultPagination ?? DEFAULT_SETTINGS.defaultPagination,
-            itemsPerPage: this.settings.defaultItemsPerPage ?? DEFAULT_SETTINGS.defaultItemsPerPage
+            itemsPerPage: this.settings.defaultItemsPerPage ?? DEFAULT_SETTINGS.defaultItemsPerPage,
+            paginationPosition: this.settings.paginationPosition ?? DEFAULT_SETTINGS.paginationPosition
         };
     }
 

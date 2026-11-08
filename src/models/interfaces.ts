@@ -272,6 +272,8 @@ export interface ViewRuntimeOptions {
   maxRemoteVideoMb?: number;
   pagination?: boolean;
   itemsPerPage?: number;
+  /** Where the Prev/Next bar sits: above or below the gallery */
+  paginationPosition?: 'top' | 'bottom';
   /** Draw the gallery's frame: border, background, shadow and padding */
   frame?: boolean;
   /** Justified: target row height in px */

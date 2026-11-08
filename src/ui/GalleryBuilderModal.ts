@@ -224,6 +224,20 @@ export class GalleryBuilderModal extends Modal {
 
             if (this.viewOptions.pagination) {
                 new Setting(container)
+                    .setName('Page controls')
+                    .setDesc('Where the prev/next controls sit.')
+                    .addDropdown(dropdown => dropdown
+                        .addOption('default', 'Default (from settings)')
+                        .addOption('bottom', 'Below the gallery')
+                        .addOption('top', 'Above the gallery')
+                        .setValue(this.viewOptions.paginationPosition ?? 'default')
+                        .onChange(value => {
+                            this.viewOptions.paginationPosition = value === 'default' ? undefined : value as 'top' | 'bottom';
+                            this.refreshLivePreview();
+                        })
+                    );
+
+                new Setting(container)
                     .setName('Images per page')
                     .setDesc('Number of images to display per page.')
                     .addText(text => text

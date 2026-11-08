@@ -1,6 +1,6 @@
 import { GalleryBuilderModal } from './ui/GalleryBuilderModal';
 import { Logger } from "./utils/Logger";
-import { Plugin, App, MarkdownPostProcessorContext, MarkdownView, Notice } from 'obsidian';
+import { Plugin, App, MarkdownPostProcessorContext, MarkdownView, Notice, TFile, Menu, Platform } from 'obsidian';
 import { ContentScanner } from './services/ContentScanner';
 import { ViewFactory } from './views/ViewFactory';
 import { GalleryProcessor, RefreshSources } from './processors/GalleryProcessor';
@@ -12,6 +12,7 @@ import { addDemoConnections, DemoConnectionConflict, hasDemoImmichConnection } f
 import { DemoConnectionsModal } from './ui/DemoConnectionsModal';
 import { GallerySettingsTab } from './ui/GallerySettingsTab';
 import { GalleryPluginSettings, DEFAULT_SETTINGS } from './models/settings';
+import type { IImageSource } from './models/interfaces';
 
 interface AppWithCommands extends App {
     commands: {
@@ -307,6 +308,43 @@ export default class GalleryPlugin extends Plugin {
     }
 
     /**
+     * The right-click menu for a photo or video from the vault: the same open, rename and delete
+     * items as elsewhere in Obsidian, plus whatever core and other plugins add to the `file-menu`
+     * event (open in new window, copy path, reveal in navigation, open in default app, ...), so
+     * those are not added here a second time. Photos from Immich, Nextcloud or a URL have no vault
+     * file and keep the default menu.
+     */
+    private showImageMenu(image: IImageSource, event: MouseEvent): void {
+        if (image.type !== 'local') return;
+        const file = this.app.vault.getFileByPath(image.path);
+        if (!file) return;
+        // Stopped here too: in Live Preview the editor's own menu would otherwise open over this one
+        event.preventDefault();
+        event.stopPropagation();
+
+        const workspace = this.app.workspace;
+        const menu = new Menu();
+        menu.addItem(item => item.setSection('open').setTitle('Open in new tab').setIcon('lucide-file-plus')
+            .onClick(() => { void workspace.getLeaf('tab').openFile(file); }));
+        if (!Platform.isPhone) {
+            menu.addItem(item => item.setSection('open').setTitle('Open to the right').setIcon('lucide-separator-vertical')
+                .onClick(() => { void workspace.getLeaf('split').openFile(file); }));
+        }
+        // Not in the typings, but what Obsidian's own menus call; left out if a version lacks it
+        const rename = (this.app.fileManager as unknown as { promptForFileRename?: (file: TFile) => void }).promptForFileRename;
+        if (rename) {
+            menu.addItem(item => item.setSection('action').setTitle('Rename').setIcon('lucide-edit-3')
+                .onClick(() => rename.call(this.app.fileManager, file)));
+        }
+
+        workspace.trigger('file-menu', menu, file, 'gallery-view');
+
+        menu.addItem(item => item.setSection('danger').setTitle('Delete').setIcon('lucide-trash-2').setWarning(true)
+            .onClick(() => { void this.app.fileManager.promptForDeletion(file); }));
+        menu.showAtMouseEvent(event);
+    }
+
+    /**
      * Process gallery using professional pipeline
      */
     private async processGalleryProfessional(
@@ -326,7 +364,10 @@ export default class GalleryPlugin extends Plugin {
 
         try {
             // Use the comprehensive gallery processor with professional features
-            const result = await this.galleryProcessor.processCodeBlock(source, el, ctx, this.getProcessingOptions());
+            const result = await this.galleryProcessor.processCodeBlock(source, el, ctx, {
+                ...this.getProcessingOptions(),
+                onImageMenu: (image, event) => this.showImageMenu(image, event)
+            });
 
             if (!result.success) {
                 console.error('Gallery processing failed:', result.errors);

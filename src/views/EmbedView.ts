@@ -53,6 +53,7 @@ export class EmbedView extends GalleryView {
         }
       });
 
+      this.attachImageMenu(wrapper, img);
       wrapper.addEventListener('click', (e: MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();

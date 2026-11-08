@@ -59,6 +59,8 @@ export class CarouselView extends GalleryView {
             // Lets CSS leave room under the image without a :has() selector
             if (caption?.classList.contains('is-below')) item.classList.add('has-caption-below');
 
+            this.attachImageMenu(item, img);
+
             // Click to expand
             item.addEventListener('click', (e: MouseEvent) => {
                 e.preventDefault();

@@ -48,6 +48,8 @@ export abstract class GalleryView implements IGalleryView {
     public allowRemoteImages: boolean = false;
     public showCaptions: boolean = true;
     public captionMaxLines: number = 1;
+    /** Shows the file menu for an image that was right-clicked; set once, by the plugin */
+    protected onImageMenu: ((image: IImageSource, event: MouseEvent) => void) | null = null;
     public paginationEnabled: boolean = false;
     public itemsPerPage: number = 24;
     protected currentPage: number = 1;
@@ -140,6 +142,11 @@ export abstract class GalleryView implements IGalleryView {
         }
     }
 
+    /** Give a tile (or any element showing the image) the file menu on right-click and long-press */
+    protected attachImageMenu(el: HTMLElement, image: IImageSource): void {
+        el.addEventListener('contextmenu', (e: MouseEvent) => this.onImageMenu?.(image, e));
+    }
+
     protected createElement(parent: HTMLElement, tag: string, props?: CreateElementOptions): HTMLElement {
         return parent.createEl(tag as keyof HTMLElementTagNameMap, props as DomElementInfo);
     }
@@ -160,6 +167,7 @@ export abstract class GalleryView implements IGalleryView {
         if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
         if (typeof options.slideshowInterval === 'number') this.slideshowIntervalSeconds = slideshowSeconds(options.slideshowInterval);
         if (typeof options.maxRemoteVideoMb === 'number' && options.maxRemoteVideoMb >= 0) this.maxRemoteVideoMb = options.maxRemoteVideoMb;
+        if (typeof options.onImageMenu === 'function') this.onImageMenu = options.onImageMenu;
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
         // Passed together for each gallery, so a key that is present but undefined clears an earlier value
@@ -769,6 +777,8 @@ export abstract class GalleryView implements IGalleryView {
 
         // Image container & Zoom track
         const imgContainer = this.createElement(viewerArea, 'div', { cls: 'gallery-modal-image-container gallery-modal-image' });
+        // The menu is for whichever image the viewer is showing now
+        imgContainer.addEventListener('contextmenu', (e: MouseEvent) => this.onImageMenu?.(currentImage, e));
         const img = this.createElement(imgContainer, 'img', {
             attr: { 'alt': image.displayName }
         }) as HTMLImageElement;

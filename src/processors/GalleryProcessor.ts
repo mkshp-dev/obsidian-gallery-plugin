@@ -15,6 +15,8 @@ import { ImageLoader } from '../utils/ImageLoader';
 import { IImmichConnection, INextcloudConnection } from '../models/interfaces';
 
 export interface IGalleryProcessingOptions {
+  /** Shows the file menu for a right-clicked image; set per code block by the plugin */
+  onImageMenu?: (image: IImageSource, event: MouseEvent) => void;
   errorDisplayMode?: 'full' | 'hidden';
   showLoadingFeedback?: boolean;
   enableValidation?: boolean;
@@ -39,6 +41,9 @@ export interface IGalleryProcessingOptions {
         pagination?: boolean;
         itemsPerPage?: number;
 }
+
+/** The processing options with every setting filled in; the menu callback is only there for a block rendered in a note */
+type ProcessingOptions = Required<Omit<IGalleryProcessingOptions, 'onImageMenu'>> & Pick<IGalleryProcessingOptions, 'onImageMenu'>;
 
 export interface IGalleryRenderResult {
   success: boolean;
@@ -95,7 +100,7 @@ export class GalleryProcessor {
     private resolverRegistry: SourceResolverRegistry;
     private getOptions?: () => IGalleryProcessingOptions;
 
-    private readonly DEFAULT_OPTIONS: Required<IGalleryProcessingOptions> = {
+    private readonly DEFAULT_OPTIONS: ProcessingOptions = {
         errorDisplayMode: 'full',
         showLoadingFeedback: true,
         enableValidation: true,
@@ -311,7 +316,7 @@ export class GalleryProcessor {
     private async scanForImages(
         config: IGalleryConfig,
         result: IGalleryRenderResult,
-        options: Required<IGalleryProcessingOptions>,
+        options: ProcessingOptions,
         loadingManager: LoadingManager | null,
         notePath?: string
     ): Promise<{ images: IImageSource[]; perSource: IImageSource[][]; perSourceSkipped: string[][] }> {
@@ -361,7 +366,7 @@ export class GalleryProcessor {
     private async validateImages(
         images: IImageSource[], 
         result: IGalleryRenderResult,
-        options: Required<IGalleryProcessingOptions>,
+        options: ProcessingOptions,
         loadingManager: LoadingManager | null
     ): Promise<IImageSource[]> {
         if (!options.enableValidation) {
@@ -466,7 +471,7 @@ export class GalleryProcessor {
         container: HTMLElement,
         images: IImageSource[],
         result: IGalleryRenderResult,
-        options: Required<IGalleryProcessingOptions>,
+        options: ProcessingOptions,
         loadingManager: LoadingManager | null,
         notePath?: string
     ): Promise<GalleryInstance> {
@@ -646,7 +651,7 @@ export class GalleryProcessor {
      * (pagination, itemsPerPage, captions, sizes). Ignored view options become warnings shown
      * under the gallery, unless error messages are hidden.
      */
-    private static viewRuntimeOptions(config: IGalleryConfig, settings: Required<IGalleryProcessingOptions>, skipped: string[] = []): ViewRuntimeOptions {
+    private static viewRuntimeOptions(config: IGalleryConfig, settings: ProcessingOptions, skipped: string[] = []): ViewRuntimeOptions {
         const { options: block, warnings: viewWarnings } = readViewOptions(config.view);
         // Photos and videos left out for their format get one line under the gallery
         const skippedNote = skippedFilesNote(skipped);
@@ -665,6 +670,7 @@ export class GalleryProcessor {
             columnWidth: block.columnWidth,
             gap: block.gap,
             height: block.height,
+            ...(settings.onImageMenu ? { onImageMenu: settings.onImageMenu } : {}),
             warnings: settings.errorDisplayMode === 'hidden' ? [] : warnings
         };
     }
@@ -801,7 +807,7 @@ export class GalleryProcessor {
     /**
      * Handle processing errors — always renders a compact single-line message.
      */
-    private handleProcessingError(error: Error, container: HTMLElement, options?: Required<IGalleryProcessingOptions>): void {
+    private handleProcessingError(error: Error, container: HTMLElement, options?: ProcessingOptions): void {
         const errorDisplayMode = options?.errorDisplayMode || this.DEFAULT_OPTIONS.errorDisplayMode;
 
         const obsContainer = container as unknown as ObsidianDOMExtensions;

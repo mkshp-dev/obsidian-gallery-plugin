@@ -110,6 +110,25 @@ describe('details panel', () => {
         .map(row => [row.querySelector('.info-label')!.textContent, row.querySelector('.info-value')!.textContent]);
     const labels = () => rows().map(([label]) => label);
 
+    test('the text sits in a fixed-width box inside the panel, which is what animates', async () => {
+        const { q } = openViewer([local('a'), local('b')]);
+        (q('.info-btn') as HTMLButtonElement).click();
+        await flush();
+
+        const panel = document.querySelector('.gallery-modal-info-panel')!;
+        const content = panel.querySelector(':scope > .gallery-modal-info-content')!;
+        // Nothing but the box is a direct child, so the panel's width change never re-wraps the text
+        expect(panel.children).toHaveLength(1);
+        expect(content.querySelector(':scope > .info-title')).not.toBeNull();
+        expect(content.querySelectorAll('.info-row').length).toBeGreaterThan(0);
+
+        // Moving to the next image rebuilds the text in the same box
+        (document.querySelector('.gallery-modal-nav.next') as HTMLButtonElement).click();
+        await flush();
+        expect(panel.querySelectorAll(':scope > .gallery-modal-info-content')).toHaveLength(1);
+        expect(content.isConnected).toBe(true);
+    });
+
     test('shows the date taken, camera and lens once the panel is opened', async () => {
         const img = local('a');
         const loader = jest.fn().mockResolvedValue({ takenAt: new Date(2024, 6, 14, 18, 32), camera: 'Canon EOS R5', lens: 'RF24-105mm' });

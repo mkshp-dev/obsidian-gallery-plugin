@@ -2,6 +2,8 @@
 
 ## In-progress
 
+## 2.8.0 - 2026-11-09
+
 - **Mosaic view**: New `mosaic` layout: square tiles with a repeating pattern of large ones, like a photo collage. Images keep their order and every one is shown: the built-in pattern repeats every 12 images, and images after the last full repeat fill rows of small tiles, with no placeholders. Captions sit over the bottom of each tile, a very narrow pane switches to a two-column pattern, and large tiles from Immich and Nextcloud load the larger version the image viewer uses, so they stay sharp. `gap` sets the space between tiles. The **Insert gallery** builder and autocomplete offer the new layout, the showcase's "03 - Views" and "Test lab" notes have mosaic galleries, and the "Iceland — five layouts" use case is now "Iceland — six layouts".
 - **Custom mosaic patterns**: The new **Build custom mosaic** command draws your own pattern on a grid of up to 8 columns and 16 rows: drag across cells to merge them into a large tile, click a large tile to split it, and leave cells blank for empty space in the gallery. Save it by name and use it with `pattern: <name>`. Saved patterns are listed in the new **Mosaic** settings tab (edit, duplicate, delete), and editing one updates the galleries that use it. A gallery naming a pattern that isn't saved in the vault shows the built-in pattern with a note saying so. In **Insert gallery**, the **Pattern** dropdown lists your patterns and **New pattern…** opens the editor; autocomplete suggests your pattern names after `pattern:`.
 - **Mosaic fit**: Tiles crop their image to fill by default. `fit: contain` shows each image whole over a blurred copy of itself instead, made from the image already loaded, so nothing extra is downloaded. SVGs are always fitted whole. **Insert gallery** has a **Fit** dropdown, and autocomplete suggests `crop` and `contain`.
@@ -9,6 +11,7 @@
 - **Settings tabs**: The settings now have four tabs. **General** keeps error messages, troubleshooting and the remote image settings (now in their own **Remote images** group); the new **Display** tab has the frame, captions, pagination and image viewer settings; the new **Mosaic** tab lists your mosaic patterns; **Providers** is unchanged.
 - **Justified last row** (#223): A short last row in the justified view now takes the height of the row above it, instead of the target row height. Rows often end a little taller than the target, so the last row could look smaller than the others, most noticeably on phones: six images of the same size came out as a row of large ones and a row of smaller ones.
 - **Zero gap in masonry and justified**: With `gap: 0`, the layout still allowed for the default gap: justified rows came out slightly too short, cropping their images a little, and masonry could fit a column fewer than the width allowed.
+
 
 ## 2.7.1 - 2026-11-09
 

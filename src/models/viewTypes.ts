@@ -1,5 +1,5 @@
 /** Every view a gallery can render with */
-export const VIEW_TYPES = ['thumbnail', 'carousel', 'masonry', 'justified', 'embed'] as const;
+export const VIEW_TYPES = ['thumbnail', 'carousel', 'masonry', 'justified', 'mosaic', 'embed'] as const;
 
 export type ViewType = typeof VIEW_TYPES[number];
 
@@ -41,5 +41,5 @@ export function resolveViewType(view: unknown): ViewType {
 /** Views that show many small tiles, so remote sources should fetch thumbnails rather than full images */
 export function usesThumbnailImages(viewType: string | undefined): boolean {
     const type = normalizeViewType(viewType);
-    return type === 'thumbnail' || type === 'masonry' || type === 'justified';
+    return type === 'thumbnail' || type === 'masonry' || type === 'justified' || type === 'mosaic';
 }

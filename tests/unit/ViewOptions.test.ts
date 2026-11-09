@@ -48,7 +48,7 @@ describe('readViewOptions', () => {
             '"rowHeight" doesn\'t apply to the masonry view and is ignored (it applies to: justified).'
         ]);
         expect(readViewOptions({ type: 'carousel', pagination: true }).warnings).toEqual([
-            '"pagination" doesn\'t apply to the carousel view and is ignored (it applies to: thumbnail, masonry, justified, embed).'
+            '"pagination" doesn\'t apply to the carousel view and is ignored (it applies to: thumbnail, masonry, justified, mosaic, embed).'
         ]);
     });
 
@@ -135,7 +135,7 @@ describe('gallery frame', () => {
 
     test('frame is not an option for the embed view, which never has one', () => {
         expect(readViewOptions({ type: 'embed', frame: true }).warnings).toEqual([
-            '"frame" doesn\'t apply to the embed view and is ignored (it applies to: thumbnail, carousel, masonry, justified).'
+            '"frame" doesn\'t apply to the embed view and is ignored (it applies to: thumbnail, carousel, masonry, justified, mosaic).'
         ]);
         expect(viewOptionErrors({ type: 'masonry', frame: 'no' })).toEqual(['view.frame must be true or false']);
     });

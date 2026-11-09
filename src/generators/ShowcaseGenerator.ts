@@ -186,7 +186,7 @@ These notes render images immediately:
 - [[01 - Local source]] — Load images from a folder in your vault.
 - [[Nature (folder note demo)]] — Resolve \`path\` relative to the current note (\`.\`, \`./\`, \`../\`) instead of a hardcoded folder.
 - [[02 - External URLs]] — Load images from web URLs.
-- [[03 - Views]] — Layout types (thumbnail, masonry, justified, carousel, embed) and pagination for large collections.
+- [[03 - Views]] — Layout types (thumbnail, masonry, justified, mosaic, carousel, embed) and pagination for large collections.
 - [[04 - Mixed sources]] — Combine local + external in one gallery.
 - [[05 - Sort and limit]] — Control order and count of displayed images, including local \`sort\`/\`limit\`.
 - [[06 - Recursive and filters]] — Scan sub-folders and filter by filename glob, size, or date — for local files and Immich.
@@ -388,6 +388,45 @@ view:
 
 ---
 
+### Mosaic View
+Square tiles with a repeating pattern of large ones, in the images' own order. Images are cropped to fill their tiles.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: mosaic
+\`\`\`
+
+\`fit: contain\` shows every image whole instead, over a blurred copy of itself, and \`gap\` sets the space between tiles:
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: mosaic
+  fit: contain
+  gap: 8
+\`\`\`
+
+**Draw your own pattern.** Run **Gallery View: Build custom mosaic**, drag across cells to merge them into large tiles (or leave some blank), and save the pattern as \`My first mosaic\`. Until you do, the gallery below uses the built-in pattern and says so underneath; once you save, it switches to yours. Saved patterns are in **Settings → Gallery View → Mosaic**.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: mosaic
+  pattern: My first mosaic
+\`\`\`
+
+---
+
 ### Carousel View
 One image at a time on a fixed-height stage — ideal for a curated set of highlights. Hover to show the arrows, use ← / → once it is focused, or swipe. \`height\` sets the stage height in pixels (default 420).
 
@@ -444,7 +483,9 @@ view:
   paginationPosition: top
 \`\`\`
 
-Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination**, which also sets where the controls sit — the per-gallery \`pagination\`, \`itemsPerPage\` and \`paginationPosition\` keys override those defaults.
+In the mosaic view, each page holds whole repeats of the pattern, so \`itemsPerPage\` is rounded to fit.
+
+Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Display → Pagination**, which also sets where the controls sit — the per-gallery \`pagination\`, \`itemsPerPage\` and \`paginationPosition\` keys override those defaults.
 
 ---
 
@@ -1368,7 +1409,7 @@ Right-click a photo in any of these for **Open in Nextcloud**, which opens the s
             '> [!NOTE] Expected output (when "Allow remote images" is **OFF** in settings)',
             '> `\u26a0\ufe0f gallery: External images blocked — enable "Allow remote images" in plugin settings`',
             '',
-            '> **Tip:** Toggle **Settings → Gallery View → Allow remote images** to make this error appear and disappear.',
+            '> **Tip:** Toggle **Settings → Gallery View → General → Allow remote images** to make this error appear and disappear.',
             '',
             '```obs-gallery',
             'sources:',
@@ -1523,7 +1564,7 @@ Right-click a photo in any of these for **Open in Nextcloud**, which opens the s
             '',
             '## Error messages setting',
             '',
-            'You can control whether errors are shown at all in **Settings → Gallery View → Error messages**:',
+            'You can control whether errors are shown at all in **Settings → Gallery View → General → Error messages**:',
             '',
             '| Setting | What you see |',
             '|---|---|',
@@ -1562,7 +1603,7 @@ A workbench for checking layouts by eye. The images in \`${this.testLabPath}/\` 
 
 The white corner squares and border show whether an image is being cropped. A further ${TEST_LAB_BULK_COUNT} images live in \`_assets/Bulk/\` for pagination tests.
 
-> 💡 Captions are controlled in **Settings → Gallery View → Captions**. Try toggling **Show captions** and changing **Caption max lines** while this note is open.
+> 💡 Captions are controlled in **Settings → Gallery View → Display → Captions**. Try toggling **Show captions** and changing **Caption max lines** while this note is open.
 
 ---
 
@@ -1605,6 +1646,31 @@ sources:
     path: ./_assets
 view:
   type: justified
+\`\`\`
+
+---
+
+## Mosaic view
+
+Square tiles in a repeating pattern, cropped to fill. Check that the panorama and the tall strip are cut off evenly on both sides (their white corner squares should be gone), the SVGs are fitted whole, and the broken image shows an error tile.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+view:
+  type: mosaic
+\`\`\`
+
+With \`fit: contain\` every image is whole, with its white corners visible, over a blurred copy of itself. The SVGs have no blurred copy.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets
+view:
+  type: mosaic
+  fit: contain
 \`\`\`
 
 ---
@@ -1674,6 +1740,18 @@ view:
   type: justified
   pagination: true
   itemsPerPage: 8
+\`\`\`
+
+And in the mosaic view, 9 per page. Pages hold whole repeats of the 12-tile pattern, so 9 becomes 12: there should be 3 pages, each showing the full pattern.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: ./_assets/Bulk
+view:
+  type: mosaic
+  pagination: true
+  itemsPerPage: 9
 \`\`\`
 
 ---

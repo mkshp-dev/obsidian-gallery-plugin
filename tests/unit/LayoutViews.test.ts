@@ -123,11 +123,37 @@ describe('JustifiedView', () => {
         expect(rows.flatMap(r => r.tiles)).toEqual(tiles);
     });
 
-    test('a short last row keeps the target height instead of stretching', () => {
+    test('a short last row takes the height of the row above instead of stretching', () => {
         const rows = JustifiedView.buildRows([tile(1.5), tile(1.5), tile(1.5), tile(1.5), tile(1)], 1000, 220, 4);
         const last = rows[rows.length - 1];
         expect(last.justified).toBe(false);
-        expect(last.height).toBe(220);
+        expect(last.height).toBe(rows[0].height);
+        expect(rows[0].height).toBeCloseTo(220.44);
+    });
+
+    test('equal images come out the same size in every row, even when rows end taller than the target (#223)', () => {
+        // Six portrait cards on a ~350px phone: the target is capped to 140px, three cards fill a
+        // row at ~152px, and the last row used to drop back to 140px and look smaller
+        const width = 350;
+        const target = JustifiedView.targetRowHeight(220, width);
+        const rows = JustifiedView.buildRows(Array.from({ length: 6 }, (_, i) => tile(0.75, String(i))), width, target, 4);
+        expect(rows.map(r => r.tiles.length)).toEqual([3, 3]);
+        expect(rows[0].height).toBeGreaterThan(target);
+        expect(rows[1].height).toBeCloseTo(rows[0].height);
+        expect(rows[1].justified).toBe(true);
+    });
+
+    test('a short last row shrinks to fit when the height of the row above would make it too wide', () => {
+        // The first row closes below the target, at ~212.5px; the last row's two wide images at that
+        // height would be slightly wider than 1000px, so they fill the width at ~211.9px instead
+        const rows = JustifiedView.buildRows([2, 2, 0.25, 0.4, 2.5, 2.2].map(r => tile(r)), 1000, 220, 4);
+        expect(rows.map(r => r.tiles.length)).toEqual([4, 2]);
+        expect(rows[0].height).toBeCloseTo(212.5, 1);
+        const last = rows[1];
+        expect(last.justified).toBe(true);
+        expect(last.height).toBeLessThan(rows[0].height);
+        const lastWidth = last.tiles.reduce((sum, t) => sum + t.ratio * last.height, 0) + 4 * (last.tiles.length - 1);
+        expect(lastWidth).toBeCloseTo(1000);
     });
 
     test('a panorama too wide for the target height gets a row of its own', () => {

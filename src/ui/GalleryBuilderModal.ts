@@ -6,6 +6,7 @@ import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 import { NotePathResolver } from '../utils/NotePathResolver';
 import { VIEW_OPTIONS, ViewBlockOptions, PaginationPosition } from '../models/viewOptions';
 import { resolveViewType } from '../models/viewTypes';
+import { MosaicBuilderModal } from './MosaicBuilderModal';
 
 /** A pixel-size view option: its field label, description and the default shown as a placeholder */
 interface SizeOptionField {
@@ -71,6 +72,7 @@ export class GalleryBuilderModal extends Modal {
                 .addOptions({
                     'masonry': 'Masonry (Columns)',
                     'justified': 'Justified (Rows)',
+                    'mosaic': 'Mosaic (Large and small tiles)',
                     'thumbnail': 'Thumbnail Grid',
                     'carousel': 'Carousel (Slideshow)',
                     'embed': 'Embed (Continuous)'
@@ -209,6 +211,51 @@ export class GalleryBuilderModal extends Modal {
                 );
         }
 
+        if (applies('pattern')) {
+            // Not a valid pattern name, so it can't clash with a saved one
+            const NEW_PATTERN = ':new';
+            new Setting(container)
+                .setName('Pattern')
+                .setDesc('Which tiles are large. Choose the last option to draw your own.')
+                .addDropdown(dropdown => {
+                    dropdown.addOption('', 'Built-in');
+                    for (const saved of this.plugin.settings.mosaicPatterns) dropdown.addOption(saved.name, saved.name);
+                    dropdown.addOption(NEW_PATTERN, 'New pattern…');
+                    dropdown.setValue(this.viewOptions.pattern ?? '');
+                    dropdown.onChange(value => {
+                        if (value === NEW_PATTERN) {
+                            // Keep the current choice until a new pattern is saved, then select it
+                            dropdown.setValue(this.viewOptions.pattern ?? '');
+                            new MosaicBuilderModal(this.app, this.plugin, {
+                                onSaved: name => {
+                                    this.viewOptions.pattern = name;
+                                    this.renderViewOptions(container);
+                                    this.refreshLivePreview();
+                                }
+                            }).open();
+                            return;
+                        }
+                        this.viewOptions.pattern = value === '' ? undefined : value;
+                        this.refreshLivePreview();
+                    });
+                });
+        }
+
+        if (applies('fit')) {
+            new Setting(container)
+                .setName('Fit')
+                .setDesc('Crop each image to fill its tile, or show the whole image over a blurred copy of itself.')
+                .addDropdown(dropdown => dropdown
+                    .addOptions({ crop: 'Crop to fill', contain: 'Show whole image' })
+                    .setValue(this.viewOptions.fit ?? 'crop')
+                    .onChange(value => {
+                        // Crop is the default, so it isn't written
+                        this.viewOptions.fit = value === 'contain' ? 'contain' : undefined;
+                        this.refreshLivePreview();
+                    })
+                );
+        }
+
         if (applies('pagination')) {
             new Setting(container)
                 .setName('Enable pagination')
@@ -239,7 +286,9 @@ export class GalleryBuilderModal extends Modal {
 
                 new Setting(container)
                     .setName('Images per page')
-                    .setDesc('Number of images to display per page.')
+                    .setDesc(type === 'mosaic'
+                        ? 'Number of images per page, rounded to whole repeats of the pattern so every page shows the full pattern.'
+                        : 'Number of images to display per page.')
                     .addText(text => text
                         .setPlaceholder('24')
                         .setValue(this.viewOptions.itemsPerPage?.toString() || '')

@@ -46,7 +46,7 @@ view:                  # long form, with options
 
 | Key | Values | Default | Description |
 |---|---|---|---|
-| `type` | `thumbnail`, `carousel`, `masonry`, `justified`, `embed` | `thumbnail` | The layout. The older name `grid` is still accepted and renders as `masonry`. |
+| `type` | `thumbnail`, `carousel`, `masonry`, `justified`, `mosaic`, `embed` | `thumbnail` | The layout. The older name `grid` is still accepted and renders as `masonry`. |
 | `pagination` | `true` / `false` | The **Enable pagination by default** setting (off) | Show a fixed number of images per page with Prev/Next buttons, instead of one long scroll. All views except `carousel`. |
 | `itemsPerPage` | whole number, 1–10000 | The **Images per page** setting (24) | Images per page when pagination is on. All views except `carousel`. |
 | `paginationPosition` | `top` / `bottom` | The **Page controls position** setting (`bottom`) | Whether the Prev/Next controls sit above or below the gallery. All views except `carousel`. |
@@ -54,7 +54,9 @@ view:                  # long form, with options
 | `frame` | `true` / `false` | The **Show gallery frame** setting (on) | `false` removes the box around the gallery (border, shadow, background and padding), so the images sit directly in the note. Thumbnail tiles keep their card look. All views except `embed`, which never has a frame. |
 | `rowHeight` | number of pixels, 40–1000 | 220 | Target row height. `justified` only. |
 | `columnWidth` | number of pixels, 60–1000 | 220 | Minimum column width; the number of columns follows the note's width. `masonry` only. |
-| `gap` | number of pixels, 0–64 | 8 (masonry), 4 (justified) | Space between images. `masonry` and `justified`. |
+| `gap` | number of pixels, 0–64 | 8 (masonry), 4 (justified, mosaic) | Space between images. `masonry`, `justified` and `mosaic`. |
+| `pattern` | the name of a saved pattern, such as `featured` | a built-in pattern | Which tiles are large; the pattern repeats down the gallery. Make patterns with the **Build custom mosaic** command. See [Mosaic view](./views/mosaic.md#your-own-pattern). `mosaic` only. |
+| `fit` | `crop`, `contain` | `crop` | `crop` fills each tile and cuts off the image's edges; `contain` shows the whole image over a blurred copy of itself. See [Mosaic view](./views/mosaic.md#fitting-images). `mosaic` only. |
 | `height` | number of pixels, 120–1500 | 420 | Height of the stage. `carousel` only. |
 
 These options override the plugin settings, and any [CSS snippet](./views/masonry.md#customizing-with-css) sizes, for this gallery only:

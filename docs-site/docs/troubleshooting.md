@@ -11,6 +11,7 @@ sidebar_position: 6
 
 - Verify that the path defined in your local source configuration (under `sources`) exists in your vault and that the spelling and casing match exactly.
 - Confirm images are in a supported format: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.avif`, `.svg`, or a video: `.mp4`, `.m4v`, `.webm`, `.mov`, `.ogv`.
+- A line such as *The mosaic pattern "featured" isn't saved in this vault* under a mosaic gallery means its `pattern:` names a pattern that doesn't exist here (it was renamed or deleted, or the note came from another vault), so the gallery uses the built-in pattern. Make a pattern with that name with the **Build custom mosaic** command, or pick one from **Settings → Gallery View → Mosaic**.
 - A line such as *3 files weren't shown: HEIC isn't supported* under a gallery (or after **No images found**) names photos and videos in formats galleries can't show. Convert them to JPEG (or MP4 for videos) to include them. iPhones can save photos as JPEG under **Settings → Camera → Formats → Most Compatible**.
 - Try switching between reading and editing mode to trigger a re-render.
 

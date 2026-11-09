@@ -22,9 +22,9 @@ How it lays out images:
 
 - Each row is scaled so its images fill the width exactly, at a height close to the target row height.
 - On a narrow screen the target row height is capped at 40% of the gallery's width, so a phone still shows two or three photos per row.
-- The last row is not stretched. If it is short, its images keep the target height and the row stays left-aligned.
+- The last row is not stretched. If it is short, its images keep the height of the row above, so images of the same size look the same in every row, and the row stays left-aligned.
 - A panorama too wide for a single row gets a row of its own.
-- With captions on, each image has its caption underneath, and each row grows by that line; the row height is the height of the images. With captions off, a caption appears over an image only while you hover over it (not on touch screens). See **Settings → Gallery View → Show captions**.
+- With captions on, each image has its caption underneath, and each row grows by that line; the row height is the height of the images. With captions off, a caption appears over an image only while you hover over it (not on touch screens). See **Settings → Gallery View → Display → Show captions**.
 
 For `immich`, `immich-share` and `nextcloud` sources the plugin fetches thumbnails rather than full-size images. For Immich sources it also knows each image's size before it downloads, so rows don't shift as images load. For other sources, rows below an image may reflow once it loads and its real size is known.
 

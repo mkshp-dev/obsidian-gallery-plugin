@@ -12,6 +12,8 @@ import { addDemoConnections, DemoConnectionConflict, hasDemoImmichConnection } f
 import { DemoConnectionsModal } from './ui/DemoConnectionsModal';
 import { GallerySettingsTab } from './ui/GallerySettingsTab';
 import { GalleryPluginSettings, DEFAULT_SETTINGS } from './models/settings';
+import { MosaicBuilderModal } from './ui/MosaicBuilderModal';
+import { patternProblem, type SavedMosaicPattern } from './models/mosaicPattern';
 import type { IImageSource } from './models/interfaces';
 import { remoteImageLink, sourceServiceName } from './models/sourceLinks';
 
@@ -88,6 +90,12 @@ export default class GalleryPlugin extends Plugin {
         });
 
         this.addCommand({
+            id: 'build-custom-mosaic',
+            name: 'Build custom mosaic',
+            callback: () => new MosaicBuilderModal(this.app, this).open()
+        });
+
+        this.addCommand({
             id: 'insert-gallery',
             name: 'Insert gallery',
             callback: () => {
@@ -129,6 +137,13 @@ export default class GalleryPlugin extends Plugin {
         if ((this.settings.errorDisplayMode as string) === 'text') {
             this.settings.errorDisplayMode = 'full';
         }
+
+        // A fresh array (never the shared default one), with only well-formed patterns
+        const patterns: unknown = this.settings.mosaicPatterns;
+        this.settings.mosaicPatterns = Array.isArray(patterns)
+            ? patterns.filter((p): p is SavedMosaicPattern =>
+                typeof (p as Partial<SavedMosaicPattern> | null)?.name === 'string' && patternProblem(p) === undefined)
+            : [];
 
         // Migrate old Immich connection settings
         if (this.settings.immichConnections && Array.isArray(this.settings.immichConnections)) {
@@ -226,7 +241,8 @@ export default class GalleryPlugin extends Plugin {
             showFrame: this.settings.showFrame ?? DEFAULT_SETTINGS.showFrame,
             pagination: this.settings.defaultPagination ?? DEFAULT_SETTINGS.defaultPagination,
             itemsPerPage: this.settings.defaultItemsPerPage ?? DEFAULT_SETTINGS.defaultItemsPerPage,
-            paginationPosition: this.settings.defaultPaginationPosition ?? DEFAULT_SETTINGS.defaultPaginationPosition
+            paginationPosition: this.settings.defaultPaginationPosition ?? DEFAULT_SETTINGS.defaultPaginationPosition,
+            mosaicPatterns: this.settings.mosaicPatterns ?? []
         };
     }
 

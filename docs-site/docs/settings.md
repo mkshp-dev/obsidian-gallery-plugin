@@ -6,30 +6,69 @@ sidebar_position: 5
 
 You can configure plugin-wide behavior by opening **Settings → Gallery View**.
 
-The settings panel is split into two tabs: **General** and **Providers**.
+The settings panel is split into four tabs: **General**, **Display**, **Mosaic** and **Providers**.
 
 ---
 
 ## General tab
 
-The General tab controls core plugin behavior and remote image handling.
+How the plugin behaves: error messages, images from the web, and troubleshooting.
+
+### Plugin preferences
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Error messages | `Show` | When a gallery can't be shown, `Show` puts a one-line message (starting with ⚠️) in its place; `Hide` shows nothing. `Hide` also drops the notes under galleries, such as ignored view options and files skipped for their format. |
-| Show gallery frame | `On` | Draws a border, background and padding around each gallery. Turn it off to place images directly in the note; thumbnail tiles keep their card look. A gallery can override this with `frame: true` or `frame: false` in its `view:` block. The embed view never has a frame. |
-| Slideshow interval (seconds) | `4` | How long the image viewer's slideshow shows each image before moving on (1 to 60 seconds). |
-| Largest remote video to play (MB) | `200` | Immich and Nextcloud videos are downloaded in full before they play in the image viewer. A larger video shows its still frame, its size and an **Open in Immich** (or **Open in Nextcloud**) button instead. Videos whose size the server doesn't report are played. `0` means no limit. Videos in your vault aren't affected: they play straight from disk at any size. |
-| Show captions | `On` | On: captions show under each image in every view, and take up space in the layout. Off: a caption appears over an image only while you hover over it or focus it with the keyboard (not on touch screens). A gallery can override this with `captions: true` or `captions: false` in its `view:` block. |
-| Caption max lines | `1` | Controls the maximum number of text lines displayed for image captions before truncating with an ellipsis (configurable between 1 and 10). |
+| Detached gallery grace period (ms) | 30000 | How long to keep a gallery alive in memory after its container is removed from the view. This is useful for preventing galleries from reloading their images constantly if you frequently toggle between reading and editing modes. |
+| Enable debug logging | Off | Write verbose debug logs (gallery rendering, refreshes, lifecycle events) to the developer console. Useful for troubleshooting. Errors and warnings are always logged. |
+
+### Remote images
+
+| Setting | Default | Description |
+|---------|---------|-------------|
 | Allow remote images | Off | Enable loading images from external URLs. Disabled by default to protect your privacy. If disabled, any `external` sources in your blocks will be skipped. |
 | Remote load timeout (ms) | 30000 | How long the plugin waits for a remote image to load before giving up. Useful for slow network connections or slow remote servers. |
 | Validate remote content type | Off | When enabled, the plugin performs a lightweight HEAD request to verify that a remote URL actually serves an image (e.g., `image/jpeg`) before attempting to load it. This reduces accidental loading of non-image resources, at the cost of one extra small network request per URL. |
-| Detached gallery grace period (ms) | 30000 | How long to keep a gallery alive in memory after its container is removed from the view. This is useful for preventing galleries from reloading their images constantly if you frequently toggle between reading and editing modes. |
+
+---
+
+## Display tab
+
+How galleries look. Most of these can be overridden for one gallery in its `view:` block.
+
+### Appearance
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Show gallery frame | `On` | Draws a border, background and padding around each gallery. Turn it off to place images directly in the note; thumbnail tiles keep their card look. A gallery can override this with `frame: true` or `frame: false` in its `view:` block. The embed view never has a frame. |
+
+### Captions
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Show captions | `On` | On: captions show under each image in every view, and take up space in the layout. Off: a caption appears over an image only while you hover over it or focus it with the keyboard (not on touch screens). A gallery can override this with `captions: true` or `captions: false` in its `view:` block. |
+| Caption max lines | `1` | Controls the maximum number of text lines displayed for image captions before truncating with an ellipsis (configurable between 1 and 10). |
+
+### Pagination
+
+| Setting | Default | Description |
+|---------|---------|-------------|
 | Enable pagination by default | Off | Split every gallery into pages with Prev/Next buttons instead of one long scroll. A gallery can override this with `pagination` in its `view:` block (see [Gallery block syntax](./gallery-block-syntax.md#view)). |
-| Images per page | `24` | Images per page when pagination is on. A gallery can override this with `itemsPerPage`. |
+| Images per page | `24` | Images per page when pagination is on. A gallery can override this with `itemsPerPage`. Mosaic galleries round it to whole repeats of their pattern, so every page shows the full pattern. |
 | Page controls position | Below the gallery | Show the Prev/Next controls above or below a paged gallery. Above, they stay where they are while the page below changes height. A gallery can override this with `paginationPosition`. |
-| Enable debug logging | Off | Write verbose debug logs (gallery rendering, refreshes, lifecycle events) to the developer console. Useful for troubleshooting. Errors and warnings are always logged. |
+
+### Image viewer
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Slideshow interval (seconds) | `4` | How long the image viewer's slideshow shows each image before moving on (1 to 60 seconds). |
+| Largest remote video to play (MB) | `200` | Immich and Nextcloud videos are downloaded in full before they play in the image viewer. A larger video shows its still frame, its size and an **Open in Immich** (or **Open in Nextcloud**) button instead. Videos whose size the server doesn't report are played. `0` means no limit. Videos in your vault aren't affected: they play straight from disk at any size. |
+
+---
+
+## Mosaic tab
+
+The patterns you made with the **Build custom mosaic** command, each with a small drawing of its tiles (blank cells are dotted). Edit, duplicate or delete them here, or add one with **New pattern**. A mosaic gallery uses one with `pattern:` followed by its name; see [Mosaic view](./views/mosaic.md#your-own-pattern).
 
 ---
 

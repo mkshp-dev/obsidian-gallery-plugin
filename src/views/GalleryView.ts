@@ -5,7 +5,8 @@ import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import { formatDuration, isSvgPath } from '../models/media';
 import type { ViewType } from '../models/viewTypes';
 import { sourceServiceName } from '../models/sourceLinks';
-import type { PaginationPosition } from '../models/viewOptions';
+import type { MosaicPattern } from '../models/mosaicPattern';
+import type { MosaicFit, PaginationPosition } from '../models/viewOptions';
 
 /**
  * Zoom factor for one wheel event in the image viewer: 1.25x per 100px of scroll (one mouse-wheel
@@ -58,7 +59,7 @@ export abstract class GalleryView implements IGalleryView {
     public paginationPosition: PaginationPosition = 'bottom';
     protected currentPage: number = 1;
     /** Per-gallery layout sizes from the block's view: options (px); views that support them apply them */
-    protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number; height?: number } = {};
+    protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number; height?: number; pattern?: MosaicPattern; fit?: MosaicFit } = {};
     /** Notes shown under the gallery, such as ignored view options */
     protected warnings: string[] = [];
 
@@ -180,8 +181,8 @@ export abstract class GalleryView implements IGalleryView {
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
         if (options.paginationPosition === 'top' || options.paginationPosition === 'bottom') this.paginationPosition = options.paginationPosition;
         // Passed together for each gallery, so a key that is present but undefined clears an earlier value
-        if ('rowHeight' in options || 'columnWidth' in options || 'gap' in options || 'height' in options) {
-            this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap, height: options.height };
+        if ('rowHeight' in options || 'columnWidth' in options || 'gap' in options || 'height' in options || 'pattern' in options || 'fit' in options) {
+            this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap, height: options.height, pattern: options.pattern, fit: options.fit };
         }
         if (options.warnings) this.warnings = [...options.warnings];
         // The frame belongs to the gallery's container, which the view renders into
@@ -199,12 +200,20 @@ export abstract class GalleryView implements IGalleryView {
     }
 
     /**
-     * Total number of pages for the current image list, given itemsPerPage.
+     * Images on each page: itemsPerPage, unless a view needs pages of a particular size (mosaic
+     * rounds it to whole repeats of its pattern).
+     */
+    protected get pageSize(): number {
+        return this.itemsPerPage;
+    }
+
+    /**
+     * Total number of pages for the current image list, given pageSize.
      * Always at least 1.
      */
     protected get totalPages(): number {
-        if (!this.paginationEnabled || this.itemsPerPage <= 0) return 1;
-        return Math.max(1, Math.ceil(this._images.length / this.itemsPerPage));
+        if (!this.paginationEnabled || this.pageSize <= 0) return 1;
+        return Math.max(1, Math.ceil(this._images.length / this.pageSize));
     }
 
     /**
@@ -212,15 +221,16 @@ export abstract class GalleryView implements IGalleryView {
      * list unchanged when pagination is disabled.
      */
     protected getPageImages(): IImageSource[] {
-        if (!this.paginationEnabled || this.itemsPerPage <= 0) return this._images;
+        if (!this.paginationEnabled || this.pageSize <= 0) return this._images;
 
         // Clamp currentPage in case the image list shrank since the last render
         const pages = this.totalPages;
         if (this.currentPage > pages) this.currentPage = pages;
         if (this.currentPage < 1) this.currentPage = 1;
 
-        const start = (this.currentPage - 1) * this.itemsPerPage;
-        return this._images.slice(start, start + this.itemsPerPage);
+        const size = this.pageSize;
+        const start = (this.currentPage - 1) * size;
+        return this._images.slice(start, start + size);
     }
 
     /**
@@ -245,7 +255,7 @@ export abstract class GalleryView implements IGalleryView {
      * pagination is disabled or there's only a single page.
      */
     protected renderPaginationControls(parent: HTMLElement): void {
-        if (!this.paginationEnabled || this.itemsPerPage <= 0) return;
+        if (!this.paginationEnabled || this.pageSize <= 0) return;
         const pages = this.totalPages;
         if (pages <= 1) return;
 

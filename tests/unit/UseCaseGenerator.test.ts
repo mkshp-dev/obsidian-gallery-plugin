@@ -82,7 +82,7 @@ describe('UseCaseGenerator', () => {
         const { notes, vault } = await generate({ demoConnections: 'added' });
 
         expect([...notes.keys()].map(p => p.slice(FOLDER.length + 1))).toEqual([
-            'Start here.md', 'Iceland road trip.md', 'Iceland — five layouts.md', 'Change the layout.md',
+            'Start here.md', 'Iceland road trip.md', 'Iceland — six layouts.md', 'Change the layout.md',
             'Cabin mood board.md', 'Shakshuka.md', 'Design references.md', 'Trip highlights.md', 'Family album (Immich).md'
         ]);
         for (const set of ['iceland', 'cabin', 'recipe', 'design']) {
@@ -132,7 +132,7 @@ describe('UseCaseGenerator', () => {
                 checked++;
             }
         }
-        expect(checked).toBe(12);
+        expect(checked).toBe(13);
         for (const block of Object.values(USE_CASE_BLOCKS)) {
             expect(readViewOptions(ParameterParser.parseAndValidate(block).view).warnings).toEqual([]);
         }

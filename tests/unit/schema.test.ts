@@ -365,7 +365,7 @@ view:
         test('unknown view type is rejected with the current view names', () => {
             expect(() => ParameterParser.parseAndValidate(`path: photos
 view: slideshow`))
-                .toThrow('thumbnail, carousel, masonry, justified, embed');
+                .toThrow('thumbnail, carousel, masonry, justified, mosaic, embed');
         });
 
         test('mixed-source block renders inline error when some sources fail', async () => {

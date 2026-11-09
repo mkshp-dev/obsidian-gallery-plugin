@@ -1346,17 +1346,25 @@ button.gallery-modal-video-notice-btn:hover {
   width: 0;
   max-width: 320px;
   background: rgba(20, 20, 20, 0.95);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: hidden;
   overflow-y: auto;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
 }
 
 .gallery-modal-info-panel.visible {
   width: 320px;
+}
+
+/* The text keeps this width for the whole slide, so only the panel's edge moves. The panel clips
+   it; its border and padding live here so a closed panel shows no stray line. */
+.gallery-modal-info-content {
+  flex: 1 0 auto;
+  box-sizing: border-box;
+  width: 320px;
   padding: 64px 20px 20px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .info-title {
@@ -1500,6 +1508,8 @@ button.gallery-modal-nav:focus-visible {
   .gallery-modal-toolbar {
     gap: 8px;
   }
+  /* A bottom sheet on a phone: it slides up as a whole, at full width the whole time */
+  .gallery-modal-info-panel,
   .gallery-modal-info-panel.visible {
     width: 100%;
     max-width: 100%;
@@ -1507,10 +1517,23 @@ button.gallery-modal-nav:focus-visible {
     bottom: 0;
     left: 0;
     height: 40vh;
-    padding: 20px;
-    border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 4;
+  }
+  .gallery-modal-info-panel {
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.3s;
+  }
+  .gallery-modal-info-panel.visible {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
+  }
+  .gallery-modal-info-content {
+    width: 100%;
+    padding: 20px;
+    border-left: none;
   }
   button.gallery-modal-nav {
     width: 38px;

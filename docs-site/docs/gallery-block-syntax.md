@@ -49,6 +49,7 @@ view:                  # long form, with options
 | `type` | `thumbnail`, `carousel`, `masonry`, `justified`, `embed` | `thumbnail` | The layout. The older name `grid` is still accepted and renders as `masonry`. |
 | `pagination` | `true` / `false` | The **Enable pagination by default** setting (off) | Show a fixed number of images per page with Prev/Next buttons, instead of one long scroll. All views except `carousel`. |
 | `itemsPerPage` | whole number, 1–10000 | The **Images per page** setting (24) | Images per page when pagination is on. All views except `carousel`. |
+| `paginationPosition` | `top` / `bottom` | The **Page controls position** setting (`bottom`) | Whether the Prev/Next controls sit above or below the gallery. All views except `carousel`. |
 | `captions` | `true` / `false` | The **Show captions** setting (on) | `true`: captions under each image. `false`: captions only on hover. All views. |
 | `frame` | `true` / `false` | The **Show gallery frame** setting (on) | `false` removes the box around the gallery (border, shadow, background and padding), so the images sit directly in the note. Thumbnail tiles keep their card look. All views except `embed`, which never has a frame. |
 | `rowHeight` | number of pixels, 40–1000 | 220 | Target row height. `justified` only. |

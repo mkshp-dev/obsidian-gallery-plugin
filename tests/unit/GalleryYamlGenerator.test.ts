@@ -183,6 +183,13 @@ describe('GalleryYamlGenerator', () => {
         expect(result).not.toContain('itemsPerPage:');
     });
 
+    it('should emit paginationPosition only with pagination on', () => {
+        const sources: Partial<ISourceConfig>[] = [{ type: 'local', path: 'Assets/Photos' }];
+
+        expect(GalleryYamlGenerator.generateYaml(sources, 'grid', { pagination: true, paginationPosition: 'top' })).toContain('paginationPosition: top');
+        expect(GalleryYamlGenerator.generateYaml(sources, 'grid', { paginationPosition: 'top' })).not.toContain('paginationPosition');
+    });
+
     it('should emit pagination and itemsPerPage when enabled', () => {
         const sources: Partial<ISourceConfig>[] = [
             { type: 'local', path: 'Assets/Photos' }

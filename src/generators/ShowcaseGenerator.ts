@@ -270,6 +270,7 @@ view:
 - \`path: GalleryDemo/Assets\` points to the folder containing the images.
 - Change the \`path\` to any folder in your vault that contains images.
 - Add \`recursive: true\` to scan all sub-folders as well.
+- Right-click a photo for Obsidian's file menu: open it in a new tab or to the right, rename or delete it, copy its path, reveal it in the file explorer, and whatever other plugins add.
 `;
         await this.app.vault.create(`${this.basePath}/01 - Local source.md`, content);
     }
@@ -337,6 +338,7 @@ view:
 - \`type: external\` tells the plugin these are remote web links.
 - Provide a list of direct image links under \`urls\`.
 - External images depend on an internet connection to load.
+- Right-click a photo for **Open in browser** and **Copy link**.
 `;
         await this.app.vault.create(`${this.basePath}/02 - External URLs.md`, content);
     }
@@ -428,7 +430,21 @@ view:
   itemsPerPage: 2
 \`\`\`
 
-Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination** — the per-gallery \`pagination\`/\`itemsPerPage\` keys shown above override that default.
+The controls sit below the gallery, so they move when the next page is taller or shorter. Add \`paginationPosition: top\` to put them above it instead: click **Next** below and the buttons stay under your mouse while the page changes height.
+
+\`\`\`obs-gallery
+sources:
+  - type: local
+    path: GalleryDemo/Assets
+    recursive: true
+view:
+  type: masonry
+  pagination: true
+  itemsPerPage: 2
+  paginationPosition: top
+\`\`\`
+
+Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination**, which also sets where the controls sit — the per-gallery \`pagination\`, \`itemsPerPage\` and \`paginationPosition\` keys override those defaults.
 
 ---
 
@@ -765,6 +781,7 @@ view:
 - \`people\` — person names as they appear in Immich (case-sensitive).
 - \`tags\` — tag names as they appear in your Immich tag library (case-sensitive).
 - Filters are combined with AND: every filter, and every listed person or tag, must match.
+- Right-click a photo for **Open in Immich** and **Copy link**. Immich opens the photo only for the account the API key belongs to, so with this demo server it asks you to sign in (or says the photo isn't found, if you're signed in as someone else); with your own server and account it opens. To try it here, use the Immich shared link note.
 `;
         await this.app.vault.create(`${this.basePath}/07 - Immich authenticated.md`, content);
     }
@@ -933,6 +950,8 @@ view:
 
 \`justified\` lays the photos out in even rows like Immich's own web view. Use \`masonry\` for Pinterest-style columns instead.
 
+Right-click a photo for **Open in Immich**, which opens it in the shared album in your browser (no sign-in needed), and **Copy link**.
+
 ## How to use your own
 1. Create a shared link in your Immich instance (Share → Create link).
 2. Paste the full share URL into the \`url\` field.
@@ -1046,6 +1065,7 @@ view:
 - \`type: nextcloud\` tells the plugin to load images from Nextcloud via WebDAV.
 - \`connection: ${DEMO.nextcloudKey}\` refers to the connection key configured in Nextcloud settings.
 - \`path\` specifies the folder path on your Nextcloud server. Sub-folders are included by default; add \`recursive: false\` to show only the folder itself.
+- Right-click a photo for **Open in Nextcloud** and **Copy link**. Nextcloud opens the file only when you're signed in with access to it, so with this demo server it asks you to sign in; with your own server it opens the file.
 `;
         await this.app.vault.create(`${this.basePath}/12 - Nextcloud authenticated.md`, content);
     }
@@ -1212,6 +1232,8 @@ sources:
 view:
   type: justified
 \`\`\`
+
+Right-click a photo in any of these for **Open in Nextcloud**, which opens the share in your browser, and **Copy link**.
 
 ## How to use your own
 1. Open Nextcloud in your browser.

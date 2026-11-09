@@ -47,7 +47,7 @@ Gallery View includes built-in editor tools to make writing gallery blocks faste
 
 Instead of writing YAML by hand, use the **Gallery View: Insert gallery** command from the command palette. This opens an interactive modal where you can:
 - Choose a view type (Thumbnail, Carousel, Masonry, Justified, Embed)
-- Enable pagination and set images-per-page for large collections
+- Enable pagination for large collections, and set the images per page and whether the page controls sit above or below
 - Add and configure one or more sources using form fields
 - Preview the generated YAML in real time before inserting it.
 

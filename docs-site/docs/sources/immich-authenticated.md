@@ -25,6 +25,7 @@ The examples on this page use the connection key `immich-demo` and the albums, t
 - **View-Aware Loading**: The plugin fetches lighter assets depending on your `view`: thumbnails for the `thumbnail`, `masonry` and `justified` views, and previews for `carousel`. This avoids downloading large originals for big galleries.
 - **Stable layouts**: Immich reports each photo's size, so the `masonry` and `justified` views place photos correctly before they download.
 - **Inline Error Behavior**: If an asset fails to load, the gallery handles it inline gracefully, and can retry if the asset becomes available.
+- **Open in Immich**: Right-click a photo or video for **Open in Immich** and **Copy link**, which link to the asset's page in Immich. That page needs you to be signed in to Immich, in your browser, as the account your API key belongs to.
 - **Separate from Shared Links**: The `immich` authenticated source is entirely separate from `immich-share` and does not use public shared links. It exclusively uses your securely stored API keys.
 
 ## The `immich` Source Schema
@@ -297,3 +298,4 @@ See [Gallery Builder](../gallery-builder) for full details.
 - **Gallery is blank/empty**: The album or favorites list may be empty. If using an album, the Album ID might be incorrect. Double check the ID from the Immich URL. If you list several tags or people, only assets matching all of them are shown.
 - **A date filter matches every photo or none**: `createdAfter` / `createdBefore` check the upload date. Use `takenAfter` / `takenBefore` to filter by the date the photo was taken.
 - **Tags or people not resolving**: Ensure the names match exactly as they appear in Immich. Names are case-sensitive. Use the Gallery Builder to browse and select available tags and people from live lists.
+- **Open in Immich says "Not found or no asset.read access"**: Your browser is signed in to Immich as a different account from the one your API key belongs to. Sign in as that account, or share the photos with your own account in Immich.

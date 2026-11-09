@@ -4,6 +4,8 @@ import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import { formatDuration, isSvgPath } from '../models/media';
 import type { ViewType } from '../models/viewTypes';
+import { sourceServiceName } from '../models/sourceLinks';
+import type { PaginationPosition } from '../models/viewOptions';
 
 /**
  * Zoom factor for one wheel event in the image viewer: 1.25x per 100px of scroll (one mouse-wheel
@@ -48,8 +50,12 @@ export abstract class GalleryView implements IGalleryView {
     public allowRemoteImages: boolean = false;
     public showCaptions: boolean = true;
     public captionMaxLines: number = 1;
+    /** Shows the file menu for an image that was right-clicked; set once, by the plugin */
+    protected onImageMenu: ((image: IImageSource, event: MouseEvent) => void) | null = null;
     public paginationEnabled: boolean = false;
     public itemsPerPage: number = 24;
+    /** Whether the Prev/Next bar sits above or below the gallery */
+    public paginationPosition: PaginationPosition = 'bottom';
     protected currentPage: number = 1;
     /** Per-gallery layout sizes from the block's view: options (px); views that support them apply them */
     protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number; height?: number } = {};
@@ -140,6 +146,15 @@ export abstract class GalleryView implements IGalleryView {
         }
     }
 
+    /**
+     * Give a gallery tile the file menu on right-click. Not used in the image viewer: the viewer
+     * sits above Obsidian's menu and modal layers, so the menu and its Rename/Delete prompts would
+     * open hidden behind it.
+     */
+    protected attachImageMenu(el: HTMLElement, image: IImageSource): void {
+        el.addEventListener('contextmenu', (e: MouseEvent) => this.onImageMenu?.(image, e));
+    }
+
     protected createElement(parent: HTMLElement, tag: string, props?: CreateElementOptions): HTMLElement {
         return parent.createEl(tag as keyof HTMLElementTagNameMap, props as DomElementInfo);
     }
@@ -160,8 +175,10 @@ export abstract class GalleryView implements IGalleryView {
         if (typeof options.captionMaxLines === 'number') this.captionMaxLines = options.captionMaxLines;
         if (typeof options.slideshowInterval === 'number') this.slideshowIntervalSeconds = slideshowSeconds(options.slideshowInterval);
         if (typeof options.maxRemoteVideoMb === 'number' && options.maxRemoteVideoMb >= 0) this.maxRemoteVideoMb = options.maxRemoteVideoMb;
+        if (typeof options.onImageMenu === 'function') this.onImageMenu = options.onImageMenu;
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
+        if (options.paginationPosition === 'top' || options.paginationPosition === 'bottom') this.paginationPosition = options.paginationPosition;
         // Passed together for each gallery, so a key that is present but undefined clears an earlier value
         if ('rowHeight' in options || 'columnWidth' in options || 'gap' in options || 'height' in options) {
             this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap, height: options.height };
@@ -233,6 +250,8 @@ export abstract class GalleryView implements IGalleryView {
         if (pages <= 1) return;
 
         const bar = this.createElement(parent, 'div', { cls: 'gallery-pagination' });
+        // Above the gallery the bar stays put while the page below it changes height
+        if (this.paginationPosition === 'top') parent.prepend(bar);
 
         const prevBtn = this.createElement(bar, 'button', {
             cls: 'gallery-pagination-btn gallery-pagination-prev',
@@ -819,15 +838,18 @@ export abstract class GalleryView implements IGalleryView {
 
         // Info / Metadata drawer
         const infoPanel = this.createElement(viewerArea, 'div', { cls: 'gallery-modal-info-panel' });
+        // The panel's width animates; the text lives in a box of fixed width inside it, so it
+        // slides with the panel's edge instead of being re-wrapped on every frame
+        const infoContent = this.createElement(infoPanel, 'div', { cls: 'gallery-modal-info-content' });
 
         // Populate metadata function
         const updateInfoPanel = (srcImage: IImageSource) => {
-            this.emptyElement(infoPanel);
+            this.emptyElement(infoContent);
 
-            const title = this.createElement(infoPanel, 'h3', { text: srcImage.displayName || 'Gallery Image' });
+            const title = this.createElement(infoContent, 'h3', { text: srcImage.displayName || 'Gallery Image' });
             title.className = 'info-title';
 
-            const grid = this.createElement(infoPanel, 'div', { cls: 'info-grid' });
+            const grid = this.createElement(infoContent, 'div', { cls: 'info-grid' });
 
             const addRow = (label: string, val: string) => {
                 const row = this.createElement(grid, 'div', { cls: 'info-row' });
@@ -1163,7 +1185,7 @@ export abstract class GalleryView implements IGalleryView {
             this.createElement(videoNotice, 'div', { cls: 'gallery-modal-video-notice-text', text: message });
             if (srcImage.openUrl) {
                 const openUrl = srcImage.openUrl;
-                const service = srcImage.type.startsWith('nextcloud') ? 'Nextcloud' : srcImage.type.startsWith('immich') ? 'Immich' : '';
+                const service = sourceServiceName(srcImage.type);
                 const link = this.createElement(videoNotice, 'button', { cls: 'gallery-modal-video-notice-btn', text: service ? `Open in ${service}` : 'Open' });
                 link.addEventListener('click', (e: MouseEvent) => {
                     e.stopPropagation();

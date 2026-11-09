@@ -5,6 +5,7 @@
 import type { MediaType } from './media';
 
 import type { ViewType, ViewTypeName } from './viewTypes';
+import type { PaginationPosition } from './viewOptions';
 
 export interface ILocalSourceConfig {
   type: 'local';
@@ -235,7 +236,7 @@ export interface IImageSource {
   /** Call `listener` with the video's length once it is known (straight away if it already is) */
   onDurationKnown?(listener: (seconds: number) => void): void;
 
-  /** Web page showing the item at its source (Immich), offered when the viewer won't play it */
+  /** Web page showing the item at its source (Immich, Nextcloud), linked from the right-click menu and offered when the viewer won't play a video */
   openUrl?: string;
 
   /** Get a URL the image viewer can play, fetching the video first for remote sources */
@@ -272,6 +273,8 @@ export interface ViewRuntimeOptions {
   maxRemoteVideoMb?: number;
   pagination?: boolean;
   itemsPerPage?: number;
+  /** Where the Prev/Next bar sits: above or below the gallery */
+  paginationPosition?: PaginationPosition;
   /** Draw the gallery's frame: border, background, shadow and padding */
   frame?: boolean;
   /** Justified: target row height in px */
@@ -282,6 +285,8 @@ export interface ViewRuntimeOptions {
   gap?: number;
   /** Carousel: stage height in px */
   height?: number;
+  /** Called on right-click of a gallery tile; shows the file menu and cancels the default one when it handles it */
+  onImageMenu?: (image: IImageSource, event: MouseEvent) => void;
   /** Notes shown under the gallery, e.g. ignored view options */
   warnings?: string[];
 }

@@ -69,6 +69,7 @@ view:
 - **Recursive Scanning**: Discover images across subdirectories without manually listing each folder.
 - **Filename Globs & MIME Filtering**: Easily target specific file types or camera naming conventions.
 - **Automatic Caching**: Results are cached in memory for optimal performance and low server load.
+- **Open in Nextcloud**: Right-click a photo or video for **Open in Nextcloud** and **Copy link**, which link to the file in Nextcloud's web interface. Opening it needs you to be signed in to Nextcloud, in your browser, with access to the file.
 
 ---
 

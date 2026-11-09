@@ -1,4 +1,5 @@
 import { IImmichConnection, INextcloudConnection } from './interfaces';
+import type { PaginationPosition } from './viewOptions';
 
 /**
  * Plugin settings
@@ -25,6 +26,8 @@ export interface GalleryPluginSettings {
     // Pagination defaults (can be overridden per-gallery via the view: config)
     defaultPagination: boolean;
     defaultItemsPerPage: number;
+    // Whether the Prev/Next bar sits above or below a paged gallery (overridable with paginationPosition:)
+    defaultPaginationPosition: PaginationPosition;
     immichConnections: IImmichConnection[];
     nextcloudConnections: INextcloudConnection[];
 }
@@ -43,6 +46,7 @@ export const DEFAULT_SETTINGS: GalleryPluginSettings = {
     maxRemoteVideoMb: 200,
     defaultPagination: false,
     defaultItemsPerPage: 24,
+    defaultPaginationPosition: 'bottom',
     immichConnections: [],
     nextcloudConnections: []
 };

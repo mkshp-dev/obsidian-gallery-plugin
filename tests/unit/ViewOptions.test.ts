@@ -24,6 +24,12 @@ describe('readViewOptions', () => {
         });
     });
 
+    test('paginationPosition is top or bottom, in any paged view', () => {
+        expect(readViewOptions({ type: 'masonry', paginationPosition: 'top' }).options).toEqual({ paginationPosition: 'top' });
+        expect(readViewOptions({ type: 'carousel', paginationPosition: 'top' }).warnings).toHaveLength(1);
+        expect(viewOptionErrors({ type: 'embed', paginationPosition: 'middle' })).toEqual(['view.paginationPosition must be "top" or "bottom"']);
+    });
+
     test('a view given as a plain name has no options', () => {
         expect(readViewOptions('masonry')).toEqual({ type: 'masonry', options: {}, warnings: [] });
     });
@@ -32,8 +38,8 @@ describe('readViewOptions', () => {
         const { options, warnings } = readViewOptions({ type: 'masonry', columns: 4, itemPerPage: 10 });
         expect(options).toEqual({});
         expect(warnings).toEqual([
-            'Unknown view option "columns" is ignored. Options for the masonry view: pagination, itemsPerPage, captions, frame, columnWidth, gap.',
-            'Unknown view option "itemPerPage" is ignored. Options for the masonry view: pagination, itemsPerPage, captions, frame, columnWidth, gap.'
+            'Unknown view option "columns" is ignored. Options for the masonry view: pagination, itemsPerPage, paginationPosition, captions, frame, columnWidth, gap.',
+            'Unknown view option "itemPerPage" is ignored. Options for the masonry view: pagination, itemsPerPage, paginationPosition, captions, frame, columnWidth, gap.'
         ]);
     });
 

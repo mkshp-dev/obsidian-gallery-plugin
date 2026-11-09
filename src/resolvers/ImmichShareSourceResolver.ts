@@ -265,10 +265,11 @@ export class ImmichShareSourceResolver implements GallerySourceResolver<IImmichS
                 // Tile views load small thumbnails; the image viewer uses the preview size instead
                 if (shown === 'thumbnail') image.setLargeLoader(loaderFor('preview'));
                 image.size = extractImmichFileSize(asset);
+                // The asset's page in the shared album, for the right-click menu and the viewer
+                image.openUrl = `${webBase}/share/${shareKey}/photos/${assetId}`;
                 if (isVideo) {
                     image.setMediaType('video', loaderFor('video'));
                     image.durationSeconds = extractImmichDuration(asset);
-                    image.openUrl = `${webBase}/share/${shareKey}/photos/${assetId}`;
                 }
                 image.dimensions = extractImmichDimensions(asset);
                 image.metadata = metadata;

@@ -43,4 +43,4 @@ To change it for every carousel, set `--gallery-carousel-height` in a [CSS snipp
 }
 ```
 
-The carousel always holds every image, so the `pagination` and `itemsPerPage` view options don't apply to it; if a carousel block sets them, a note under the gallery says they are ignored. `captions: false` moves the captions from under the slides to a hover overlay on the image.
+The carousel always holds every image, so the `pagination`, `itemsPerPage` and `paginationPosition` view options don't apply to it; if a carousel block sets them, a note under the gallery says they are ignored. `captions: false` moves the captions from under the slides to a hover overlay on the image.

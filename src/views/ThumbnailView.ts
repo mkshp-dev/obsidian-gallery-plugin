@@ -110,6 +110,8 @@ export class ThumbnailView extends GalleryView {
         // would also show as an Obsidian tooltip on top of the hover caption.
         itemEl.setAttribute('role', 'button');
 
+        this.attachImageMenu(itemEl, image);
+
         // Add click handler for image expansion
         itemEl.addEventListener('click', (e: MouseEvent) => {
             e.preventDefault();

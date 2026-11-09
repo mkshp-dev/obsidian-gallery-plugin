@@ -122,6 +122,7 @@ export abstract class AspectLayoutView extends GalleryView {
     const tile: LayoutTile = { image, el, ratio: this.knownRatio(image) };
     this.applyRatio(tile);
 
+    this.attachImageMenu(el, image);
     el.addEventListener('click', (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();

@@ -47,6 +47,10 @@ Leaving a video stops it. An Immich or Nextcloud video is downloaded when you op
 - **Masonry, justified and embed views:** **Tab** moves between images; **Enter** or **Space** opens one.
 - **Carousel view:** with the carousel focused, **←** / **→** change the slide. You can also use the arrow buttons, the dots under the slides, or swipe on a touch screen.
 
+## Right-click menu
+
+Right-click a photo or video from your vault (or long-press on a touch screen) in any view, or in the image viewer, for Obsidian's usual file menu: **Open in new tab**, **Open to the right**, **Rename** and **Delete**, plus the items Obsidian's core plugins and other plugins add for files, such as **Open in new window**, **Copy path**, **Reveal file in navigation** and **Open in default app**. Photos from Immich, Nextcloud and external URLs aren't vault files, so they keep the default menu.
+
 ## Captions
 
 With captions on, they show under each image. With captions off, a caption appears over the bottom of an image only while you hover over it or focus it with the keyboard, and not at all on touch screens. Captions also appear in the image viewer's details (ℹ️). Where they come from:

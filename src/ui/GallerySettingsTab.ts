@@ -5,6 +5,8 @@ import type GalleryPlugin from '../main';
 import { DEFAULT_SETTINGS } from '../models/settings';
 import { IImmichConnection, INextcloudConnection } from '../models/interfaces';
 import { ConnectionBase, connectionHost, connectionProblems } from './providerConnections';
+import { MosaicBuilderModal } from './MosaicBuilderModal';
+import { renderPatternPreview } from './mosaicPatternPreview';
 
 /** A provider-specific field shown on a connection card, after the shared connection key */
 interface FieldSpec<T> {
@@ -33,9 +35,19 @@ interface ProviderSpec<T extends ConnectionBase> {
 
 type ConnectionStatus = { state: 'untested' | 'testing' | 'ok' | 'error'; message?: string };
 
+type SettingsTabId = 'general' | 'display' | 'mosaic' | 'providers';
+
+/** The tabs across the top of the settings, in order */
+const SETTINGS_TABS: { id: SettingsTabId; icon: string; title: string }[] = [
+    { id: 'general', icon: '⚙️', title: 'General' },
+    { id: 'display', icon: '🖼️', title: 'Display' },
+    { id: 'mosaic', icon: '🧩', title: 'Mosaic' },
+    { id: 'providers', icon: '🔌', title: 'Providers' }
+];
+
 export class GallerySettingsTab extends PluginSettingTab {
     plugin: GalleryPlugin;
-    private activeTab: 'general' | 'providers' = 'general';
+    private activeTab: SettingsTabId = 'general';
     /** Expanded connection cards and last test results, kept while the settings window is open */
     private openCards = new Set<string>();
     private connectionStatus = new Map<string, ConnectionStatus>();
@@ -58,33 +70,35 @@ export class GallerySettingsTab extends PluginSettingTab {
                             setting.settingEl.addClass('gallery-settings-tab-header-setting');
                             const tabHeader = setting.settingEl.createDiv({ cls: 'gallery-settings-tab-header' });
 
-                            const generalBtn = tabHeader.createEl('button', {
-                                cls: `gallery-settings-tab-btn ${this.activeTab === 'general' ? 'is-active' : ''}`
-                            });
-                            generalBtn.createSpan({ cls: 'gallery-settings-tab-icon', text: '⚙️' });
-                            generalBtn.createSpan({ cls: 'gallery-settings-tab-title', text: 'General' });
-                            generalBtn.addEventListener('click', () => {
-                                this.activeTab = 'general';
-                                this.update();
-                            });
-
-                            const providersBtn = tabHeader.createEl('button', {
-                                cls: `gallery-settings-tab-btn ${this.activeTab === 'providers' ? 'is-active' : ''}`
-                            });
-                            providersBtn.createSpan({ cls: 'gallery-settings-tab-icon', text: '🔌' });
-                            providersBtn.createSpan({ cls: 'gallery-settings-tab-title', text: 'Providers' });
-                            providersBtn.addEventListener('click', () => {
-                                this.activeTab = 'providers';
-                                this.update();
-                            });
+                            for (const tab of SETTINGS_TABS) {
+                                const btn = tabHeader.createEl('button', {
+                                    cls: `gallery-settings-tab-btn ${this.activeTab === tab.id ? 'is-active' : ''}`
+                                });
+                                btn.createSpan({ cls: 'gallery-settings-tab-icon', text: tab.icon });
+                                btn.createSpan({ cls: 'gallery-settings-tab-title', text: tab.title });
+                                btn.addEventListener('click', () => {
+                                    this.activeTab = tab.id;
+                                    this.update();
+                                });
+                            }
                         }
                     }
                 ]
             },
-            ...(this.activeTab === 'general' ? this.getGeneralDefinitions() : this.getProvidersDefinitions())
+            ...this.tabDefinitions(this.activeTab)
         ];
     }
 
+    private tabDefinitions(tab: SettingsTabId): SettingDefinitionItem[] {
+        switch (tab) {
+            case 'general': return this.getGeneralDefinitions();
+            case 'display': return this.getDisplayDefinitions();
+            case 'mosaic': return this.getMosaicDefinitions();
+            case 'providers': return this.getProvidersDefinitions();
+        }
+    }
+
+    /** How the plugin behaves: error messages, remote images and troubleshooting */
     private getGeneralDefinitions(): SettingDefinitionItem[] {
         return [
             {
@@ -95,21 +109,6 @@ export class GallerySettingsTab extends PluginSettingTab {
                         name: 'Error messages',
                         desc: 'When a gallery cannot be shown, show a one-line message in its place, or show nothing.',
                         control: { type: 'dropdown', key: 'errorDisplayMode', options: { full: 'Show', hidden: 'Hide' }, defaultValue: 'full' }
-                    },
-                    {
-                        name: 'Allow remote images',
-                        desc: 'Enable loading images from external URLs listed in the urls: field of the gallery config. This is opt-in to protect privacy.',
-                        control: { type: 'toggle', key: 'allowRemoteImages', defaultValue: false }
-                    },
-                    {
-                        name: 'Remote load timeout (ms)',
-                        desc: 'Timeout in milliseconds for loading remote images.',
-                        control: { type: 'number', key: 'remoteLoadTimeoutMs', defaultValue: DEFAULT_SETTINGS.remoteLoadTimeoutMs, min: 0 }
-                    },
-                    {
-                        name: 'Validate remote content type',
-                        desc: 'Perform a lightweight HEAD request to verify the Content-Type of remote URLs before loading them.',
-                        control: { type: 'toggle', key: 'validateRemoteContentType', defaultValue: false }
                     },
                     {
                         name: 'Detached gallery grace period (ms)',
@@ -125,28 +124,40 @@ export class GallerySettingsTab extends PluginSettingTab {
             },
             {
                 type: 'group',
+                heading: 'Remote images',
+                desc: 'Images from web addresses, listed in the urls: field of a gallery.',
+                items: [
+                    {
+                        name: 'Allow remote images',
+                        desc: 'Enable loading images from external URLs listed in the urls: field of the gallery config. This is opt-in to protect privacy.',
+                        control: { type: 'toggle', key: 'allowRemoteImages', defaultValue: false }
+                    },
+                    {
+                        name: 'Remote load timeout (ms)',
+                        desc: 'Timeout in milliseconds for loading remote images.',
+                        control: { type: 'number', key: 'remoteLoadTimeoutMs', defaultValue: DEFAULT_SETTINGS.remoteLoadTimeoutMs, min: 0 }
+                    },
+                    {
+                        name: 'Validate remote content type',
+                        desc: 'Perform a lightweight HEAD request to verify the Content-Type of remote URLs before loading them.',
+                        control: { type: 'toggle', key: 'validateRemoteContentType', defaultValue: false }
+                    }
+                ]
+            }
+        ];
+    }
+
+    /** How galleries look: frame, captions, pages and the image viewer */
+    private getDisplayDefinitions(): SettingDefinitionItem[] {
+        return [
+            {
+                type: 'group',
                 heading: 'Appearance',
                 items: [
                     {
                         name: 'Show gallery frame',
                         desc: 'Draw a border, background and padding around each gallery. Turn off to place images directly in the note. A gallery can override this with frame: true or false.',
                         control: { type: 'toggle', key: 'showFrame', defaultValue: true }
-                    }
-                ]
-            },
-            {
-                type: 'group',
-                heading: 'Image viewer',
-                items: [
-                    {
-                        name: 'Slideshow interval (seconds)',
-                        desc: 'How long the slideshow shows each image before moving on to the next one.',
-                        control: { type: 'number', key: 'slideshowInterval', defaultValue: DEFAULT_SETTINGS.slideshowInterval, min: 1, max: 60 }
-                    },
-                    {
-                        name: 'Largest remote video to play (MB)',
-                        desc: 'Immich and Nextcloud videos are downloaded in full before they play. Larger videos show their still frame and a link to open them in Immich or Nextcloud instead. 0 means no limit.',
-                        control: { type: 'number', key: 'maxRemoteVideoMb', defaultValue: DEFAULT_SETTINGS.maxRemoteVideoMb, min: 0 }
                     }
                 ]
             },
@@ -178,13 +189,46 @@ export class GallerySettingsTab extends PluginSettingTab {
                     },
                     {
                         name: 'Images per page',
-                        desc: 'Number of images to display per page when pagination is enabled.',
+                        desc: 'Number of images to display per page when pagination is enabled. Mosaic galleries round it to whole repeats of their pattern.',
                         control: { type: 'number', key: 'defaultItemsPerPage', defaultValue: DEFAULT_SETTINGS.defaultItemsPerPage, min: 1 }
                     },
                     {
                         name: 'Page controls position',
                         desc: 'Show the Prev/Next controls above or below a paged gallery. Above, they stay in place as pages change height.',
                         control: { type: 'dropdown', key: 'defaultPaginationPosition', options: { bottom: 'Below the gallery', top: 'Above the gallery' }, defaultValue: DEFAULT_SETTINGS.defaultPaginationPosition }
+                    }
+                ]
+            },
+            {
+                type: 'group',
+                heading: 'Image viewer',
+                items: [
+                    {
+                        name: 'Slideshow interval (seconds)',
+                        desc: 'How long the slideshow shows each image before moving on to the next one.',
+                        control: { type: 'number', key: 'slideshowInterval', defaultValue: DEFAULT_SETTINGS.slideshowInterval, min: 1, max: 60 }
+                    },
+                    {
+                        name: 'Largest remote video to play (MB)',
+                        desc: 'Immich and Nextcloud videos are downloaded in full before they play. Larger videos show their still frame and a link to open them in Immich or Nextcloud instead. 0 means no limit.',
+                        control: { type: 'number', key: 'maxRemoteVideoMb', defaultValue: DEFAULT_SETTINGS.maxRemoteVideoMb, min: 0 }
+                    }
+                ]
+            }
+        ];
+    }
+
+    /** The patterns made with "Build custom mosaic" */
+    private getMosaicDefinitions(): SettingDefinitionItem[] {
+        return [
+            {
+                type: 'group',
+                heading: 'Mosaic patterns',
+                desc: 'Patterns for the mosaic view, made with the "Build custom mosaic" command. A mosaic gallery uses one with pattern: followed by its name.',
+                items: [
+                    {
+                        name: 'Patterns',
+                        render: (setting: Setting) => this.renderMosaicPatterns(setting)
                     }
                 ]
             }
@@ -458,6 +502,59 @@ export class GallerySettingsTab extends PluginSettingTab {
         });
 
         refreshHeader();
+    }
+
+    private renderMosaicPatterns(setting: Setting): void {
+        setting.settingEl.empty();
+        setting.settingEl.addClass('gallery-mosaic-patterns-setting');
+        const listEl = setting.settingEl.createDiv('gallery-mosaic-pattern-list');
+        const patterns = this.plugin.settings.mosaicPatterns;
+        const reopen = () => this.update();
+
+        if (patterns.length === 0) {
+            listEl.createDiv({ cls: 'gallery-provider-empty', text: 'No saved patterns yet. Mosaic galleries use the built-in pattern.' });
+        }
+
+        for (const saved of patterns) {
+            const row = new Setting(listEl).setClass('gallery-mosaic-pattern-row').setName(saved.name);
+            // Patterns are checked when the settings load, so every listed one can be drawn
+            row.setDesc(`pattern: ${saved.name}`);
+            renderPatternPreview(row.infoEl, saved);
+            row.addExtraButton(btn => btn.setIcon('pencil').setTooltip('Edit')
+                .onClick(() => new MosaicBuilderModal(this.app, this.plugin, { editing: saved, onSaved: reopen }).open()));
+            row.addExtraButton(btn => btn.setIcon('copy').setTooltip('Duplicate')
+                .onClick(() => new MosaicBuilderModal(this.app, this.plugin, { startFrom: saved, onSaved: reopen }).open()));
+            row.addExtraButton(btn => {
+                let armed = false;
+                let disarm = 0;
+                btn.setIcon('trash-2').setTooltip('Delete').onClick(async () => {
+                    if (!armed) {
+                        // First click arms the button; deleting needs a second click within a few seconds
+                        armed = true;
+                        btn.setIcon('check').setTooltip('Click again to delete');
+                        btn.extraSettingsEl.addClass('mod-warning');
+                        disarm = window.setTimeout(() => {
+                            armed = false;
+                            btn.setIcon('trash-2').setTooltip('Delete');
+                            btn.extraSettingsEl.removeClass('mod-warning');
+                        }, 4000);
+                        return;
+                    }
+                    window.clearTimeout(disarm);
+                    patterns.splice(patterns.indexOf(saved), 1);
+                    await this.plugin.saveSettings();
+                    this.plugin.refreshGalleries('none');
+                    this.update();
+                });
+            });
+        }
+
+        new Setting(listEl)
+            .setClass('gallery-provider-add')
+            .addButton(btn => btn
+                .setButtonText('New pattern')
+                .onClick(() => new MosaicBuilderModal(this.app, this.plugin, { onSaved: reopen }).open())
+            );
     }
 
     /** Card state is keyed by position, so drop a provider's state when its list changes */

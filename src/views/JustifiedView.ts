@@ -45,7 +45,7 @@ export class JustifiedView extends AspectLayoutView {
 
     const targetHeight = JustifiedView.targetRowHeight(
       this.readCssNumber('--gallery-justified-row-height', JustifiedView.ROW_HEIGHT), width);
-    const gap = this.readCssNumber('--gallery-justified-gap', JustifiedView.GAP);
+    const gap = this.readCssNumber('--gallery-justified-gap', JustifiedView.GAP, true);
     const rows = JustifiedView.buildRows(this.tiles, width, targetHeight, gap);
 
     this.rows = this.syncContainers(this.rows, rows.length, 'gallery-justified-row');

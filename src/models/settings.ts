@@ -1,4 +1,5 @@
 import { IImmichConnection, INextcloudConnection } from './interfaces';
+import type { SavedMosaicPattern } from './mosaicPattern';
 import type { PaginationPosition } from './viewOptions';
 
 /**
@@ -30,6 +31,8 @@ export interface GalleryPluginSettings {
     defaultPaginationPosition: PaginationPosition;
     immichConnections: IImmichConnection[];
     nextcloudConnections: INextcloudConnection[];
+    // Patterns made with "Build custom mosaic"; a mosaic gallery uses one by name
+    mosaicPatterns: SavedMosaicPattern[];
 }
 
 export const DEFAULT_SETTINGS: GalleryPluginSettings = {
@@ -48,5 +51,6 @@ export const DEFAULT_SETTINGS: GalleryPluginSettings = {
     defaultItemsPerPage: 24,
     defaultPaginationPosition: 'bottom',
     immichConnections: [],
-    nextcloudConnections: []
+    nextcloudConnections: [],
+    mosaicPatterns: []
 };

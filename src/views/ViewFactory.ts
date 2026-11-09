@@ -5,6 +5,7 @@ import { ThumbnailView } from './ThumbnailView';
 import { CarouselView } from './CarouselView';
 import { MasonryView } from './MasonryView';
 import { JustifiedView } from './JustifiedView';
+import { MosaicView } from './MosaicView';
 import { EmbedView } from './EmbedView';
 
 /**
@@ -32,6 +33,7 @@ export class ViewFactory implements IViewFactory {
         // Masonry (also used for the legacy `grid` name) and justified rows
         this.viewTypes.set('masonry', MasonryView);
         this.viewTypes.set('justified', JustifiedView);
+        this.viewTypes.set('mosaic', MosaicView);
 
         // Register EmbedView (continuous, borderless, native-embed feel)
         this.viewTypes.set('embed', EmbedView);
@@ -182,6 +184,11 @@ export class ViewFactory implements IViewFactory {
                 name: 'Justified',
                 description: 'Rows of equal height that fill the width, like Immich or Google Photos',
                 features: ['Justified rows', 'Uncropped images', 'Preserve aspect ratios', 'Responsive rows']
+            },
+            mosaic: {
+                name: 'Mosaic',
+                description: 'Square tiles with a repeating pattern of large ones, in reading order',
+                features: ['Large and small tiles', 'Custom patterns', 'Cropped to fill', 'Reading order kept']
             },
             embed: {
                 name: 'Embed',

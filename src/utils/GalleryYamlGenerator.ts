@@ -3,7 +3,7 @@ import { VIEW_OPTIONS, ViewBlockOptions } from '../models/viewOptions';
 import { resolveViewType } from '../models/viewTypes';
 
 /** Order the view options are written in */
-const VIEW_OPTION_ORDER: (keyof ViewBlockOptions)[] = ['captions', 'frame', 'rowHeight', 'columnWidth', 'height', 'gap', 'pagination', 'itemsPerPage', 'paginationPosition'];
+const VIEW_OPTION_ORDER: (keyof ViewBlockOptions)[] = ['captions', 'frame', 'rowHeight', 'columnWidth', 'height', 'pattern', 'fit', 'gap', 'pagination', 'itemsPerPage', 'paginationPosition'];
 
 export class GalleryYamlGenerator {
     static generateYaml(
@@ -228,7 +228,8 @@ export class GalleryYamlGenerator {
             // Pagination is off unless turned on, and itemsPerPage only matters with it on
             if (key === 'pagination' && !value) continue;
             if ((key === 'itemsPerPage' || key === 'paginationPosition') && !viewOptions.pagination) continue;
-            yaml += `  ${key}: ${value}\n`;
+            // A pattern is text; quoting keeps its `/` and spaces as written (JSON strings are valid YAML)
+            yaml += `  ${key}: ${key === 'pattern' ? JSON.stringify(value) : value}\n`;
         }
         yaml += '```\n';
 

@@ -29,7 +29,7 @@ export class MasonryView extends AspectLayoutView {
 
   protected layout(width: number): void {
     const minColumnWidth = this.readCssNumber('--gallery-masonry-column-width', MasonryView.COLUMN_WIDTH);
-    const gap = this.readCssNumber('--gallery-masonry-gap', MasonryView.GAP);
+    const gap = this.readCssNumber('--gallery-masonry-gap', MasonryView.GAP, true);
 
     const count = width > 0 ? Math.max(1, Math.floor((width + gap) / (minColumnWidth + gap))) : 1;
     const columnWidth = width > 0 ? (width - gap * (count - 1)) / count : minColumnWidth;

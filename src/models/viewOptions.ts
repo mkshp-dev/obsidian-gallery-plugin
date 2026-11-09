@@ -2,6 +2,10 @@ import { VIEW_TYPES, ViewType, resolveViewType } from './viewTypes';
 
 export type PaginationPosition = 'top' | 'bottom';
 
+/** Mosaic: crop each image to fill its tile, or show it whole over a blurred copy of itself */
+export type MosaicFit = 'crop' | 'contain';
+export const MOSAIC_FITS: readonly MosaicFit[] = ['crop', 'contain'];
+
 /** Options a gallery block can set under `view:`, besides `type` */
 export interface ViewBlockOptions {
     pagination?: boolean;
@@ -16,8 +20,12 @@ export interface ViewBlockOptions {
     rowHeight?: number;
     /** Masonry: minimum column width in px */
     columnWidth?: number;
-    /** Masonry and justified: space between images in px */
+    /** Masonry, justified and mosaic: space between images in px */
     gap?: number;
+    /** Mosaic: the name of a pattern saved with "Build custom mosaic" */
+    pattern?: string;
+    /** Mosaic: crop images to fill their tiles (default) or show them whole */
+    fit?: MosaicFit;
     /** Carousel: stage height in px */
     height?: number;
 }
@@ -44,6 +52,16 @@ const isNumberIn = (key: string, min: number, max: number, integer = false) => (
         ? undefined
         : `view.${key} must be ${integer ? 'a whole number' : 'a number'} from ${min} to ${max}`;
 
+/**
+ * A mosaic pattern is the name of a saved pattern. Whether it is saved is checked when the gallery
+ * renders, since the parser has no settings (an unknown name falls back with a warning).
+ */
+function checkPattern(value: unknown): string | undefined {
+    return typeof value === 'string' && value.trim() !== ''
+        ? undefined
+        : 'view.pattern must be the name of a pattern saved with the "Build custom mosaic" command';
+}
+
 /** Every `view:` option, the views it applies to, and how its value is checked */
 export const VIEW_OPTIONS: Record<OptionKey, OptionSpec> = {
     pagination: { views: PAGED_VIEWS, check: isBoolean('pagination') },
@@ -54,7 +72,9 @@ export const VIEW_OPTIONS: Record<OptionKey, OptionSpec> = {
     frame: { views: VIEW_TYPES.filter(v => v !== 'embed'), check: isBoolean('frame') },
     rowHeight: { views: ['justified'], check: isNumberIn('rowHeight', 40, 1000) },
     columnWidth: { views: ['masonry'], check: isNumberIn('columnWidth', 60, 1000) },
-    gap: { views: ['masonry', 'justified'], check: isNumberIn('gap', 0, 64) },
+    gap: { views: ['masonry', 'justified', 'mosaic'], check: isNumberIn('gap', 0, 64) },
+    pattern: { views: ['mosaic'], check: checkPattern },
+    fit: { views: ['mosaic'], check: isOneOf('fit', MOSAIC_FITS) },
     height: { views: ['carousel'], check: isNumberIn('height', 120, 1500) }
 };
 

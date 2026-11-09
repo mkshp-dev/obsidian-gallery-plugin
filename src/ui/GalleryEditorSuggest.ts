@@ -104,7 +104,17 @@ export class GalleryEditorSuggest extends EditorSuggest<SuggestionItem> {
             };
         }
 
-        // 5. sort.order
+        // 5. Mosaic: pattern (saved pattern names) and fit
+        const matchMosaic = prefix.match(/(?:^|\s)(pattern|fit):\s*(.*)/);
+        if (matchMosaic) {
+            return {
+                start: { line: cursor.line, ch: prefix.length - matchMosaic[2].length },
+                end: cursor,
+                query: JSON.stringify({ field: matchMosaic[1], text: matchMosaic[2].replace(/^"/, '') })
+            };
+        }
+
+        // 6. sort.order
         const matchSortOrder = prefix.match(/order:\s*(.*)/);
         if (matchSortOrder) {
             return {
@@ -114,7 +124,7 @@ export class GalleryEditorSuggest extends EditorSuggest<SuggestionItem> {
             };
         }
 
-        // 6. view type
+        // 7. view type
         const matchViewType = prefix.match(/view:\s*(.*)/);
         if (matchViewType) {
             return {
@@ -168,6 +178,18 @@ export class GalleryEditorSuggest extends EditorSuggest<SuggestionItem> {
                     suggestions.push({ label: o, value: o });
                 }
             }
+        } else if (field === 'pattern') {
+            for (const p of this.plugin.settings.mosaicPatterns || []) {
+                if (p.name.toLowerCase().includes(textLower)) {
+                    suggestions.push({ label: p.name, value: p.name, description: `${p.columns} × ${p.rows} grid, ${p.slots.length} tiles` });
+                }
+            }
+        } else if (field === 'fit') {
+            const fits: SuggestionItem[] = [
+                { label: 'crop', value: 'crop', description: 'Fill each tile, cutting off the edges (default)' },
+                { label: 'contain', value: 'contain', description: 'Show the whole image over a blurred copy' }
+            ];
+            suggestions.push(...fits.filter(f => f.value.includes(textLower)));
         } else if (field === 'view') {
             // Suggest only current view types; the legacy `grid` alias still works but is not offered
             for (const v of VIEW_TYPES) {

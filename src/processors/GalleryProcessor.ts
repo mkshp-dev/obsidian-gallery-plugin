@@ -8,6 +8,7 @@ import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { resolveViewType } from '../models/viewTypes';
 import { readViewOptions, PaginationPosition } from '../models/viewOptions';
+import { resolvePatternOption, SavedMosaicPattern } from '../models/mosaicPattern';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
@@ -41,6 +42,8 @@ export interface IGalleryProcessingOptions {
         pagination?: boolean;
         itemsPerPage?: number;
         paginationPosition?: PaginationPosition;
+        // Mosaic patterns saved with "Build custom mosaic", which view.pattern names
+        mosaicPatterns?: SavedMosaicPattern[];
 }
 
 /** The processing options with every setting filled in; the menu callback is only there for a block rendered in a note */
@@ -119,6 +122,7 @@ export class GalleryProcessor {
         ,pagination: false
         ,itemsPerPage: 24
         ,paginationPosition: 'bottom'
+        ,mosaicPatterns: []
     };
 
     constructor(
@@ -657,7 +661,9 @@ export class GalleryProcessor {
         const { options: block, warnings: viewWarnings } = readViewOptions(config.view);
         // Photos and videos left out for their format get one line under the gallery
         const skippedNote = skippedFilesNote(skipped);
-        const warnings = skippedNote ? [...viewWarnings, skippedNote] : viewWarnings;
+        // A pattern name is looked up in the saved patterns; an unknown one falls back to the built-in pattern
+        const pattern = resolvePatternOption(block.pattern, settings.mosaicPatterns);
+        const warnings = [...viewWarnings, ...(pattern.warning ? [pattern.warning] : []), ...(skippedNote ? [skippedNote] : [])];
         return {
             remoteLoadTimeoutMs: settings.timeoutMs,
             allowRemoteImages: settings.allowRemoteImages,
@@ -673,6 +679,8 @@ export class GalleryProcessor {
             columnWidth: block.columnWidth,
             gap: block.gap,
             height: block.height,
+            pattern: pattern.pattern,
+            fit: block.fit,
             ...(settings.onImageMenu ? { onImageMenu: settings.onImageMenu } : {}),
             warnings: settings.errorDisplayMode === 'hidden' ? [] : warnings
         };

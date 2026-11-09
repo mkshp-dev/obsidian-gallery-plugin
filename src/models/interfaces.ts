@@ -5,7 +5,8 @@
 import type { MediaType } from './media';
 
 import type { ViewType, ViewTypeName } from './viewTypes';
-import type { PaginationPosition } from './viewOptions';
+import type { MosaicFit, PaginationPosition } from './viewOptions';
+import type { MosaicPattern } from './mosaicPattern';
 
 export interface ILocalSourceConfig {
   type: 'local';
@@ -281,12 +282,16 @@ export interface ViewRuntimeOptions {
   rowHeight?: number;
   /** Masonry: minimum column width in px */
   columnWidth?: number;
-  /** Masonry and justified: space between images in px */
+  /** Masonry, justified and mosaic: space between images in px */
   gap?: number;
   /** Carousel: stage height in px */
   height?: number;
   /** Called on right-click of a gallery tile; shows the file menu and cancels the default one when it handles it */
   onImageMenu?: (image: IImageSource, event: MouseEvent) => void;
+  /** Mosaic: the saved pattern the block names (the built-in pattern when unset) */
+  pattern?: MosaicPattern;
+  /** Mosaic: crop images to fill their tiles (default) or show them whole */
+  fit?: MosaicFit;
   /** Notes shown under the gallery, e.g. ignored view options */
   warnings?: string[];
 }

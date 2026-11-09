@@ -13,7 +13,8 @@ export interface LayoutTile {
 }
 
 /**
- * Base for views that place tiles by each image's aspect ratio (masonry, justified).
+ * Base for tile views laid out in JS: masonry and justified place tiles by each image's aspect
+ * ratio, and mosaic places them by a repeating pattern.
  *
  * A tile's ratio comes from the image's metadata when its source provides it (Immich), from the
  * loaded image once it has loaded, and from DEFAULT_RATIO until then. The subclass layout runs
@@ -147,15 +148,29 @@ export abstract class AspectLayoutView extends GalleryView {
     } else {
       imgEl.addEventListener('load', () => {
         this.updateRatioFromImage(tile, imgEl);
+        this.onTileImageLoad(tile, imgEl);
         this.handleImageLoad(image);
       });
       imgEl.addEventListener('error', () => this.handleImageError(image, new Error('Failed to load')));
 
-      this.loader?.observe(imgEl, () => this.resolveImageUrl(image), (error) => this.handleImageError(image, error));
+      this.loader?.observe(imgEl, () => this.resolveTileUrl(tile), (error) => this.handleImageError(image, error));
     }
 
     this.renderCaption(el, image);
     return tile;
+  }
+
+  /** Called each time a tile's image loads (including after a retry); for views that style tiles from the image */
+  protected onTileImageLoad(_tile: LayoutTile, _imgEl: HTMLImageElement): void {
+    // Nothing by default
+  }
+
+  /**
+   * The URL a tile's image loads. Called when the tile nears the viewport, which is after the
+   * first layout, so a view can pick a size from where the layout placed the tile.
+   */
+  protected resolveTileUrl(tile: LayoutTile): Promise<string> {
+    return this.resolveImageUrl(tile.image);
   }
 
   private knownRatio(image: IImageSource): number {
@@ -223,11 +238,14 @@ export abstract class AspectLayoutView extends GalleryView {
     return Math.max(0, root.clientWidth - padding);
   }
 
-  /** A numeric CSS custom property (in px) on the layout root, so themes and snippets can tune it */
-  protected readCssNumber(name: string, fallback: number): number {
+  /**
+   * A numeric CSS custom property (in px) on the layout root, so themes and snippets can tune it.
+   * `allowZero` is for gaps, where 0 is a real value rather than a missing one.
+   */
+  protected readCssNumber(name: string, fallback: number, allowZero = false): number {
     if (!this.root) return fallback;
     const value = parseFloat(getComputedStyle(this.root).getPropertyValue(name));
-    return Number.isFinite(value) && value > 0 ? value : fallback;
+    return Number.isFinite(value) && (value > 0 || (allowZero && value === 0)) ? value : fallback;
   }
 
   /** Grow or shrink the root's column/row elements in `existing` to `count`, reusing the ones already there */

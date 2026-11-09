@@ -428,7 +428,9 @@ view:
   itemsPerPage: 2
 \`\`\`
 
-Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination** — the per-gallery \`pagination\`/\`itemsPerPage\` keys shown above override that default.
+Add \`paginationPosition: top\` to put the Prev/Next controls above the gallery instead of below it, so they stay in place as pages change height.
+
+Pagination can also be turned on for every gallery by default in **Settings → Gallery View → Pagination**, which also sets where the controls sit — the per-gallery \`pagination\`, \`itemsPerPage\` and \`paginationPosition\` keys override those defaults.
 
 ---
 

@@ -203,7 +203,8 @@ describe('Immich videos', () => {
         await expect(video.resolveVideoUrl!()).resolves.toBe('blob:v1:video');
         expect(photo.mediaType).toBe('image');
         expect(photo.durationSeconds).toBeUndefined();
-        expect(photo.openUrl).toBeUndefined();
+        // Photos link to their Immich page too, for the right-click menu
+        expect(photo.openUrl).toBe('https://immich.example.com/photos/p1');
         await expect(photo.resolveDisplayUrl!()).resolves.toBe('blob:p1:original');
 
         // Tile views keep the small thumbnail

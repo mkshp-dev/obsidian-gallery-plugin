@@ -246,10 +246,12 @@ export class ImmichSourceResolver implements GallerySourceResolver<IImmichSource
                     // Tile views load small thumbnails; the image viewer uses the preview size instead
                     if (shown === 'thumbnail') image.setLargeLoader(() => client.getAssetBlobUrl(assetId, 'preview'));
                     image.size = extractImmichFileSize(asset);
+                    // The asset's page in Immich: the right-click menu links to it, and the viewer
+                    // offers it for a video it won't download
+                    image.openUrl = client.getAssetWebUrl(assetId);
                     if (isVideo) {
                         image.setMediaType('video', () => client.getAssetBlobUrl(assetId, 'video'));
                         image.durationSeconds = extractImmichDuration(asset);
-                        image.openUrl = client.getAssetWebUrl(assetId);
                     }
                     image.dimensions = extractImmichDimensions(asset);
                     image.metadata = metadata;

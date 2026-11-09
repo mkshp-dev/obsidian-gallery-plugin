@@ -244,6 +244,8 @@ export class NextcloudShareSourceResolver implements GallerySourceResolver<INext
                             const image = new ImageSource(logicalPath, 'nextcloud-share', file.name, undefined, undefined, loader);
                             image.size = file.size || undefined;
                             image.mtime = parseHttpDate(file.lastModified);
+                            // The share itself, as for videos: a public share has no page per file
+                            image.openUrl = source.url;
                             images.push(image);
                         } catch (e) {
                             Logger.warn(`Failed to resolve file ${file.href} for Nextcloud share: ${e instanceof Error ? e.message : String(e)}`);

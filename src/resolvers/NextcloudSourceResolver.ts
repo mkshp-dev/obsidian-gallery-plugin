@@ -131,6 +131,8 @@ export class NextcloudSourceResolver implements GallerySourceResolver<INextcloud
                     if (representation === 'thumbnail') image.setLargeLoader(() => client.getFileBlobUrl(file.path, 'large', file.fileId));
                     image.size = file.size || undefined;
                     image.mtime = parseHttpDate(file.lastModified);
+                    // The file in Nextcloud's web interface, for the right-click menu
+                    if (file.fileId) image.openUrl = client.getFileWebUrl(file.fileId);
                     images.push(image);
                 } catch (e) {
                     Logger.warn(`Failed to resolve file ${file.path} for Nextcloud source: ${e instanceof Error ? e.message : String(e)}`);

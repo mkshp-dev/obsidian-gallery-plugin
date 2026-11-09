@@ -4,6 +4,7 @@ import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import { formatDuration, isSvgPath } from '../models/media';
 import type { ViewType } from '../models/viewTypes';
+import { sourceServiceName } from '../models/sourceLinks';
 import type { PaginationPosition } from '../models/viewOptions';
 
 /**
@@ -1184,7 +1185,7 @@ export abstract class GalleryView implements IGalleryView {
             this.createElement(videoNotice, 'div', { cls: 'gallery-modal-video-notice-text', text: message });
             if (srcImage.openUrl) {
                 const openUrl = srcImage.openUrl;
-                const service = srcImage.type.startsWith('nextcloud') ? 'Nextcloud' : srcImage.type.startsWith('immich') ? 'Immich' : '';
+                const service = sourceServiceName(srcImage.type);
                 const link = this.createElement(videoNotice, 'button', { cls: 'gallery-modal-video-notice-btn', text: service ? `Open in ${service}` : 'Open' });
                 link.addEventListener('click', (e: MouseEvent) => {
                     e.stopPropagation();

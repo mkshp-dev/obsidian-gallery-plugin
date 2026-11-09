@@ -1,4 +1,5 @@
 import GalleryPlugin from '../../src/main';
+import { Notice } from 'obsidian';
 import { ImageSource } from '../../src/models/ImageSource';
 import { MasonryView } from '../../src/views/MasonryView';
 import { JustifiedView } from '../../src/views/JustifiedView';
@@ -49,6 +50,7 @@ describe('showImageMenu', () => {
         const fileManager: any = { promptForDeletion: jest.fn() };
         if (opts.rename !== false) fileManager.promptForFileRename = jest.fn();
         const plugin: any = {
+            showRemoteImageMenu: (GalleryPlugin.prototype as any).showRemoteImageMenu,
             app: {
                 vault: { getFileByPath: jest.fn((p: string) => ('file' in opts ? opts.file : p === file.path ? file : null)) },
                 workspace: { getLeaf, trigger },
@@ -107,10 +109,53 @@ describe('showImageMenu', () => {
         expect(titles()).toEqual(['Open in new tab', 'Open in new window', 'Copy path', 'Delete']);
     });
 
-    test('photos without a vault file keep the default menu', () => {
+    test('a vault path with no file behind it keeps the default menu', () => {
         const { show } = setup();
-        expect(show(remote() as ImageSource).event.defaultPrevented).toBe(false);
         expect(show(local('missing.jpg')).event.defaultPrevented).toBe(false);
+        expect(menus).toHaveLength(0);
+    });
+
+    test('photos from Immich and Nextcloud link to their page there', () => {
+        const { show } = setup();
+        const immich = new ImageSource('immich://home/search/asset/a1', 'immich', 'a1');
+        immich.openUrl = 'https://immich.example.com/photos/a1';
+        const { event, stop } = show(immich);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(stop).toHaveBeenCalled();
+        expect(titles()).toEqual(['Open in Immich', 'Copy link']);
+        expect(menus[0].shownAt).toBe(event);
+
+        const nextcloud = new ImageSource('nextcloud://home/a.jpg', 'nextcloud-share', 'a.jpg');
+        nextcloud.openUrl = 'https://cloud.example.com/s/TOKEN';
+        menus.length = 0;
+        show(nextcloud);
+        expect(titles()).toEqual(['Open in Nextcloud', 'Copy link']);
+    });
+
+    test('external photos open their URL in the browser and copy it', async () => {
+        const { show } = setup();
+        const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+        const writeText = jest.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+        show(remote() as ImageSource);
+        const click = (title: string) => menus[0].items.find((i: any) => i.title === title).click();
+
+        expect(titles()).toEqual(['Open in browser', 'Copy link']);
+        click('Open in browser');
+        expect(open).toHaveBeenCalledWith('https://example.com/a.jpg', '_blank');
+        click('Copy link');
+        expect(writeText).toHaveBeenCalledWith('https://example.com/a.jpg');
+        await Promise.resolve();
+        expect(Notice).toHaveBeenCalledWith('Link copied');
+        open.mockRestore();
+    });
+
+    test('a remote photo with no page to link to keeps the default menu', () => {
+        const { show } = setup();
+        // A Nextcloud file the server gave no file id for
+        const { event } = show(new ImageSource('nextcloud://home/a.jpg', 'nextcloud', 'a.jpg'));
+        expect(event.defaultPrevented).toBe(false);
         expect(menus).toHaveLength(0);
     });
 });

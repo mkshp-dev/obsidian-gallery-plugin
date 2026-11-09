@@ -236,7 +236,7 @@ export interface IImageSource {
   /** Call `listener` with the video's length once it is known (straight away if it already is) */
   onDurationKnown?(listener: (seconds: number) => void): void;
 
-  /** Web page showing the item at its source (Immich), offered when the viewer won't play it */
+  /** Web page showing the item at its source (Immich, Nextcloud), linked from the right-click menu and offered when the viewer won't play a video */
   openUrl?: string;
 
   /** Get a URL the image viewer can play, fetching the video first for remote sources */

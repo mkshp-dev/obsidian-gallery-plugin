@@ -122,6 +122,35 @@ describe('Nextcloud connection videos', () => {
         expect(capture).toHaveBeenCalledWith('nextcloud:cloud:/Clips/trip.mp4', expect.any(Function), 5000);
         expect(video.durationSeconds).toBe(9);
     });
+
+    test('photos link to their file in Nextcloud too, when the server gives a file id', async () => {
+        request.mockImplementation(async (req: { url: string; method: string }) => {
+            if (req.method === 'PROPFIND') return { status: 207, text: listing([
+                { href: '/remote.php/dav/files/me/Pics/', folder: true },
+                { href: '/remote.php/dav/files/me/Pics/a.jpg', type: 'image/jpeg', size: 100, id: '7' },
+                { href: '/remote.php/dav/files/me/Pics/b.jpg', type: 'image/jpeg', size: 100 }
+            ]) };
+            return ok('image/jpeg');
+        });
+        const { images } = await new NextcloudSourceResolver(() => [connection]).resolve(
+            { type: 'nextcloud', connection: 'cloud', path: '/Pics' } as any, { viewType: 'masonry' });
+        expect(images.map(i => i.openUrl)).toEqual(['https://cloud.example.com/index.php/f/7', undefined]);
+    });
+});
+
+describe('Nextcloud share photos', () => {
+    test('link to the share, as videos do', async () => {
+        request.mockImplementation(async (req: { url: string; method: string }) => {
+            if (req.method === 'PROPFIND') return { status: 207, text: listing([
+                { href: '/public.php/webdav/', folder: true },
+                { href: '/public.php/webdav/a.jpg', type: 'image/jpeg', size: 100 }
+            ]) };
+            return ok('image/jpeg');
+        });
+        const { images } = await new NextcloudShareSourceResolver().resolve(
+            { type: 'nextcloud-share', url: 'https://cloud.example.com/s/TOKEN', recursive: false } as any, { viewType: 'masonry' });
+        expect(images[0].openUrl).toBe('https://cloud.example.com/s/TOKEN');
+    });
 });
 
 describe('VideoPoster.captureDownloaded', () => {

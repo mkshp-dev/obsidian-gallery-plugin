@@ -829,15 +829,18 @@ export abstract class GalleryView implements IGalleryView {
 
         // Info / Metadata drawer
         const infoPanel = this.createElement(viewerArea, 'div', { cls: 'gallery-modal-info-panel' });
+        // The panel's width animates; the text lives in a box of fixed width inside it, so it
+        // slides with the panel's edge instead of being re-wrapped on every frame
+        const infoContent = this.createElement(infoPanel, 'div', { cls: 'gallery-modal-info-content' });
 
         // Populate metadata function
         const updateInfoPanel = (srcImage: IImageSource) => {
-            this.emptyElement(infoPanel);
+            this.emptyElement(infoContent);
 
-            const title = this.createElement(infoPanel, 'h3', { text: srcImage.displayName || 'Gallery Image' });
+            const title = this.createElement(infoContent, 'h3', { text: srcImage.displayName || 'Gallery Image' });
             title.className = 'info-title';
 
-            const grid = this.createElement(infoPanel, 'div', { cls: 'info-grid' });
+            const grid = this.createElement(infoContent, 'div', { cls: 'info-grid' });
 
             const addRow = (label: string, val: string) => {
                 const row = this.createElement(grid, 'div', { cls: 'info-row' });

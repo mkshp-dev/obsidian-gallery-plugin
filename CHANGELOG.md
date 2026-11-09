@@ -3,6 +3,9 @@
 ## In-progress
 
 - **Right-click menu for vault photos**: Right-clicking a photo or video from the vault, in any view or in the image viewer, now opens Obsidian's file menu: open in a new tab or to the right, rename and delete, plus what core plugins and other plugins add for files (open in a new window, copy path, reveal in navigation, open in default app, and so on). Photos from Immich, Nextcloud and external URLs keep the default menu.
+
+## 2.7.0 - 2026-11-03
+
 - **Skipped files are mentioned**: A gallery that left out photos or videos in formats it can't show (HEIC, TIFF, BMP, camera RAW, AVI, MKV and similar) now says so in one line under it, such as "3 files weren't shown: HEIC and RAW aren't supported." A folder with only such files says it after **No images found**. This covers vault folders, Nextcloud and Nextcloud share links; notes and other documents are still skipped silently, files left out by `filenameFilter` or `mimeTypes` aren't counted, and **Error messages: Hide** hides the line.
 - **AVIF and SVG**: Galleries now show `.avif` and `.svg` files, from the vault, Nextcloud (`image/avif`, `image/svg+xml`), Immich and external URLs. SVGs are drawn as images (scripts inside don't run), keep the shape of their `viewBox` when they have no width and height, and fill the image viewer instead of showing at icon size. The local test lab has an AVIF and two SVG samples.
 - **Videos**: Galleries now include videos: `.mp4`, `.m4v`, `.webm`, `.mov` and `.ogv` files from the vault, videos from Immich, Nextcloud and their share links, and external video URLs. In every view a video shows a still frame with a play icon and its length; click it to play the video in the image viewer, with the player's controls. The slideshow lets a video play to the end. Immich videos use Immich's playback version, and Immich and Nextcloud videos are downloaded only when you open them. Nextcloud tiles use the server's video preview; without one, a video up to 50 MB is downloaded once for its still frame (not on phones or tablets), and larger ones show a placeholder. Nextcloud doesn't report a video's length, so the tile shows it once the video has been played. Nextcloud's `mimeTypes` filter now accepts video types and `image/*` / `video/*`. External videos (URLs ending in a video extension, or marked `video: true`) stream straight into the player at any size, and only load once **Allow remote images** is on; their still frame is read from the site when it allows it (CORS), otherwise a video up to 50 MB is downloaded once for it. **Validate remote content type** accepts `video/` types for videos.
@@ -12,6 +15,7 @@
 
 - **Photo details in the viewer**: The image viewer's **Details** panel now also shows when a photo was taken, the camera and the lens. For local images they are read from the photo's EXIF data (JPEG, PNG and WebP), only when you open the panel; Immich photos use the EXIF data Immich already sends. Details a photo doesn't have are left out, and a photo whose EXIF can't be read shows the panel as before.
 - **Slideshow interval**: New **Slideshow interval (seconds)** setting (Settings → Image viewer) sets how long the slideshow shows each image, from 1 to 60 seconds. It is still 4 seconds by default.
+
 
 ## 2.6.4 - 2026-10-31
 

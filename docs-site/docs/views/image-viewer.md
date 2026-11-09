@@ -49,7 +49,7 @@ Leaving a video stops it. An Immich or Nextcloud video is downloaded when you op
 
 ## Right-click menu
 
-Right-click a photo or video from your vault (or long-press on a touch screen) in any view, or in the image viewer, for Obsidian's usual file menu: **Open in new tab**, **Open to the right**, **Rename** and **Delete**, plus the items Obsidian's core plugins and other plugins add for files, such as **Open in new window**, **Copy path**, **Reveal file in navigation** and **Open in default app**. Photos from Immich, Nextcloud and external URLs aren't vault files, so they keep the default menu.
+Right-click a photo or video from your vault in any view for Obsidian's usual file menu: **Open in new tab**, **Open to the right**, **Rename** and **Delete**, plus the items Obsidian's core plugins and other plugins add for files, such as **Open in new window**, **Copy path**, **Reveal file in navigation** and **Open in default app**. Photos from Immich, Nextcloud and external URLs aren't vault files, so they keep the default menu. The menu isn't available inside the image viewer itself: close the viewer and right-click the photo in the gallery.
 
 ## Captions
 

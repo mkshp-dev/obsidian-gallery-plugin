@@ -145,7 +145,11 @@ export abstract class GalleryView implements IGalleryView {
         }
     }
 
-    /** Give a tile (or any element showing the image) the file menu on right-click and long-press */
+    /**
+     * Give a gallery tile the file menu on right-click. Not used in the image viewer: the viewer
+     * sits above Obsidian's menu and modal layers, so the menu and its Rename/Delete prompts would
+     * open hidden behind it.
+     */
     protected attachImageMenu(el: HTMLElement, image: IImageSource): void {
         el.addEventListener('contextmenu', (e: MouseEvent) => this.onImageMenu?.(image, e));
     }
@@ -783,8 +787,6 @@ export abstract class GalleryView implements IGalleryView {
 
         // Image container & Zoom track
         const imgContainer = this.createElement(viewerArea, 'div', { cls: 'gallery-modal-image-container gallery-modal-image' });
-        // The menu is for whichever image the viewer is showing now
-        imgContainer.addEventListener('contextmenu', (e: MouseEvent) => this.onImageMenu?.(currentImage, e));
         const img = this.createElement(imgContainer, 'img', {
             attr: { 'alt': image.displayName }
         }) as HTMLImageElement;

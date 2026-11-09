@@ -160,7 +160,7 @@ describe('views call the image menu on right-click', () => {
         expect(onImageMenu).toHaveBeenCalledTimes(1);
     });
 
-    test('the viewer opens it for the image on screen, as that changes', () => {
+    test('the image viewer has no file menu, since it would open hidden behind the viewer', () => {
         const view = new MasonryView(container());
         const onImageMenu = jest.fn();
         view.setOptions({ onImageMenu });
@@ -168,12 +168,8 @@ describe('views call the image menu on right-click', () => {
         view.update(images);
         (view as any).expandImage(images[0]);
 
-        const stage = () => document.querySelector('.gallery-modal-image-container')!;
-        rightClick(stage());
-        expect(onImageMenu.mock.calls[0][0]).toBe(images[0]);
-
-        (document.querySelector('.gallery-modal-nav.next') as HTMLButtonElement).click();
-        rightClick(stage());
-        expect(onImageMenu.mock.calls[1][0]).toBe(images[1]);
+        const event = rightClick(document.querySelector('.gallery-modal-image-container')!);
+        expect(onImageMenu).not.toHaveBeenCalled();
+        expect(event.defaultPrevented).toBe(false);
     });
 });

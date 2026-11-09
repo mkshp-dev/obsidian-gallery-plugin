@@ -285,7 +285,7 @@ export interface ViewRuntimeOptions {
   gap?: number;
   /** Carousel: stage height in px */
   height?: number;
-  /** Called on right-click (or long-press) of an image; shows the file menu and cancels the default one when it handles it */
+  /** Called on right-click of a gallery tile; shows the file menu and cancels the default one when it handles it */
   onImageMenu?: (image: IImageSource, event: MouseEvent) => void;
   /** Notes shown under the gallery, e.g. ignored view options */
   warnings?: string[];

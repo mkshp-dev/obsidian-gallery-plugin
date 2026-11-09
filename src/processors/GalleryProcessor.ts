@@ -7,7 +7,7 @@ import { GallerySourceResolveContext } from '../resolvers/GallerySourceResolver'
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { resolveViewType } from '../models/viewTypes';
-import { readViewOptions } from '../models/viewOptions';
+import { readViewOptions, PaginationPosition } from '../models/viewOptions';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
@@ -38,6 +38,7 @@ export interface IGalleryProcessingOptions {
         // Pagination defaults (overridable per-gallery via the view: config)
         pagination?: boolean;
         itemsPerPage?: number;
+        paginationPosition?: PaginationPosition;
 }
 
 export interface IGalleryRenderResult {
@@ -112,6 +113,7 @@ export class GalleryProcessor {
         ,showFrame: true
         ,pagination: false
         ,itemsPerPage: 24
+        ,paginationPosition: 'bottom'
     };
 
     constructor(
@@ -661,6 +663,7 @@ export class GalleryProcessor {
             maxRemoteVideoMb: settings.maxRemoteVideoMb,
             pagination: block.pagination ?? settings.pagination,
             itemsPerPage: block.itemsPerPage ?? settings.itemsPerPage,
+            paginationPosition: block.paginationPosition ?? settings.paginationPosition,
             rowHeight: block.rowHeight,
             columnWidth: block.columnWidth,
             gap: block.gap,

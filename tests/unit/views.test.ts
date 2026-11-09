@@ -302,6 +302,23 @@ describe('Gallery Views - Pagination', () => {
     expect(container.querySelector('.gallery-pagination-status').textContent).toBe('Page 1 of 3');
   });
 
+  test.each([
+    ['masonry', MasonryView], ['thumbnail', ThumbnailView], ['embed', EmbedView], ['justified', JustifiedView]
+  ] as const)('%s puts the page controls above the gallery when paginationPosition is top', (_name, ViewClass) => {
+    const place = (position?: 'top' | 'bottom') => {
+      const container = createMockContainer();
+      const view = new (ViewClass as any)(container as any);
+      view.setOptions({ pagination: true, itemsPerPage: 4, paginationPosition: position });
+      view.update(makeImages(10));
+      return Array.from(container.children as HTMLCollection).findIndex(c => c.classList.contains('gallery-pagination'));
+    };
+    const count = (() => { const c = createMockContainer(); const v = new (ViewClass as any)(c as any); v.setOptions({ pagination: true, itemsPerPage: 4 }); v.update(makeImages(10)); return c.children.length; })();
+
+    expect(place('top')).toBe(0);
+    expect(place('bottom')).toBe(count - 1);
+    expect(place(undefined)).toBe(count - 1);
+  });
+
   test('EmbedView also respects pagination', () => {
     const embedContainer = createMockContainer();
     const embedView = new EmbedView(embedContainer as any);

@@ -1,9 +1,13 @@
 import { VIEW_TYPES, ViewType, resolveViewType } from './viewTypes';
 
+export type PaginationPosition = 'top' | 'bottom';
+
 /** Options a gallery block can set under `view:`, besides `type` */
 export interface ViewBlockOptions {
     pagination?: boolean;
     itemsPerPage?: number;
+    /** Where the Prev/Next bar sits relative to the gallery (default: the setting, bottom) */
+    paginationPosition?: PaginationPosition;
     /** Overrides the "Show captions" setting for this gallery */
     captions?: boolean;
     /** Overrides the "Show gallery frame" setting for this gallery */
@@ -32,6 +36,9 @@ const PAGED_VIEWS = VIEW_TYPES.filter(v => v !== 'carousel');
 const isBoolean = (key: string) => (value: unknown) =>
     typeof value === 'boolean' ? undefined : `view.${key} must be true or false`;
 
+const isOneOf = (key: string, allowed: readonly string[]) => (value: unknown) =>
+    typeof value === 'string' && allowed.includes(value) ? undefined : `view.${key} must be ${allowed.map(a => `"${a}"`).join(' or ')}`;
+
 const isNumberIn = (key: string, min: number, max: number, integer = false) => (value: unknown) =>
     typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max && (!integer || Number.isInteger(value))
         ? undefined
@@ -41,6 +48,7 @@ const isNumberIn = (key: string, min: number, max: number, integer = false) => (
 export const VIEW_OPTIONS: Record<OptionKey, OptionSpec> = {
     pagination: { views: PAGED_VIEWS, check: isBoolean('pagination') },
     itemsPerPage: { views: PAGED_VIEWS, check: isNumberIn('itemsPerPage', 1, 10000, true) },
+    paginationPosition: { views: PAGED_VIEWS, check: isOneOf('paginationPosition', ['top', 'bottom']) },
     captions: { views: VIEW_TYPES, check: isBoolean('captions') },
     // The embed view never has a frame
     frame: { views: VIEW_TYPES.filter(v => v !== 'embed'), check: isBoolean('frame') },

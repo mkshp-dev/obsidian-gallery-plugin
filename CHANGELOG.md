@@ -2,6 +2,8 @@
 
 ## In-progress
 
+- **Page controls position**: The Prev/Next bar of a paged gallery can now sit above the gallery instead of below it, so it stays in place while the page below changes height. Set `paginationPosition: top` in a gallery's `view:` block (thumbnail, masonry, justified and embed), choose it in the **Insert gallery** builder, or change the default under Settings → Pagination → **Page controls position**. It is below the gallery by default, as before.
+
 ## 2.7.0 - 2026-11-03
 
 - **Skipped files are mentioned**: A gallery that left out photos or videos in formats it can't show (HEIC, TIFF, BMP, camera RAW, AVI, MKV and similar) now says so in one line under it, such as "3 files weren't shown: HEIC and RAW aren't supported." A folder with only such files says it after **No images found**. This covers vault folders, Nextcloud and Nextcloud share links; notes and other documents are still skipped silently, files left out by `filenameFilter` or `mimeTypes` aren't counted, and **Error messages: Hide** hides the line.

@@ -28,6 +28,7 @@ The General tab controls core plugin behavior and remote image handling.
 | Detached gallery grace period (ms) | 30000 | How long to keep a gallery alive in memory after its container is removed from the view. This is useful for preventing galleries from reloading their images constantly if you frequently toggle between reading and editing modes. |
 | Enable pagination by default | Off | Split every gallery into pages with Prev/Next buttons instead of one long scroll. A gallery can override this with `pagination` in its `view:` block (see [Gallery block syntax](./gallery-block-syntax.md#view)). |
 | Images per page | `24` | Images per page when pagination is on. A gallery can override this with `itemsPerPage`. |
+| Page controls position | Below the gallery | Show the Prev/Next controls above or below a paged gallery. Above, they stay where they are while the page below changes height. A gallery can override this with `paginationPosition`. |
 | Enable debug logging | Off | Write verbose debug logs (gallery rendering, refreshes, lifecycle events) to the developer console. Useful for troubleshooting. Errors and warnings are always logged. |
 
 ---

@@ -184,7 +184,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     {
                         name: 'Page controls position',
                         desc: 'Show the Prev/Next controls above or below a paged gallery. Above, they stay in place as pages change height.',
-                        control: { type: 'dropdown', key: 'paginationPosition', options: { bottom: 'Below the gallery', top: 'Above the gallery' }, defaultValue: DEFAULT_SETTINGS.paginationPosition }
+                        control: { type: 'dropdown', key: 'defaultPaginationPosition', options: { bottom: 'Below the gallery', top: 'Above the gallery' }, defaultValue: DEFAULT_SETTINGS.defaultPaginationPosition }
                     }
                 ]
             }

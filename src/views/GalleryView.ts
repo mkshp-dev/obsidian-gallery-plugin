@@ -4,6 +4,7 @@ import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import { formatDuration, isSvgPath } from '../models/media';
 import type { ViewType } from '../models/viewTypes';
+import type { PaginationPosition } from '../models/viewOptions';
 
 /**
  * Zoom factor for one wheel event in the image viewer: 1.25x per 100px of scroll (one mouse-wheel
@@ -51,7 +52,7 @@ export abstract class GalleryView implements IGalleryView {
     public paginationEnabled: boolean = false;
     public itemsPerPage: number = 24;
     /** Whether the Prev/Next bar sits above or below the gallery */
-    public paginationPosition: 'top' | 'bottom' = 'bottom';
+    public paginationPosition: PaginationPosition = 'bottom';
     protected currentPage: number = 1;
     /** Per-gallery layout sizes from the block's view: options (px); views that support them apply them */
     protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number; height?: number } = {};

@@ -5,6 +5,7 @@
 import type { MediaType } from './media';
 
 import type { ViewType, ViewTypeName } from './viewTypes';
+import type { PaginationPosition } from './viewOptions';
 
 export interface ILocalSourceConfig {
   type: 'local';
@@ -273,7 +274,7 @@ export interface ViewRuntimeOptions {
   pagination?: boolean;
   itemsPerPage?: number;
   /** Where the Prev/Next bar sits: above or below the gallery */
-  paginationPosition?: 'top' | 'bottom';
+  paginationPosition?: PaginationPosition;
   /** Draw the gallery's frame: border, background, shadow and padding */
   frame?: boolean;
   /** Justified: target row height in px */

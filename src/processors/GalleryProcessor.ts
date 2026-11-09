@@ -7,7 +7,7 @@ import { GallerySourceResolveContext } from '../resolvers/GallerySourceResolver'
 import { GalleryInstance } from '../models/GalleryInstance';
 import { ParameterParser } from './ParameterParser';
 import { resolveViewType } from '../models/viewTypes';
-import { readViewOptions } from '../models/viewOptions';
+import { readViewOptions, PaginationPosition } from '../models/viewOptions';
 import { ConfigValidator } from '../utils/ConfigValidator';
 import { ViewFactory } from '../views/ViewFactory';
 import { LoadingManager } from '../views/components/LoadingSpinner';
@@ -38,7 +38,7 @@ export interface IGalleryProcessingOptions {
         // Pagination defaults (overridable per-gallery via the view: config)
         pagination?: boolean;
         itemsPerPage?: number;
-        paginationPosition?: 'top' | 'bottom';
+        paginationPosition?: PaginationPosition;
 }
 
 export interface IGalleryRenderResult {

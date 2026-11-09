@@ -4,7 +4,7 @@ import { ISourceConfig, ILocalSourceConfig, INextcloudSourceConfig, INextcloudSh
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 import { NotePathResolver } from '../utils/NotePathResolver';
-import { VIEW_OPTIONS, ViewBlockOptions } from '../models/viewOptions';
+import { VIEW_OPTIONS, ViewBlockOptions, PaginationPosition } from '../models/viewOptions';
 import { resolveViewType } from '../models/viewTypes';
 
 /** A pixel-size view option: its field label, description and the default shown as a placeholder */
@@ -232,7 +232,7 @@ export class GalleryBuilderModal extends Modal {
                         .addOption('top', 'Above the gallery')
                         .setValue(this.viewOptions.paginationPosition ?? 'default')
                         .onChange(value => {
-                            this.viewOptions.paginationPosition = value === 'default' ? undefined : value as 'top' | 'bottom';
+                            this.viewOptions.paginationPosition = value === 'default' ? undefined : value as PaginationPosition;
                             this.refreshLivePreview();
                         })
                     );

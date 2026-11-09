@@ -1787,12 +1787,18 @@ button.gallery-modal-nav:focus-visible {
 body .modal-container .modal.gallery-builder-modal-container {
   width: 1040px;
   max-width: 92vw;
+  /* Obsidian pads the modal itself, and the modal is what scrolls. That padding would leave a strip
+     around the sticky footer (settings scrolling by underneath it, and the footer short of the
+     edges), so the content below pads itself instead. */
+  padding: 0;
 }
 
 body .modal-container .modal-content.gallery-builder-modal {
   width: 100%;
   max-width: none;
-  padding: 24px 28px;
+  /* No bottom padding: the sticky footer can't leave this box, so padding below it would leave a gap
+     under the footer and let it scroll the last few pixels. The footer pads itself. */
+  padding: 24px 28px 0;
 }
 
 /* Two-column layout: config on the left, generated code sticky on the right */

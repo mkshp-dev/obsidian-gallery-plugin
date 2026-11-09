@@ -44,7 +44,7 @@ Below the view type, the builder shows the [view options](./gallery-block-syntax
 | **Column width** | Masonry | Minimum column width in pixels (`columnWidth:`). |
 | **Carousel height** | Carousel | Height of the slide area in pixels (`height:`). |
 | **Gap** | Masonry, Justified | Space between images in pixels (`gap:`). |
-| **Enable pagination** | All but Carousel | Page through large collections with Prev/Next controls instead of lazy-loading everything into one continuous scroll. Once enabled, an **Images per page** field appears. |
+| **Enable pagination** | All but Carousel | Page through large collections with Prev/Next controls instead of lazy-loading everything into one continuous scroll. Once enabled, an **Images per page** field and a **Page controls** dropdown appear. **Page controls** puts the Prev/Next controls above or below the gallery, or leaves it to the **Page controls position** setting. |
 
 Sizes outside an option's range are left out of the block. Values are kept when you switch view types, so switching back restores them.
 

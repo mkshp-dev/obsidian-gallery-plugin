@@ -169,7 +169,7 @@ export class GallerySettingsTab extends PluginSettingTab {
             {
                 type: 'group',
                 heading: 'Pagination',
-                desc: 'Split large galleries into pages instead of lazy-loading everything in one continuous scroll. Can be overridden per-gallery via the "pagination" and "itemsPerPage" keys in the view: config.',
+                desc: 'Split large galleries into pages instead of lazy-loading everything in one continuous scroll. Can be overridden per-gallery via the "pagination", "itemsPerPage" and "paginationPosition" keys in the view: config.',
                 items: [
                     {
                         name: 'Enable pagination by default',
@@ -180,6 +180,11 @@ export class GallerySettingsTab extends PluginSettingTab {
                         name: 'Images per page',
                         desc: 'Number of images to display per page when pagination is enabled.',
                         control: { type: 'number', key: 'defaultItemsPerPage', defaultValue: DEFAULT_SETTINGS.defaultItemsPerPage, min: 1 }
+                    },
+                    {
+                        name: 'Page controls position',
+                        desc: 'Show the Prev/Next controls above or below a paged gallery. Above, they stay in place as pages change height.',
+                        control: { type: 'dropdown', key: 'defaultPaginationPosition', options: { bottom: 'Below the gallery', top: 'Above the gallery' }, defaultValue: DEFAULT_SETTINGS.defaultPaginationPosition }
                     }
                 ]
             }

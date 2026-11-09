@@ -4,6 +4,7 @@ import { setIcon } from 'obsidian';
 import { ErrorPlaceholder } from './components/ErrorPlaceholder';
 import { formatDuration, isSvgPath } from '../models/media';
 import type { ViewType } from '../models/viewTypes';
+import type { PaginationPosition } from '../models/viewOptions';
 
 /**
  * Zoom factor for one wheel event in the image viewer: 1.25x per 100px of scroll (one mouse-wheel
@@ -52,6 +53,8 @@ export abstract class GalleryView implements IGalleryView {
     protected onImageMenu: ((image: IImageSource, event: MouseEvent) => void) | null = null;
     public paginationEnabled: boolean = false;
     public itemsPerPage: number = 24;
+    /** Whether the Prev/Next bar sits above or below the gallery */
+    public paginationPosition: PaginationPosition = 'bottom';
     protected currentPage: number = 1;
     /** Per-gallery layout sizes from the block's view: options (px); views that support them apply them */
     protected layoutOptions: { rowHeight?: number; columnWidth?: number; gap?: number; height?: number } = {};
@@ -170,6 +173,7 @@ export abstract class GalleryView implements IGalleryView {
         if (typeof options.onImageMenu === 'function') this.onImageMenu = options.onImageMenu;
         if (typeof options.pagination === 'boolean') this.paginationEnabled = options.pagination;
         if (typeof options.itemsPerPage === 'number' && options.itemsPerPage > 0) this.itemsPerPage = Math.floor(options.itemsPerPage);
+        if (options.paginationPosition === 'top' || options.paginationPosition === 'bottom') this.paginationPosition = options.paginationPosition;
         // Passed together for each gallery, so a key that is present but undefined clears an earlier value
         if ('rowHeight' in options || 'columnWidth' in options || 'gap' in options || 'height' in options) {
             this.layoutOptions = { rowHeight: options.rowHeight, columnWidth: options.columnWidth, gap: options.gap, height: options.height };
@@ -241,6 +245,8 @@ export abstract class GalleryView implements IGalleryView {
         if (pages <= 1) return;
 
         const bar = this.createElement(parent, 'div', { cls: 'gallery-pagination' });
+        // Above the gallery the bar stays put while the page below it changes height
+        if (this.paginationPosition === 'top') parent.prepend(bar);
 
         const prevBtn = this.createElement(bar, 'button', {
             cls: 'gallery-pagination-btn gallery-pagination-prev',

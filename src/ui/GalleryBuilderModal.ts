@@ -4,7 +4,7 @@ import { ISourceConfig, ILocalSourceConfig, INextcloudSourceConfig, INextcloudSh
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { GalleryYamlGenerator } from '../utils/GalleryYamlGenerator';
 import { NotePathResolver } from '../utils/NotePathResolver';
-import { VIEW_OPTIONS, ViewBlockOptions } from '../models/viewOptions';
+import { VIEW_OPTIONS, ViewBlockOptions, PaginationPosition } from '../models/viewOptions';
 import { resolveViewType } from '../models/viewTypes';
 
 /** A pixel-size view option: its field label, description and the default shown as a placeholder */
@@ -223,6 +223,20 @@ export class GalleryBuilderModal extends Modal {
                 );
 
             if (this.viewOptions.pagination) {
+                new Setting(container)
+                    .setName('Page controls')
+                    .setDesc('Where the prev/next controls sit.')
+                    .addDropdown(dropdown => dropdown
+                        .addOption('default', 'Default (from settings)')
+                        .addOption('bottom', 'Below the gallery')
+                        .addOption('top', 'Above the gallery')
+                        .setValue(this.viewOptions.paginationPosition ?? 'default')
+                        .onChange(value => {
+                            this.viewOptions.paginationPosition = value === 'default' ? undefined : value as PaginationPosition;
+                            this.refreshLivePreview();
+                        })
+                    );
+
                 new Setting(container)
                     .setName('Images per page')
                     .setDesc('Number of images to display per page.')

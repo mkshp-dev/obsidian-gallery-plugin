@@ -2,6 +2,7 @@
 
 ## In-progress
 
+- **Page controls position**: The Prev/Next bar of a paged gallery can now sit above the gallery instead of below it, so it stays in place while the page below changes height. Set `paginationPosition: top` in a gallery's `view:` block (thumbnail, masonry, justified and embed), choose it in the **Insert gallery** builder, or change the default under Settings → Pagination → **Page controls position**. It is below the gallery by default, as before.
 - **Right-click menu for vault photos**: Right-clicking a photo or video from the vault, in any view or in the image viewer, now opens Obsidian's file menu: open in a new tab or to the right, rename and delete, plus what core plugins and other plugins add for files (open in a new window, copy path, reveal in navigation, open in default app, and so on). Photos from Immich, Nextcloud and external URLs keep the default menu.
 
 ## 2.7.0 - 2026-11-03

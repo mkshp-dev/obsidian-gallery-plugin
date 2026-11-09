@@ -75,15 +75,21 @@ export class JustifiedView extends AspectLayoutView {
    */
   static buildRows(tiles: LayoutTile[], width: number, targetHeight: number, gap: number): JustifiedRow[] {
     const fitHeight = (count: number, ratioSum: number) => (width - gap * (count - 1)) / ratioSum;
-    // A row that may not fill the width: justified only if it already fills it at the target height
+    const rows: JustifiedRow[] = [];
+    /**
+     * A row that may not fill the width (the last row, or the row before a panorama). It takes the
+     * height of the row above it, so it doesn't look smaller when that row ended up taller than the
+     * target; the first row uses the target. It is justified only if it fills the width at that
+     * height, and shrinks to fit when it would be wider.
+     */
     const openRow = (rowTiles: LayoutTile[], ratioSum: number): JustifiedRow => {
+      const reference = rows.length > 0 ? rows[rows.length - 1].height : targetHeight;
       const height = fitHeight(rowTiles.length, ratioSum);
-      return height <= targetHeight
+      return height <= reference
         ? { tiles: rowTiles, height, justified: true }
-        : { tiles: rowTiles, height: targetHeight, justified: false };
+        : { tiles: rowTiles, height: reference, justified: false };
     };
 
-    const rows: JustifiedRow[] = [];
     let current: LayoutTile[] = [];
     let ratioSum = 0;
 

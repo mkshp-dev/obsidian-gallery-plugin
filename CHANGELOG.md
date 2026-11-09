@@ -7,6 +7,7 @@
 - **Mosaic fit**: Tiles crop their image to fill by default. `fit: contain` shows each image whole over a blurred copy of itself instead, made from the image already loaded, so nothing extra is downloaded. SVGs are always fitted whole. **Insert gallery** has a **Fit** dropdown, and autocomplete suggests `crop` and `contain`.
 - **Mosaic pages**: With pagination, each mosaic page holds whole repeats of the pattern: `itemsPerPage` is rounded to the nearest multiple of the pattern's tiles (at least one repeat), so a page never ends part-way through the pattern.
 - **Settings tabs**: The settings now have four tabs. **General** keeps error messages, troubleshooting and the remote image settings (now in their own **Remote images** group); the new **Display** tab has the frame, captions, pagination and image viewer settings; the new **Mosaic** tab lists your mosaic patterns; **Providers** is unchanged.
+- **Justified last row** (#223): A short last row in the justified view now takes the height of the row above it, instead of the target row height. Rows often end a little taller than the target, so the last row could look smaller than the others, most noticeably on phones: six images of the same size came out as a row of large ones and a row of smaller ones.
 - **Zero gap in masonry and justified**: With `gap: 0`, the layout still allowed for the default gap: justified rows came out slightly too short, cropping their images a little, and masonry could fit a column fewer than the width allowed.
 
 ## 2.7.1 - 2026-11-09

@@ -28,6 +28,7 @@ Select the gallery layout from the **View type** dropdown:
 |--------|-------------|
 | **Masonry** | Equal-width columns, each image at its natural height (Pinterest-style). |
 | **Justified** | Equal-height rows that fill the width, images uncropped (like Immich or Google Photos). |
+| **Mosaic** | Square tiles with a repeating pattern of large ones, images cropped to fill. |
 | **Thumbnail** | Fixed-size thumbnail grid. Clicking an image opens the full-size modal viewer. |
 | **Carousel** | Horizontally scrolling view with previous/next navigation. |
 | **Embed** | Continuous, borderless vertical stack at natural image size — feels like part of the note, similar to a native `![[image]]` embed. |
@@ -43,7 +44,9 @@ Below the view type, the builder shows the [view options](./gallery-block-syntax
 | **Row height** | Justified | Target row height in pixels (`rowHeight:`). |
 | **Column width** | Masonry | Minimum column width in pixels (`columnWidth:`). |
 | **Carousel height** | Carousel | Height of the slide area in pixels (`height:`). |
-| **Gap** | Masonry, Justified | Space between images in pixels (`gap:`). |
+| **Pattern** | Mosaic | **Built-in**, one of your saved patterns (`pattern:`), or **New pattern…** to draw one with the [mosaic editor](./views/mosaic.md#your-own-pattern). |
+| **Fit** | Mosaic | **Crop to fill** (the default, not written) or **Show whole image** (`fit: contain`). |
+| **Gap** | Masonry, Justified, Mosaic | Space between images in pixels (`gap:`). |
 | **Enable pagination** | All but Carousel | Page through large collections with Prev/Next controls instead of lazy-loading everything into one continuous scroll. Once enabled, an **Images per page** field and a **Page controls** dropdown appear. **Page controls** puts the Prev/Next controls above or below the gallery, or leaves it to the **Page controls position** setting. |
 
 Sizes outside an option's range are left out of the block. Values are kept when you switch view types, so switching back restores them.
@@ -117,7 +120,7 @@ Completions are triggered automatically when your cursor is inside an `obs-galle
 |-------|-------------|
 | `type:` | `local`, `immich`, `immich-share` |
 | `connection:` | Your configured Immich connection keys (with their base URLs shown as descriptions) |
-| `view:` | `thumbnail`, `carousel`, `masonry`, `justified`, `embed` |
+| `view:` | `thumbnail`, `carousel`, `masonry`, `justified`, `mosaic`, `embed` |
 | `assetType:` | `IMAGE`, `VIDEO` |
 | `sort.order:` | `asc`, `desc` |
 | Items in `albumIds:` list | Album names fetched live from Immich (inserts the UUID) |

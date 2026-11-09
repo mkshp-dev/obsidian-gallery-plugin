@@ -43,7 +43,7 @@ view:
 
 The Prev/Next controls sit below the gallery. Add `paginationPosition: top` to put them above it instead, where they stay in place while pages of different heights change below them.
 
-Pagination can also be turned on by default for every gallery via **Settings → Gallery View → Pagination**, which also sets where the controls sit; the per-gallery `pagination`, `itemsPerPage` and `paginationPosition` keys override those defaults. The same keys work in every view except the carousel.
+Pagination can also be turned on by default for every gallery via **Settings → Gallery View → Display → Pagination**, which also sets where the controls sit; the per-gallery `pagination`, `itemsPerPage` and `paginationPosition` keys override those defaults. The same keys work in every view except the carousel.
 
 ### Column width and spacing
 

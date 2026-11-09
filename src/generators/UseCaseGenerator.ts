@@ -58,6 +58,13 @@ sources:
 view:
   type: masonry
 `,
+    icelandMosaic: `\
+sources:
+  - type: local
+    path: ./_photos/iceland
+view:
+  type: mosaic
+`,
     icelandThumbnail: `\
 sources:
   - type: local
@@ -172,7 +179,7 @@ export class UseCaseGenerator {
         const notes: Array<[string, string]> = [
             ['Start here', this.startHere(status)],
             ['Iceland road trip', this.icelandRoadTrip()],
-            ['Iceland — five layouts', this.fiveLayouts()],
+            ['Iceland — six layouts', this.sixLayouts()],
             ['Change the layout', this.changeTheLayout()],
             ['Cabin mood board', this.cabinMoodBoard()],
             ['Shakshuka', this.shakshuka()],
@@ -230,7 +237,7 @@ export class UseCaseGenerator {
 Real notes with real photos, to show what Gallery View is for. For what each option does, see the numbered notes in \`GalleryDemo\` (start with [[00 - Welcome]]).
 
 - [[Iceland road trip]] — a travel journal with the trip's photos in tidy rows.
-- [[Iceland — five layouts]] — the same folder in all five layouts, one after the other.
+- [[Iceland — six layouts]] — the same folder in all six layouts, one after the other.
 - [[Change the layout]] — change one word and the gallery redraws.
 - [[Cabin mood board]] — a borderless masonry board for collecting a look.
 - [[Shakshuka]] — a recipe with a full-width photo of the dish under the method.
@@ -263,19 +270,20 @@ ${setupCallout(yaml, [
 `;
     }
 
-    private fiveLayouts(): string {
+    private sixLayouts(): string {
         const sections: Array<[string, string, string]> = [
             ['Masonry', USE_CASE_BLOCKS.icelandMasonry, 'Columns of uncropped photos, like a pinboard.'],
             ['Justified', USE_CASE_BLOCKS.icelandJustified, 'Rows of equal height that fill the width.'],
+            ['Mosaic', USE_CASE_BLOCKS.icelandMosaic, 'Square tiles with a repeating pattern of large ones, like a photo collage.'],
             ['Thumbnail', USE_CASE_BLOCKS.icelandThumbnail, 'Every photo whole, in an even grid of matching cards.'],
             ['Carousel', USE_CASE_BLOCKS.icelandCarousel, 'One photo at a time, on a stage of fixed height.'],
             ['Embed', USE_CASE_BLOCKS.icelandEmbed, 'Photos at full width, one under the other, like images pasted into the note.']
         ];
         const body = sections.map(([title, yaml, line]) => `## ${title}\n\n${line}\n\n${gallery(yaml)}`).join('\n\n');
         return `${frontmatter(['travel', 'iceland'], '2026-09-01')}
-# Iceland — five layouts
+# Iceland — six layouts
 
-Same folder, five ways to show it.
+Same folder, six ways to show it.
 
 ${body}
 
@@ -293,11 +301,11 @@ ${setupCallout(USE_CASE_BLOCKS.icelandCarousel, [
         return `${frontmatter(['travel', 'iceland'], '2026-09-02')}
 # Change the layout
 
-Put the cursor in the gallery below and change \`masonry\` to \`justified\` or \`carousel\`. The gallery redraws as soon as you leave the block.
+Put the cursor in the gallery below and change \`masonry\` to \`justified\`, \`mosaic\` or \`carousel\`. The gallery redraws as soon as you leave the block.
 
 ${gallery(yaml)}
 
-The five layouts are \`thumbnail\`, \`masonry\`, \`justified\`, \`carousel\` and \`embed\`.
+The six layouts are \`thumbnail\`, \`masonry\`, \`justified\`, \`mosaic\`, \`carousel\` and \`embed\`.
 
 ${setupCallout(yaml, [
     '`view: type` picks the layout. Nothing else in the block has to change.',

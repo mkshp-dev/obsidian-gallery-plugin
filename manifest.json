@@ -3,7 +3,7 @@
 	"name": "Gallery View",
 	"version": "2.7.1",
 	"minAppVersion": "1.13.0",
-	"description": "Turn vault folders, web URLs, Immich and Nextcloud albums into photo galleries in your notes, with masonry, justified, thumbnail, carousel and embed layouts and a full-screen viewer.",
+	"description": "Turn vault folders, web URLs, Immich and Nextcloud albums into photo galleries in your notes, with masonry, justified, mosaic, thumbnail, carousel and embed layouts and a full-screen viewer.",
 	"author": "mkshp",
 	"authorUrl": "https://github.com/mkshp-dev",
 	"fundingUrl": {

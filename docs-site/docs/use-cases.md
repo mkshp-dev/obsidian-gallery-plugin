@@ -30,11 +30,11 @@ Click a photo to open the full-screen viewer.
 
 ![The full-screen viewer with the details panel open](views/Viewer.png)
 
-## One folder, five layouts
+## One folder, six layouts
 
-![The same photos in five layouts](/img/readme/five-layouts.png)
+![The same photos in six layouts](/img/readme/six-layouts.png)
 
-The same folder as `masonry`, `justified`, `thumbnail`, `carousel` (`height: 480`) and `embed` (with `limit: 3` on the source). Only `view: type` changes.
+The same folder as `masonry`, `justified`, `mosaic`, `thumbnail`, `carousel` (`height: 480`) and `embed` (with `limit: 3` on the source). Only `view: type` changes.
 
 ![Changing view type from masonry to justified, then to carousel; the gallery redraws each time](/img/use-cases/change-layout.gif)
 
@@ -46,7 +46,7 @@ sources:
   - type: local
     path: ./_photos/iceland
 view:
-  type: masonry   # or justified, thumbnail, carousel, embed
+  type: masonry   # or justified, mosaic, thumbnail, carousel, embed
 ```
 ````
 

@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # Image viewer
@@ -44,7 +44,7 @@ Leaving a video stops it. An Immich or Nextcloud video is downloaded when you op
 ## Keyboard in the gallery
 
 - **Thumbnail view:** **←** / **→** move between tiles; **Enter** or **Space** opens the focused one.
-- **Masonry, justified and embed views:** **Tab** moves between images; **Enter** or **Space** opens one.
+- **Masonry, justified, mosaic and embed views:** **Tab** moves between images; **Enter** or **Space** opens one.
 - **Carousel view:** with the carousel focused, **←** / **→** change the slide. You can also use the arrow buttons, the dots under the slides, or swipe on a touch screen.
 
 ## Right-click menu

@@ -2,9 +2,12 @@
 
 ## In-progress
 
+## 2.9.0 - 2026-11-11
+
 - **Burn galleries for Publish (experimental)**: Obsidian Publish and other places that can't run plugins show a gallery's code block instead of its photos. The new **Burn galleries in this note (experimental)** command replaces every gallery in the open note with a WebP image of how it looks, so the page can be published with its galleries. Each image is drawn from the gallery's own layout (frame, rounded corners, crops, captions and video badges) at twice the screen's size for sharpness, from any source: vault folders, external URLs, Immich and Nextcloud. Galleries you haven't scrolled to are rendered off-screen for the burn, so one run covers the whole note. Images are named after the plugin, the note and the date and time (`Gallery View - Trip - 2026-11-11 143005.webp`, numbered when a note has several galleries), and each gallery's code block is replaced with an embed of its image. A dialog explains what will happen before anything changes. This is a one-way step: the image doesn't update with new photos and has no viewer or pages, so copy a gallery's block first if you want to keep the live version. Carousels keep the slide that is showing and paged galleries the current page (the first one for galleries further down), and captions that appear only on hover are left out.
 - **Folder for burned galleries**: New setting under Settings → General → **Burned galleries**: the folder the burned images are saved in. Pick an existing folder from the list, or leave it empty for the vault root (the default). If the folder is deleted or renamed later, the command says so before anything is burned.
 - **Number settings check what you type**: The number fields in Settings (grace period, remote load timeout, caption max lines, images per page, slideshow interval, largest remote video) show a message under the field when a value is out of range or not a whole number, and keep the last valid value instead of saving it.
+
 
 ## 2.8.0 - 2026-11-09
 

@@ -2853,3 +2853,30 @@ button.gallery-settings-tab-btn.is-active {
   width: 72px;
   margin-top: 6px;
 }
+
+/* "Burn galleries" confirmation */
+.gallery-burn-modal ol {
+  padding-inline-start: 1.4em;
+}
+
+.gallery-burn-tip {
+  margin: 0.8em 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-s);
+  border-left: 3px solid var(--interactive-accent);
+  background: var(--background-secondary);
+}
+
+.gallery-burn-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Galleries rendered off-screen for "Burn galleries", at the width they have in the note */
+.gallery-burn-stage {
+  position: fixed;
+  left: -100000px;
+  top: 0;
+  width: var(--gallery-burn-width, 700px);
+  pointer-events: none;
+}

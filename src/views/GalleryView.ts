@@ -7,6 +7,7 @@ import type { ViewType } from '../models/viewTypes';
 import { sourceServiceName } from '../models/sourceLinks';
 import type { MosaicPattern } from '../models/mosaicPattern';
 import type { MosaicFit, PaginationPosition } from '../models/viewOptions';
+import { visibleRectWithin } from '../services/burn/GallerySnapshot';
 
 /**
  * Zoom factor for one wheel event in the image viewer: 1.25x per 100px of scroll (one mouse-wheel
@@ -572,6 +573,60 @@ export abstract class GalleryView implements IGalleryView {
                 .then(url => { img.src = url; })
                 .catch((e: unknown) => this.handleImageError(image, e instanceof Error ? e : new Error(String(e))));
         }
+    }
+
+    /**
+     * Load every image that shows on the current page, including the ones lazy loading hasn't
+     * reached yet, and wait for the layout to settle, so a snapshot shows the gallery complete.
+     * Images hidden from view (a carousel's other slides) aren't loaded.
+     */
+    async prepareForSnapshot(timeoutMs: number = 15000): Promise<void> {
+        const tiles = Array.from(this.container.querySelectorAll<HTMLElement>('[data-image-path]'))
+            .filter(tile => visibleRectWithin(tile, this.container));
+        await Promise.all(tiles.map(async tile => {
+            const found = tile.querySelector('img');
+            if (!found || (found.complete && found.naturalWidth > 0)) return;
+            const img: HTMLImageElement = found;
+            if (img.classList.contains('gallery-external-blocked')) return;
+            const path = tile.getAttribute('data-image-path');
+            const image = this._images.find(candidate => candidate.path === path);
+            if (!image) return;
+            try {
+                // Views with a lazy loader load through it, so it updates the image's classes and state
+                if (await this.loadForSnapshot(img)) return;
+                const url = await this.resolveImageUrl(image);
+                await new Promise<void>(resolve => {
+                    const timer = window.setTimeout(done, timeoutMs);
+                    function done() {
+                        window.clearTimeout(timer);
+                        img.removeEventListener('load', done);
+                        img.removeEventListener('error', done);
+                        resolve();
+                    }
+                    img.addEventListener('load', done);
+                    img.addEventListener('error', done);
+                    // An off-screen lazy image wouldn't load at all
+                    img.loading = 'eager';
+                    if (img.getAttribute('src') !== url) img.src = url;
+                    else if (img.complete) done();
+                });
+                if (img.naturalWidth > 0) this.updateImageElement(tile, image, 'loaded');
+            } catch (error) {
+                // Left as it is; the snapshot leaves its tile empty
+                Logger.debug('Snapshot: image did not load', image.path, error);
+            }
+        }));
+        // Layouts that size tiles from the loaded images redo themselves on the next frames
+        for (let i = 0; i < 3; i++) await new Promise(resolve => window.requestAnimationFrame(resolve));
+    }
+
+    /**
+     * Load an image for prepareForSnapshot the view's own way. Views that lazy-load override
+     * this: loading behind their loader's back would leave its "loading" class on the image, and
+     * that class is styled (with padding) as a loading box. False to let the caller set the src.
+     */
+    protected loadForSnapshot(_img: HTMLImageElement): Promise<boolean> {
+        return Promise.resolve(false);
     }
 
     /**

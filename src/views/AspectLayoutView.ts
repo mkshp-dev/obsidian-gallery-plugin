@@ -70,9 +70,9 @@ export abstract class AspectLayoutView extends GalleryView {
     // LazyLoader resolves each image's URL (fetching remote images) only once it nears the viewport
     this.loader = new LazyLoader({
       placeholderSrc: '',
-      loadingClass: 'gallery-loading',
-      loadedClass: 'gallery-loaded',
-      errorClass: 'gallery-error',
+      loadingClass: 'gallery-image-loading',
+      loadedClass: 'gallery-image-loaded',
+      errorClass: 'gallery-image-error',
       timeoutMs: this.remoteLoadTimeoutMs ?? 10000
     });
 
@@ -264,6 +264,10 @@ export abstract class AspectLayoutView extends GalleryView {
     const current = parent.children;
     const same = current.length === tiles.length && tiles.every((tile, i) => current[i] === tile.el);
     if (!same) parent.replaceChildren(...tiles.map(tile => tile.el));
+  }
+
+  protected loadForSnapshot(img: HTMLImageElement): Promise<boolean> {
+    return this.loader ? this.loader.loadNow(img) : Promise.resolve(false);
   }
 
   /**

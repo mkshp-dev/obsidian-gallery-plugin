@@ -15,6 +15,10 @@ sidebar_position: 6
 - A line such as *3 files weren't shown: HEIC isn't supported* under a gallery (or after **No images found**) names photos and videos in formats galleries can't show. Convert them to JPEG (or MP4 for videos) to include them. iPhones can save photos as JPEG under **Settings → Camera → Formats → Most Compatible**.
 - Try switching between reading and editing mode to trigger a re-render.
 
+## Gallery shows as code on Obsidian Publish
+
+Obsidian Publish doesn't run plugins, so it shows a gallery's `obs-gallery` code block instead of its photos. Run **Burn galleries in this note (experimental)** to replace the note's galleries with images before publishing; see [Publishing galleries](./publishing.md). If the command says the folder for burned galleries doesn't exist, pick another one in **Settings → Gallery View → General → Burned galleries**.
+
 ## Video shows a dark tile or doesn't play
 
 - The video's format may not be one Obsidian's player supports. MP4 (H.264) and WebM play everywhere; HEVC (often used by iPhone `.mov` files) doesn't play on every computer. Converting the file to H.264 MP4 fixes it.

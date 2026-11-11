@@ -83,10 +83,32 @@ export class LazyLoader {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const img = entry.target as HTMLImageElement;
-        void this.loadImage(img);
+        void this.startLoad(img);
         this.observer?.unobserve(img);
       }
     });
+  }
+
+  /** First load attempt of each image, while it runs, so loadNow doesn't start a second one */
+  private inFlight = new Map<HTMLImageElement, Promise<ILazyLoadResult>>();
+
+  private startLoad(img: HTMLImageElement): Promise<ILazyLoadResult> {
+    const running = this.inFlight.get(img);
+    if (running) return running;
+    const load = this.loadImage(img).finally(() => this.inFlight.delete(img));
+    this.inFlight.set(img, load);
+    return load;
+  }
+
+  /**
+   * Load an observed image now instead of when it nears the viewport (before a gallery is burned
+   * to an image, say), going through the usual path so its loading/loaded classes are updated.
+   * Resolves false when the image isn't waiting to load or didn't load.
+   */
+  async loadNow(img: HTMLImageElement): Promise<boolean> {
+    if (!this.loadingElements.has(img)) return false;
+    this.observer?.unobserve(img);
+    return (await this.startLoad(img)).success;
   }
 
   /**

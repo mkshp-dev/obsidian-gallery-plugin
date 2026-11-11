@@ -8,6 +8,8 @@ You can configure plugin-wide behavior by opening **Settings → Gallery View**.
 
 The settings panel is split into four tabs: **General**, **Display**, **Mosaic** and **Providers**.
 
+Settings are saved as soon as you change them. A number field with a value out of its range (or not a whole number) shows a message under it and keeps its last valid value.
+
 ---
 
 ## General tab
@@ -21,6 +23,12 @@ How the plugin behaves: error messages, images from the web, and troubleshooting
 | Error messages | `Show` | When a gallery can't be shown, `Show` puts a one-line message (starting with ⚠️) in its place; `Hide` shows nothing. `Hide` also drops the notes under galleries, such as ignored view options and files skipped for their format. |
 | Detached gallery grace period (ms) | 30000 | How long to keep a gallery alive in memory after its container is removed from the view. This is useful for preventing galleries from reloading their images constantly if you frequently toggle between reading and editing modes. |
 | Enable debug logging | Off | Write verbose debug logs (gallery rendering, refreshes, lifecycle events) to the developer console. Useful for troubleshooting. Errors and warnings are always logged. |
+
+### Burned galleries
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Folder to save the burned gallery images | Vault root | Where **Burn galleries in this note (experimental)** saves its images. Pick an existing folder from the list, or leave it empty for the vault root. See [Publishing galleries](./publishing.md). |
 
 ### Remote images
 

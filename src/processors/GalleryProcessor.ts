@@ -925,6 +925,11 @@ export class GalleryProcessor {
     /**
      * Destroy gallery and cleanup resources
      */
+    /** The galleries rendered right now */
+    getActiveGalleries(): GalleryInstance[] {
+        return Array.from(this.activeGalleries.values());
+    }
+
     destroyGallery(galleryId: string): void {
         const gallery = this.activeGalleries.get(galleryId);
         if (gallery) {

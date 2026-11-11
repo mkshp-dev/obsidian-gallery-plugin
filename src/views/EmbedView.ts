@@ -35,9 +35,9 @@ export class EmbedView extends GalleryView {
     this.loader?.disconnect();
     this.loader = new LazyLoader({
       placeholderSrc: '',
-      loadingClass: 'gallery-loading',
-      loadedClass: 'gallery-loaded',
-      errorClass: 'gallery-error',
+      loadingClass: 'gallery-image-loading',
+      loadedClass: 'gallery-image-loaded',
+      errorClass: 'gallery-image-error',
       timeoutMs: this.remoteLoadTimeoutMs ?? 10000
     });
     const loader = this.loader;
@@ -91,6 +91,10 @@ export class EmbedView extends GalleryView {
 
   update(images: IImageSource[]): void {
     super.update(images);
+  }
+
+  protected loadForSnapshot(img: HTMLImageElement): Promise<boolean> {
+    return this.loader ? this.loader.loadNow(img) : Promise.resolve(false);
   }
 
   destroy(): void {

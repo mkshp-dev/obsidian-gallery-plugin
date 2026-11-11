@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, setIcon, type SettingDefinitionItem } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, setIcon, normalizePath, type SettingDefinitionItem } from 'obsidian';
 import { ImmichClient } from '../services/immich/ImmichClient';
 import { NextcloudClient } from '../services/nextcloud/NextcloudClient';
 import type GalleryPlugin from '../main';
@@ -36,6 +36,17 @@ interface ProviderSpec<T extends ConnectionBase> {
 type ConnectionStatus = { state: 'untested' | 'testing' | 'ok' | 'error'; message?: string };
 
 type SettingsTabId = 'general' | 'display' | 'mosaic' | 'providers';
+
+/**
+ * Checks a number setting: a whole number from `min` (to `max`). A value that fails isn't saved,
+ * and the message shows under the field, so a typo doesn't go unnoticed.
+ */
+function wholeNumber(min: number, max?: number): (value: number) => string | undefined {
+    return value => {
+        if (Number.isInteger(value) && value >= min && (max === undefined || value <= max)) return undefined;
+        return max === undefined ? `Enter a whole number of ${min} or more.` : `Enter a whole number from ${min} to ${max}.`;
+    };
+}
 
 /** The tabs across the top of the settings, in order */
 const SETTINGS_TABS: { id: SettingsTabId; icon: string; title: string }[] = [
@@ -113,12 +124,24 @@ export class GallerySettingsTab extends PluginSettingTab {
                     {
                         name: 'Detached gallery grace period (ms)',
                         desc: 'How long (ms) to retain a detached gallery before final destruction. Useful to avoid losing galleries during editor/preview toggles.',
-                        control: { type: 'number', key: 'gracePeriodMs', defaultValue: DEFAULT_SETTINGS.gracePeriodMs, min: 0 }
+                        control: { type: 'number', key: 'gracePeriodMs', defaultValue: DEFAULT_SETTINGS.gracePeriodMs, min: 0, validate: wholeNumber(0) }
                     },
                     {
                         name: 'Enable debug logging',
                         desc: 'Write verbose debug logs to the developer console. Useful for troubleshooting.',
                         control: { type: 'toggle', key: 'enableLifecycleLogging', defaultValue: false }
+                    }
+                ]
+            },
+            {
+                type: 'group',
+                heading: 'Burned galleries',
+                desc: 'The "Burn galleries in this note" command replaces each gallery in a note with a still image of it, for places that can\'t run plugins, such as Obsidian Publish.',
+                items: [
+                    {
+                        name: 'Folder to save the burned gallery images',
+                        desc: 'Pick an existing folder from the list, or leave empty to save them in the vault root.',
+                        control: { type: 'folder', key: 'burnFolder', defaultValue: DEFAULT_SETTINGS.burnFolder, placeholder: 'Vault root', validate: value => this.existingFolderProblem(value) }
                     }
                 ]
             },
@@ -135,7 +158,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     {
                         name: 'Remote load timeout (ms)',
                         desc: 'Timeout in milliseconds for loading remote images.',
-                        control: { type: 'number', key: 'remoteLoadTimeoutMs', defaultValue: DEFAULT_SETTINGS.remoteLoadTimeoutMs, min: 0 }
+                        control: { type: 'number', key: 'remoteLoadTimeoutMs', defaultValue: DEFAULT_SETTINGS.remoteLoadTimeoutMs, min: 0, validate: wholeNumber(0) }
                     },
                     {
                         name: 'Validate remote content type',
@@ -173,7 +196,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     {
                         name: 'Caption max lines',
                         desc: 'Maximum number of lines to display before truncating with ellipsis.',
-                        control: { type: 'number', key: 'captionMaxLines', defaultValue: DEFAULT_SETTINGS.captionMaxLines, min: 1, max: 10 }
+                        control: { type: 'number', key: 'captionMaxLines', defaultValue: DEFAULT_SETTINGS.captionMaxLines, min: 1, max: 10, validate: wholeNumber(1, 10) }
                     }
                 ]
             },
@@ -190,7 +213,7 @@ export class GallerySettingsTab extends PluginSettingTab {
                     {
                         name: 'Images per page',
                         desc: 'Number of images to display per page when pagination is enabled. Mosaic galleries round it to whole repeats of their pattern.',
-                        control: { type: 'number', key: 'defaultItemsPerPage', defaultValue: DEFAULT_SETTINGS.defaultItemsPerPage, min: 1 }
+                        control: { type: 'number', key: 'defaultItemsPerPage', defaultValue: DEFAULT_SETTINGS.defaultItemsPerPage, min: 1, validate: wholeNumber(1) }
                     },
                     {
                         name: 'Page controls position',
@@ -206,12 +229,12 @@ export class GallerySettingsTab extends PluginSettingTab {
                     {
                         name: 'Slideshow interval (seconds)',
                         desc: 'How long the slideshow shows each image before moving on to the next one.',
-                        control: { type: 'number', key: 'slideshowInterval', defaultValue: DEFAULT_SETTINGS.slideshowInterval, min: 1, max: 60 }
+                        control: { type: 'number', key: 'slideshowInterval', defaultValue: DEFAULT_SETTINGS.slideshowInterval, min: 1, max: 60, validate: wholeNumber(1, 60) }
                     },
                     {
                         name: 'Largest remote video to play (MB)',
                         desc: 'Immich and Nextcloud videos are downloaded in full before they play. Larger videos show their still frame and a link to open them in Immich or Nextcloud instead. 0 means no limit.',
-                        control: { type: 'number', key: 'maxRemoteVideoMb', defaultValue: DEFAULT_SETTINGS.maxRemoteVideoMb, min: 0 }
+                        control: { type: 'number', key: 'maxRemoteVideoMb', defaultValue: DEFAULT_SETTINGS.maxRemoteVideoMb, min: 0, validate: wholeNumber(0) }
                     }
                 ]
             }
@@ -561,6 +584,13 @@ export class GallerySettingsTab extends PluginSettingTab {
     private forgetCards(providerId: string): void {
         for (const id of [...this.openCards]) if (id.startsWith(`${providerId}:`)) this.openCards.delete(id);
         for (const id of [...this.connectionStatus.keys()]) if (id.startsWith(`${providerId}:`)) this.connectionStatus.delete(id);
+    }
+
+    /** Why a burn folder can't be used (it doesn't exist); undefined when it can, or when empty (the vault root) */
+    private existingFolderProblem(value: string): string | undefined {
+        const path = value.trim();
+        if (!path || path === '/' || this.app.vault.getFolderByPath(normalizePath(path))) return undefined;
+        return 'There is no folder with that name. Pick one from the list, or leave empty for the vault root.';
     }
 
     getControlValue(key: string): unknown {

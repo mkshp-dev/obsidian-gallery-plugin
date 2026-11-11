@@ -1,6 +1,6 @@
 import { GalleryBuilderModal } from './ui/GalleryBuilderModal';
 import { Logger } from "./utils/Logger";
-import { Plugin, App, MarkdownPostProcessorContext, MarkdownView, Notice, TFile, Menu, Platform } from 'obsidian';
+import { Plugin, App, Component, MarkdownPostProcessorContext, MarkdownView, Notice, TFile, Menu, Platform } from 'obsidian';
 import { ContentScanner } from './services/ContentScanner';
 import { ViewFactory } from './views/ViewFactory';
 import { GalleryProcessor, RefreshSources } from './processors/GalleryProcessor';
@@ -16,6 +16,10 @@ import { MosaicBuilderModal } from './ui/MosaicBuilderModal';
 import { patternProblem, type SavedMosaicPattern } from './models/mosaicPattern';
 import type { IImageSource } from './models/interfaces';
 import { remoteImageLink, sourceServiceName } from './models/sourceLinks';
+import { GalleryBurner, type AcquiredGallery } from './services/burn/GalleryBurner';
+import { burnTimestamp, findGalleryBlocks, locateGalleryBlock } from './services/burn/burnText';
+import { BurnConfirmModal } from './ui/BurnConfirmModal';
+import type { GalleryInstance } from './models/GalleryInstance';
 
 interface AppWithCommands extends App {
     commands: {
@@ -31,6 +35,11 @@ export default class GalleryPlugin extends Plugin {
     private galleryProcessor: GalleryProcessor | null = null;
     public settings: GalleryPluginSettings = DEFAULT_SETTINGS;
     private _onOpenSettingsRequested: ((e?: Event) => void) | null = null;
+    /** Each rendered gallery's code block source and context, for burning it into its note */
+    private galleryBlocks = new WeakMap<HTMLElement, { source: string; ctx: MarkdownPostProcessorContext }>();
+    private burning = false;
+    /** A vault change asked for a refresh during a burn; it runs when the burn ends */
+    private refreshAfterBurn = false;
     
     async onload() {
         await this.loadSettings();
@@ -93,6 +102,17 @@ export default class GalleryPlugin extends Plugin {
             id: 'build-custom-mosaic',
             name: 'Build custom mosaic',
             callback: () => new MosaicBuilderModal(this.app, this).open()
+        });
+
+        this.addCommand({
+            id: 'burn-galleries',
+            name: 'Burn galleries in this note (experimental)',
+            checkCallback: (checking) => {
+                const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (!view?.file) return false;
+                if (!checking) void this.burnGalleriesIn(view, view.file);
+                return true;
+            }
         });
 
         this.addCommand({
@@ -319,6 +339,11 @@ export default class GalleryPlugin extends Plugin {
         if (!this.galleryProcessor) {
             return;
         }
+        // Saving burned images would re-render the galleries being drawn; wait until the burn ends
+        if (this.burning) {
+            this.refreshAfterBurn = true;
+            return;
+        }
 
         this.galleryProcessor.refreshAllGalleries(refreshSources).catch(error => {
             console.error('Error refreshing galleries:', error);
@@ -389,6 +414,143 @@ export default class GalleryPlugin extends Plugin {
         menu.showAtMouseEvent(event);
     }
 
+    /** The note's galleries showing in its open view (in whichever mode it's in), not ones from embedded notes */
+    private galleriesShownIn(view: MarkdownView, note: TFile): GalleryInstance[] {
+        return (this.galleryProcessor?.getActiveGalleries() ?? []).filter(g =>
+            g.container.isConnected &&
+            view.containerEl.contains(g.container) &&
+            g.container.getClientRects().length > 0 &&
+            this.galleryBlocks.get(g.container)?.ctx.sourcePath === note.path);
+    }
+
+    /**
+     * Replace every gallery in a note with a still image of it, for places that don't run plugins
+     * (Obsidian Publish). Asks first, since the code blocks are deleted. See GalleryBurner.
+     *
+     * Obsidian only renders the part of a note near the screen, so galleries further down may not
+     * exist yet. Those are rendered off-screen, at the note's width, just for the burn; galleries
+     * already showing are burned as they are (keeping the carousel slide or page on screen).
+     */
+    private async burnGalleriesIn(view: MarkdownView, note: TFile): Promise<void> {
+        if (this.burning) {
+            new Notice('Already burning galleries. Try again when it finishes.');
+            return;
+        }
+        if (!this.galleryProcessor) return;
+        const lines = (await this.app.vault.cachedRead(note)).split('\n');
+        const blocks = findGalleryBlocks(lines);
+        if (blocks.length === 0) {
+            new Notice('This note has no galleries to burn.');
+            return;
+        }
+
+        const folder = (this.settings.burnFolder ?? '').trim();
+        // Checked before asking, so nobody confirms a burn that can't happen
+        if (GalleryBurner.resolveFolder(this.app, folder) === null) {
+            new Notice(`The folder "${folder}" set for burned galleries doesn't exist anymore. Pick another one in the Gallery View settings, or leave it empty for the vault root.`, 10000);
+            return;
+        }
+        const confirmed = await new BurnConfirmModal(this.app, { noteName: note.basename, count: blocks.length, folder }).ask();
+        if (!confirmed) return;
+
+        // The galleries already showing, by the line their block starts on
+        const shown = this.galleriesShownIn(view, note);
+        const shownByStart = new Map<number, GalleryInstance>();
+        for (const gallery of shown) {
+            const info = this.galleryBlocks.get(gallery.container);
+            if (!info) continue;
+            const hint = info.ctx.getSectionInfo(gallery.container)?.lineStart;
+            const sameBody = blocks.filter(block => block.body.trim() === info.source.trim()).length;
+            // Without a line to tell identical blocks apart, render them off-screen instead
+            if (hint === undefined && sameBody > 1) continue;
+            const block = locateGalleryBlock(lines, info.source, hint);
+            if (block) shownByStart.set(block.start, gallery);
+        }
+
+        // Off-screen galleries are laid out at the width the note's galleries have on screen
+        const width = shown[0]?.container.clientWidth
+            || view.containerEl.querySelector<HTMLElement>('.markdown-preview-sizer, .cm-contentContainer')?.clientWidth
+            || 700;
+        const stage = view.containerEl.createDiv({ cls: 'gallery-burn-stage markdown-rendered' });
+        stage.style.setProperty('--gallery-burn-width', `${width}px`);
+
+        this.burning = true;
+        const progress = new Notice(blocks.length === 1 ? 'Burning gallery…' : `Burning ${blocks.length} galleries…`, 0);
+        try {
+            const report = await new GalleryBurner(this.app).burnNote(note, blocks.map(block => ({
+                source: block.body,
+                start: block.start,
+                acquire: () => {
+                    const gallery = shownByStart.get(block.start);
+                    return gallery && gallery.container.isConnected
+                        ? Promise.resolve({ view: gallery.view, release: () => undefined })
+                        : this.renderGalleryOffscreen(block.body, note, stage);
+                }
+            })), {
+                folder,
+                pluginName: this.manifest.name,
+                timestamp: burnTimestamp(new Date()),
+                onProgress: (current, total) => {
+                    if (total > 1) progress.setMessage(`Burning gallery ${current} of ${total}…`);
+                }
+            });
+
+            progress.hide();
+            if (report.burned.length > 0) {
+                const what = report.burned.length === 1 ? `Gallery burned to ${report.burned[0].path}` : `${report.burned.length} galleries burned into ${folder || 'the vault root'}`;
+                const missing = report.missingImages;
+                const note = missing > 0 ? `. ${missing} ${missing === 1 ? "photo couldn't be drawn and was" : "photos couldn't be drawn and were"} left empty` : '';
+                new Notice(`${what}${note}.`, 8000);
+            }
+            if (report.orphaned.length > 0) {
+                new Notice(`The note changed while drawing, so ${report.orphaned.length === 1 ? 'an image was' : `${report.orphaned.length} images were`} saved but not put in the note: ${report.orphaned.map(f => f.path).join(', ')}`, 0);
+            }
+            if (report.failed.length > 0) {
+                new Notice(`Couldn't burn ${report.failed.length === 1 ? 'a gallery' : `${report.failed.length} galleries`}, so ${report.failed.length === 1 ? 'its code block was' : 'their code blocks were'} kept: ${report.failed[0]}`, 10000);
+            }
+        } catch (error) {
+            progress.hide();
+            console.error('Gallery burn failed:', error);
+            new Notice(`Couldn't burn the galleries: ${error instanceof Error ? error.message : String(error)}`, 10000);
+        } finally {
+            stage.remove();
+            this.burning = false;
+            // Saving the images changed the vault; refresh the galleries that waited for the burn
+            if (this.refreshAfterBurn) {
+                this.refreshAfterBurn = false;
+                this.refreshGalleries(['local']);
+            }
+        }
+    }
+
+    /**
+     * Render a gallery block outside the screen for the burn, the way Obsidian would render it
+     * in the note. `release` removes it again.
+     */
+    private async renderGalleryOffscreen(source: string, note: TFile, stage: HTMLElement): Promise<AcquiredGallery> {
+        if (!this.galleryProcessor) throw new Error('The gallery processor is not running');
+        const el = stage.createDiv({ cls: 'block-language-obs-gallery' });
+        const children: Component[] = [];
+        const ctx = {
+            sourcePath: note.path,
+            docId: '',
+            frontmatter: undefined,
+            addChild: (child: Component) => { children.push(child); child.load(); },
+            getSectionInfo: () => null
+        } as unknown as MarkdownPostProcessorContext;
+        const release = () => {
+            children.forEach(child => child.unload());
+            el.remove();
+        };
+
+        const result = await this.galleryProcessor.processCodeBlock(source, el, ctx, this.getProcessingOptions());
+        if (!result.success || !result.galleryInstance) {
+            release();
+            throw new Error(result.errors[0] ?? 'The gallery could not be rendered');
+        }
+        return { view: result.galleryInstance.view, release };
+    }
+
     /**
      * Process gallery using professional pipeline
      */
@@ -407,6 +569,7 @@ export default class GalleryPlugin extends Plugin {
             return;
         }
 
+        this.galleryBlocks.set(el, { source, ctx });
         try {
             // Use the comprehensive gallery processor with professional features
             const result = await this.galleryProcessor.processCodeBlock(source, el, ctx, {

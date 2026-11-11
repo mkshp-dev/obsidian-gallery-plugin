@@ -33,6 +33,8 @@ export interface GalleryPluginSettings {
     nextcloudConnections: INextcloudConnection[];
     // Patterns made with "Build custom mosaic"; a mosaic gallery uses one by name
     mosaicPatterns: SavedMosaicPattern[];
+    // Vault folder the "Burn galleries" command saves its images in; '' is the vault root
+    burnFolder: string;
 }
 
 export const DEFAULT_SETTINGS: GalleryPluginSettings = {
@@ -52,5 +54,6 @@ export const DEFAULT_SETTINGS: GalleryPluginSettings = {
     defaultPaginationPosition: 'bottom',
     immichConnections: [],
     nextcloudConnections: [],
-    mosaicPatterns: []
+    mosaicPatterns: [],
+    burnFolder: ''
 };

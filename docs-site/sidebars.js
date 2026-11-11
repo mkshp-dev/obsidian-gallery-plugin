@@ -35,6 +35,7 @@ const sidebars = {
       },
       items: ['views/thumbnail', 'views/carousel', 'views/masonry', 'views/justified', 'views/mosaic', 'views/embed', 'views/image-viewer'],
     },
+    'publishing',
     'settings',
     'troubleshooting',
     'changelog',

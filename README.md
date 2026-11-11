@@ -18,6 +18,7 @@ Turn any folder of photos into a gallery inside your notes. Pick a layout (mason
 - **No YAML needed.** The **Insert gallery** command builds the block for you, **Build custom mosaic** lets you draw mosaic patterns on a grid, and autocomplete helps if you'd rather type it.
 - **Fast with big folders.** Images load as you scroll, with optional pagination.
 - **Fits your notes.** Uses your theme, works on mobile, and can drop its frame so the gallery sits in the text.
+- **Ready for Publish (experimental).** Obsidian Publish can't run plugins, so **Burn galleries in this note** turns a note's galleries into images of how they look, ready to publish.
 
 ![Full-screen image viewer with the details panel open](https://raw.githubusercontent.com/mkshp-dev/obsidian-gallery-plugin/main/docs-site/static/img/readme/viewer.png)
 

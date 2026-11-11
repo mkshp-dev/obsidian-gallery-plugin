@@ -333,6 +333,12 @@ export interface IGalleryView {
   /** Optional runtime property for allowing remote images */
   allowRemoteImages?: boolean;
 
+  /**
+   * Load every image that shows on the current page (lazy loading may not have reached the ones
+   * below the screen yet) and let the layout settle, before the gallery is burned to an image.
+   */
+  prepareForSnapshot?(): Promise<void>;
+
   /** Optional method to retrieve view status/stats */
   getStats?(): {
     totalImages: number;

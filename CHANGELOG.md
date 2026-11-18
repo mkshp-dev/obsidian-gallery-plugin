@@ -2,7 +2,10 @@
 
 ## In-progress
 
+## 2.9.1 - 2026-11-18
+
 - **Galleries in Live Preview**: A note with several galleries could show one of them as an empty line in Live Preview, while Reading view showed it. Rendering one gallery no longer removes another gallery that Obsidian has not placed on the page yet.
+
 
 ## 2.9.0 - 2026-11-11
 

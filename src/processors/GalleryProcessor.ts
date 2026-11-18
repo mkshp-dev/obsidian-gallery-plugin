@@ -486,13 +486,13 @@ export class GalleryProcessor {
         }
 
         try {
-            // Clean up existing gallery instances if:
-            // 1. They are rendering in the exact same container (re-render of the same block)
-            // 2. The container is no longer in the DOM (zombie instance from note changes)
+            // Clean up the gallery already rendering in this container (re-render of the same block).
+            // Only this container: Live Preview renders blocks into detached elements and attaches them
+            // later, so a detached container can belong to a gallery that is still showing. Galleries whose
+            // block goes away are destroyed by their GalleryRenderChild.
             try {
-                const existing = Array.from(this.activeGalleries.values()).find(g => 
-                    (g.container === container || !g.container.ownerDocument.body.contains(g.container)) && 
-                    g.id !== undefined
+                const existing = Array.from(this.activeGalleries.values()).find(g =>
+                    g.container === container && g.id !== undefined
                 );
                 if (existing) {
                     Logger.debug(`GalleryProcessor: cleaning up existing gallery instance (id=${existing.id}) before creating new one.`);
